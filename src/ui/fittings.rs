@@ -37,7 +37,8 @@ use crate::fitting::resources::{
 };
 use crate::fitting::saved_copy::{convert_saved_fitting, SavedCopyOutcome, SavedCopyRefusal};
 use crate::fitting::ship_cap_stability::{
-    fitting_cap_stability, CapStabilityOutcome, FittingCapStability,
+    fitting_cap_stability, fitting_cap_stability_with_module_bonuses, BonusedFittingCapStability,
+    CapStabilityOutcome, FittingCapStability,
 };
 use crate::fitting::ship_ehp::{
     ship_base_ehp, ship_ehp_with_module_bonuses, BonusedShipEhpOutcome, ShipBaseEhp,
@@ -3198,6 +3199,153 @@ fn render_fitting_cap_stability(
     }
 }
 
+/// Locked heading for the capacitor stability block with
+/// fitted module capacitor bonuses (capacitor bonuses design
+/// section 7). "With fitted module bonuses" names everything
+/// that is applied and keeps the block from reading as base
+/// or as a complete fitted total.
+const FITTINGS_CAP_STABILITY_WITH_BONUSES_HEADING: &str = "Capacitor (with fitted module bonuses)";
+
+/// Locked disclosure: the continuous-cycling assumption and
+/// "counted as active" are the base block's sentence and
+/// #615's locked plain form; the module-use sentence is this
+/// block's load-bearing honesty line, because the "Module
+/// capacitor use" figure above it is identical in both
+/// blocks (capacitor bonuses design section 7). This block's
+/// own sentence; the base disclosure names a different
+/// applied and excluded set.
+const FITTING_CAP_STABILITY_WITH_BONUSES_DISCLOSURE: &str = "Assumes every counted module keeps cycling continuously. These numbers add the fitted modules' and rigs' capacitor capacity and recharge bonuses from Mimir's bundled item data to the base values above. Every fitted module is counted as active, because the fitting data does not say which modules are on. Module capacitor use stays at base values: bonuses to how much capacitor a module needs or how fast it cycles are not applied. Ship bonuses, subsystems, skills, implants, and capacitor changes from anything outside this ship are not applied. Capacitor boosters and effects on other ships (such as energy neutralizers and remote repairers) are not modelled, so these numbers can differ from EVE.";
+
+const FITTING_CAP_STABILITY_WITH_BONUSES_NO_CATALOGUE: &str =
+    "Capacitor with fitted module bonuses unavailable: Mimir's bundled item data failed to load.";
+const FITTING_CAP_STABILITY_WITH_BONUSES_NO_SHIP_DATA: &str =
+    "Capacitor with fitted module bonuses unavailable: Mimir's bundled item data has no capacitor data for this fitting's ship.";
+
+/// Bonus-dimension excluded-module disclosure for the bonused
+/// capacitor block, or `None` when every counted fitting row
+/// had a catalogue row (capacitor bonuses design section 7).
+fn bonused_capacitor_excluded_line(excluded: usize) -> Option<String> {
+    if excluded == 0 {
+        None
+    } else if excluded == 1 {
+        Some("1 fitted module is not in Mimir's bundled item data, so any capacitor bonus from it is not counted.".to_string())
+    } else {
+        Some(format!("{excluded} fitted modules are not in Mimir's bundled item data, so any capacitor bonuses from them are not counted."))
+    }
+}
+
+/// Capacity-dimension unapplied-carrier disclosure for the
+/// bonused capacitor block, or `None` when every counted
+/// carrier's capacitor capacity bonus could be applied
+/// (capacitor bonuses design section 7).
+fn bonused_capacitor_capacity_unapplied_line(unapplied: usize) -> Option<String> {
+    if unapplied == 0 {
+        None
+    } else if unapplied == 1 {
+        Some("1 fitted module has a capacitor capacity bonus Mimir's bundled item data cannot describe, so that bonus is not applied.".to_string())
+    } else {
+        Some(format!("{unapplied} fitted modules have capacitor capacity bonuses Mimir's bundled item data cannot describe, so those bonuses are not applied."))
+    }
+}
+
+/// Recharge-dimension unapplied-carrier disclosure for the
+/// bonused capacitor block, or `None` when every counted
+/// carrier's capacitor recharge bonus could be applied
+/// (capacitor bonuses design section 7). Wording uses
+/// "capacitor recharge bonus", never "recharge rate bonus":
+/// the modified attribute is a duration and no rate figure
+/// for a single module's bonus exists to print.
+fn bonused_capacitor_recharge_unapplied_line(unapplied: usize) -> Option<String> {
+    if unapplied == 0 {
+        None
+    } else if unapplied == 1 {
+        Some("1 fitted module has a capacitor recharge bonus Mimir's bundled item data cannot describe, so that bonus is not applied.".to_string())
+    } else {
+        Some(format!("{unapplied} fitted modules have capacitor recharge bonuses Mimir's bundled item data cannot describe, so those bonuses are not applied."))
+    }
+}
+
+/// The bonused block's lines in locked order (module
+/// capacitor use, capacitor peak recharge, outcome, then the
+/// four count lines that apply — drain-excluded,
+/// bonus-excluded, capacity-unapplied, recharge-unapplied).
+/// The first three reuse the base block's helpers verbatim,
+/// as does the drain-excluded line; the three new count lines
+/// are separate per-dimension disclosures, never summed. A
+/// `None` use or peak contributes no line — never a zero.
+/// For `Unavailable` this returns empty; the renderer's
+/// fixed unavailable sentence is the whole block in that
+/// case.
+fn cap_stability_with_bonuses_lines(stability: &BonusedFittingCapStability) -> Vec<String> {
+    if let CapStabilityOutcome::Unavailable = stability.outcome {
+        return Vec::new();
+    }
+    let mut lines: Vec<String> = [
+        cap_stability_use_line(stability.total_use_per_sec),
+        cap_stability_peak_line(stability.peak_recharge_per_sec),
+        cap_stability_outcome_line(&stability.outcome),
+    ]
+    .into_iter()
+    .flatten()
+    .collect();
+    if let Some(line) = cap_stability_excluded_line(stability.excluded_modules) {
+        lines.push(line);
+    }
+    if let Some(line) = bonused_capacitor_excluded_line(stability.bonus_excluded_modules) {
+        lines.push(line);
+    }
+    if let Some(line) =
+        bonused_capacitor_capacity_unapplied_line(stability.capacitor_capacity_unapplied_modules)
+    {
+        lines.push(line);
+    }
+    if let Some(line) =
+        bonused_capacitor_recharge_unapplied_line(stability.capacitor_recharge_unapplied_modules)
+    {
+        lines.push(line);
+    }
+    lines
+}
+
+/// Capacitor stability with fitted module bonuses block
+/// shared by the saved and imported fitting details
+/// (capacitor bonuses design section 6).
+/// Depends only on the fitting and the catalogue: no skill
+/// levels, no SDE handle, so it renders identically for every
+/// viewing character. The saved site passes the fitting; the
+/// imported site passes its synthesized `CharacterFitting`.
+/// The heading always renders, so the view never silently
+/// omits the feature; `Unavailable` swaps all lines and the
+/// disclosure for the fixed unavailable sentence and neither
+/// count line. The bonused block renders even when the
+/// bonused numbers equal the base numbers. Logs nothing
+/// itself: the pure function logs nothing (render cadence).
+fn render_fitting_cap_stability_with_module_bonuses(
+    ui: &mut egui::Ui,
+    fitting: &CharacterFitting,
+    fitting_types: Option<&FittingTypes>,
+) {
+    let Some(catalogue) = fitting_types else {
+        ui.heading(FITTINGS_CAP_STABILITY_WITH_BONUSES_HEADING);
+        ui.label(FITTING_CAP_STABILITY_WITH_BONUSES_NO_CATALOGUE);
+        return;
+    };
+    let stability = fitting_cap_stability_with_module_bonuses(fitting, catalogue);
+    match stability.outcome {
+        CapStabilityOutcome::Unavailable => {
+            ui.heading(FITTINGS_CAP_STABILITY_WITH_BONUSES_HEADING);
+            ui.label(FITTING_CAP_STABILITY_WITH_BONUSES_NO_SHIP_DATA);
+        }
+        CapStabilityOutcome::Stable { .. } | CapStabilityOutcome::Depletes { .. } => {
+            ui.heading(FITTINGS_CAP_STABILITY_WITH_BONUSES_HEADING);
+            for line in cap_stability_with_bonuses_lines(&stability) {
+                ui.label(line);
+            }
+            ui.label(FITTING_CAP_STABILITY_WITH_BONUSES_DISCLOSURE);
+        }
+    }
+}
+
 /// Locked heading for the active repair block
 /// (sustained tank design section 6). The "(base values)"
 /// qualifier keeps every base repair number from reading
@@ -3858,6 +4006,7 @@ fn fittings_import_panel(
     render_bay_usage(ui, &synth, fitting_types);
     render_fitting_dps(ui, &synth, Some(&imported), fitting_types);
     render_fitting_cap_stability(ui, &synth, fitting_types);
+    render_fitting_cap_stability_with_module_bonuses(ui, &synth, fitting_types);
     render_fitting_active_repair(ui, &synth, fitting_types);
     render_slot_layout(ui, &synth, fitting_types);
     render_ship_base_stats(ui, &synth, fitting_types);
@@ -4169,6 +4318,7 @@ pub fn show(
                     render_bay_usage(ui, selected, fitting_types);
                     render_fitting_dps(ui, selected, None, fitting_types);
                     render_fitting_cap_stability(ui, selected, fitting_types);
+                    render_fitting_cap_stability_with_module_bonuses(ui, selected, fitting_types);
                     render_fitting_active_repair(ui, selected, fitting_types);
                     render_slot_layout(ui, selected, fitting_types);
                     render_ship_base_stats(ui, selected, fitting_types);
@@ -6572,6 +6722,185 @@ mod tests {
             excluded_modules: 2,
         };
         assert!(cap_stability_lines(&unavailable).is_empty());
+    }
+
+    #[test]
+    fn cap_stability_with_bonuses_wording_constants() {
+        assert_eq!(
+            FITTINGS_CAP_STABILITY_WITH_BONUSES_HEADING,
+            "Capacitor (with fitted module bonuses)"
+        );
+        assert_eq!(
+            FITTING_CAP_STABILITY_WITH_BONUSES_DISCLOSURE,
+            "Assumes every counted module keeps cycling continuously. These numbers add the fitted modules' and rigs' capacitor capacity and recharge bonuses from Mimir's bundled item data to the base values above. Every fitted module is counted as active, because the fitting data does not say which modules are on. Module capacitor use stays at base values: bonuses to how much capacitor a module needs or how fast it cycles are not applied. Ship bonuses, subsystems, skills, implants, and capacitor changes from anything outside this ship are not applied. Capacitor boosters and effects on other ships (such as energy neutralizers and remote repairers) are not modelled, so these numbers can differ from EVE."
+        );
+        assert_eq!(
+            FITTING_CAP_STABILITY_WITH_BONUSES_NO_CATALOGUE,
+            "Capacitor with fitted module bonuses unavailable: Mimir's bundled item data failed to load."
+        );
+        assert_eq!(
+            FITTING_CAP_STABILITY_WITH_BONUSES_NO_SHIP_DATA,
+            "Capacitor with fitted module bonuses unavailable: Mimir's bundled item data has no capacitor data for this fitting's ship."
+        );
+    }
+
+    #[test]
+    fn bonused_capacitor_count_lines() {
+        assert_eq!(bonused_capacitor_excluded_line(0), None);
+        assert_eq!(
+            bonused_capacitor_excluded_line(1).as_deref(),
+            Some("1 fitted module is not in Mimir's bundled item data, so any capacitor bonus from it is not counted.")
+        );
+        assert_eq!(
+            bonused_capacitor_excluded_line(2).as_deref(),
+            Some("2 fitted modules are not in Mimir's bundled item data, so any capacitor bonuses from them are not counted.")
+        );
+        assert_eq!(bonused_capacitor_capacity_unapplied_line(0), None);
+        assert_eq!(
+            bonused_capacitor_capacity_unapplied_line(1).as_deref(),
+            Some("1 fitted module has a capacitor capacity bonus Mimir's bundled item data cannot describe, so that bonus is not applied.")
+        );
+        assert_eq!(
+            bonused_capacitor_capacity_unapplied_line(2).as_deref(),
+            Some("2 fitted modules have capacitor capacity bonuses Mimir's bundled item data cannot describe, so those bonuses are not applied.")
+        );
+        assert_eq!(bonused_capacitor_recharge_unapplied_line(0), None);
+        assert_eq!(
+            bonused_capacitor_recharge_unapplied_line(1).as_deref(),
+            Some("1 fitted module has a capacitor recharge bonus Mimir's bundled item data cannot describe, so that bonus is not applied.")
+        );
+        assert_eq!(
+            bonused_capacitor_recharge_unapplied_line(2).as_deref(),
+            Some("2 fitted modules have capacitor recharge bonuses Mimir's bundled item data cannot describe, so those bonuses are not applied.")
+        );
+    }
+
+    #[test]
+    fn cap_stability_with_bonuses_lines_order_and_omission() {
+        // Every count non-zero renders all seven lines in
+        // the locked order, the first four in the base
+        // block's formats (lines by construction, design
+        // section 8): the base helpers are reused verbatim.
+        let full = BonusedFittingCapStability {
+            outcome: CapStabilityOutcome::Stable { percent: 50.0 },
+            total_use_per_sec: Some(2.5),
+            peak_recharge_per_sec: Some(5.0),
+            counted_modules: 0,
+            excluded_modules: 3,
+            bonus_excluded_modules: 1,
+            capacitor_capacity_unapplied_modules: 2,
+            capacitor_recharge_unapplied_modules: 1,
+        };
+        assert_eq!(
+            cap_stability_with_bonuses_lines(&full),
+            [
+                "Module capacitor use: 2.5 GJ/s",
+                "Capacitor peak recharge: 5.0 GJ/s",
+                "Stable at 50%",
+                "3 fitted modules are not counted because their base capacitor use is not in Mimir's bundled item data.",
+                "1 fitted module is not in Mimir's bundled item data, so any capacitor bonus from it is not counted.",
+                "2 fitted modules have capacitor capacity bonuses Mimir's bundled item data cannot describe, so those bonuses are not applied.",
+                "1 fitted module has a capacitor recharge bonus Mimir's bundled item data cannot describe, so that bonus is not applied.",
+            ]
+        );
+        // Each zero count omits only its own line; a `None`
+        // use/peak contributes no line either.
+        let bare = BonusedFittingCapStability {
+            outcome: CapStabilityOutcome::Stable { percent: 50.0 },
+            total_use_per_sec: None,
+            peak_recharge_per_sec: None,
+            counted_modules: 0,
+            excluded_modules: 0,
+            bonus_excluded_modules: 0,
+            capacitor_capacity_unapplied_modules: 0,
+            capacitor_recharge_unapplied_modules: 0,
+        };
+        assert_eq!(cap_stability_with_bonuses_lines(&bare), ["Stable at 50%"]);
+        let partial = BonusedFittingCapStability {
+            capacitor_capacity_unapplied_modules: 4,
+            ..bare
+        };
+        assert_eq!(
+            cap_stability_with_bonuses_lines(&partial),
+            [
+                "Stable at 50%",
+                "4 fitted modules have capacitor capacity bonuses Mimir's bundled item data cannot describe, so those bonuses are not applied.",
+            ]
+        );
+        // `Unavailable` contributes no lines at all: the
+        // renderer prints the fixed unavailable sentence
+        // instead of the lines.
+        let unavailable = BonusedFittingCapStability {
+            outcome: CapStabilityOutcome::Unavailable,
+            total_use_per_sec: None,
+            peak_recharge_per_sec: None,
+            counted_modules: 1,
+            excluded_modules: 2,
+            bonus_excluded_modules: 1,
+            capacitor_capacity_unapplied_modules: 1,
+            capacitor_recharge_unapplied_modules: 1,
+        };
+        assert!(cap_stability_with_bonuses_lines(&unavailable).is_empty());
+    }
+
+    // Demo story (design section 8): the visible form of the
+    // empty==base identity with honest counts. The demo
+    // fittings carry no capacitor carrier in a counted slot,
+    // so the bonused lines equal the base lines — plus
+    // exactly the bonus-excluded line on Demo Brawler, whose
+    // counted row 1535 is catalogue-absent.
+    #[test]
+    fn demo_fixture_cap_stability_with_bonuses_match_the_locked_demo_story() {
+        use crate::demo::data::DEMO_FITTINGS_JSON;
+
+        #[derive(Debug, serde::Deserialize)]
+        struct DemoFittingEntry {
+            fittings: Vec<CharacterFitting>,
+        }
+
+        let by_character: HashMap<String, DemoFittingEntry> =
+            serde_json::from_str(DEMO_FITTINGS_JSON).expect("demo fittings fixture parses");
+        let all: Vec<CharacterFitting> = by_character
+            .values()
+            .flat_map(|entry| entry.fittings.iter().cloned())
+            .collect();
+        let find = |name: &str| {
+            all.iter()
+                .find(|f| f.name == name)
+                .unwrap_or_else(|| panic!("demo fitting {name} present"))
+                .clone()
+        };
+        let catalogue = FittingTypes::load_bundled().expect("bundled catalogue loads");
+        let base_for = |fitting: &CharacterFitting| {
+            cap_stability_lines(&fitting_cap_stability(fitting, &catalogue))
+        };
+        let bonused_for = |fitting: &CharacterFitting| {
+            cap_stability_with_bonuses_lines(&fitting_cap_stability_with_module_bonuses(
+                fitting, &catalogue,
+            ))
+        };
+
+        assert_eq!(
+            bonused_for(&find("Demo Brawler")),
+            [
+                "Module capacitor use: 5.3 GJ/s",
+                "Capacitor peak recharge: 5.0 GJ/s",
+                "Depletes in about 234s",
+                "5 fitted modules are not counted because their base capacitor use is not in Mimir's bundled item data.",
+                "1 fitted module is not in Mimir's bundled item data, so any capacitor bonus from it is not counted.",
+            ],
+            "bonused Brawler lines are the base lines plus exactly the bonus-excluded line"
+        );
+        assert_eq!(
+            bonused_for(&find("Mission Runner")),
+            base_for(&find("Mission Runner")),
+            "bonused Mission Runner lines equal the base lines"
+        );
+        assert_eq!(
+            bonused_for(&find("Demo Runner")),
+            base_for(&find("Demo Runner")),
+            "bonused Demo Runner lines equal the base lines"
+        );
     }
 
     // Demo story (design section 7, verified by the pure
