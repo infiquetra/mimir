@@ -365,6 +365,14 @@ def main():
         f"output quantity set != {{1,3,5,20}}, got {sorted(output_qty_set)}",
     )
 
+    # Fail with the collected validation list before indexing
+    # into rows to build the emitted document: a shape-malformed
+    # member lists its problems instead of trace-backing.
+    if problems:
+        for p in problems:
+            print(f"VALIDATION: {p}", file=sys.stderr)
+        fail(f"self-validation failed with {len(problems)} problem(s)")
+
     # --- emitted schematics -------------------------------------------
     schematics = []
     for row in sorted(parsed, key=lambda r: r["_key"]):

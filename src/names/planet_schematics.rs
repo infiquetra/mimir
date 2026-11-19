@@ -117,6 +117,19 @@ impl PlanetSchematicsRef {
                     "[PI] schematic {id} name is empty"
                 )));
             }
+            // A digits-only name would render as a raw number;
+            // digit-checking (not parsing) also covers digit
+            // strings beyond the i64 range.
+            let name_digits = schematic
+                .name
+                .trim()
+                .strip_prefix(['-', '+'])
+                .unwrap_or(schematic.name.trim());
+            if !name_digits.is_empty() && name_digits.bytes().all(|byte| byte.is_ascii_digit()) {
+                return Err(AppError::Message(format!(
+                    "[PI] schematic {id} name is numeric"
+                )));
+            }
             if schematic.cycle_time <= 0 {
                 return Err(AppError::Message(format!(
                     "[PI] schematic {id} cycleTime <= 0"
@@ -466,6 +479,10 @@ mod tests {
         let mut blank_name = valid_value();
         blank_name["schematics"][0]["name"] = json!("  ");
         assert!(PlanetSchematicsRef::from_json(&to_json(&blank_name)).is_err());
+
+        let mut numeric_name = valid_value();
+        numeric_name["schematics"][0]["name"] = json!("99999999999999999999999999");
+        assert!(PlanetSchematicsRef::from_json(&to_json(&numeric_name)).is_err());
 
         let mut zero_cycle = valid_value();
         zero_cycle["schematics"][0]["cycleTime"] = json!(0);
