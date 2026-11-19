@@ -429,13 +429,15 @@ pub fn fitting_resources(fitting: &CharacterFitting, catalogue: &FittingTypes) -
 /// and module needs reduced by the five need-reduction skills
 /// when `levels` is `Some`. `None` is exactly
 /// [`fitting_resources`]. `output` is
-/// `(base_output + fitted-module adds) * fitted-module muls *
-/// sorted percents` per dimension (`docs/output-bonuses-
-/// design.md` section 4), where `base_output` scales by
-/// `1 + 0.05 * clamped_level` per dimension and the two
-/// skill percentages sit inside the same sorted percent
-/// chain as the fitted modules' percents; `base_output`
-/// itself is the shipped skill-scaled hull output. Each
+/// `(hull output + fitted-module adds) * fitted-module muls *
+/// sorted percent chain` per dimension
+/// (`docs/output-bonuses-design.md` section 4), where the
+/// chain holds the fitted modules' percents plus one skill
+/// percent of `5 * clamped_level` per dimension, so flat
+/// adds are scaled by multipliers, module percents, and the
+/// skill percent alike; `base_output` is the comparison
+/// figure, the hull output scaled by
+/// `1 + 0.05 * clamped_level` with no module bonuses. Each
 /// counted need is reduced per module by `dimension_factor`
 /// before the quantity multiplication, `used` carries the
 /// reduced sum and `base_used` the pre-reduction sum.
