@@ -182,6 +182,19 @@ be grounded from the bundled data. This family reuses the
 same `dogmaEffects.jsonl` read and the same
 `dgmTypeAttributes` pass with the wanted set extended to the
 shield recharge modifying attributes.
+Fitted-module output modifiers
+(docs/output-bonuses-design.md section 3) append four
+further keys after `shieldRechargeModifiersUnapplied` in
+locked CPU-then-power order: `cpuOutputModifiers` and
+`powerOutputModifiers`, each a sparse array of
+[modifiedAttributeId, operator, operand] triples on
+category-7 rows only (modified ids 48 and 11), and the two
+`...Unapplied` sparse `true` markers beside that family's
+array when the carrier's output bonus cannot be grounded
+in that dimension. Both families reuse the same
+`dogmaEffects.jsonl` read and the same `dgmTypeAttributes`
+pass with the wanted set extended to the output modifying
+attributes.
 """
 
 import bz2
@@ -313,6 +326,17 @@ CAPACITOR_MODIFIER_ATTRS = {482, 55}
 SHIELD_RECHARGE_MODIFIER_ORDER = [479]
 SHIELD_RECHARGE_MODIFIER_OPERATORS = {2, 4, 6}
 SHIELD_RECHARGE_MODIFIER_ATTRS = {479}
+# Fitted-module output modifiers
+# (docs/output-bonuses-design.md section 3): the locked order
+# (cpuOutput 48, powerOutput 11) and operators 2 (modAdd),
+# 4 (postMulAlt), 6 (postPercent) per Flutter
+# dogma_engine.dart / dogma_attributes.dart at ed698d3 for
+# the ship path (operators 0/3/5 and others are unsupported →
+# unapplied). CPU precedes power grid in every body this
+# slice touches (design section 2).
+OUTPUT_MODIFIER_ORDER = [48, 11]
+OUTPUT_MODIFIER_OPERATORS = {2, 4, 6}
+OUTPUT_MODIFIER_ATTRS = {48, 11}
 SDE_ZIP_NAME = "eve-online-static-data-3503375-jsonl.zip"
 SDE_ZIP_MEMBER = "dogmaEffects.jsonl"
 SHIELD_EM_RESONANCE_ATTR = 271
@@ -855,6 +879,63 @@ SHIELD_RECHARGE_MODIFIER_ROWS = 103
 SHIELD_RECHARGE_MODIFIER_NONEMPTY_ROWS = 77
 SHIELD_RECHARGE_MODIFIER_MARKED_ROWS = 26
 SHIELD_RECHARGE_MODIFIER_ENTRIES = 77
+
+# Fitted-module output modifier oracles
+# (docs/output-bonuses-design.md section 3): each value read
+# from dogmaEffects.jsonl (committed zip) joined through
+# dgmTypeEffects / dgmTypeAttributes during design. Tuple
+# shape mirrors SHIELD_RECHARGE_MODIFIER_ORACLES:
+# (typeId, expected-entries-or-None, expected-unapplied).
+# A None entries means neither of that family's keys may be
+# present at all. An empty list means the (possibly empty)
+# array must be present and the unapplied marker must be true.
+CPU_OUTPUT_MODIFIER_ORACLES = [
+    (3469, [[48, 4, 1.07]], False),
+    (3888, [[48, 4, 1.1]], False),
+    (4395, [[48, 6, 7.1]], False),
+    (4399, [[48, 6, 9.6]], False),
+    (25908, [[48, 6, -10.0]], False),
+    (1355, None, False),
+    (1541, None, False),
+    (2048, None, False),
+    (587, None, False),
+    (3426, None, False),
+    (2589, None, False),
+    (45625, None, False),
+]
+
+POWER_OUTPUT_MODIFIER_ORACLES = [
+    (1353, [[11, 4, 1.1]], False),
+    (1355, [[11, 4, 1.15]], False),
+    (1537, [[11, 4, 1.025]], False),
+    (1541, [[11, 4, 1.06]], False),
+    (11563, [[11, 2, 10.0]], False),
+    (4254, [[11, 2, 12.0]], False),
+    (31936, [[11, 2, 13.0]], False),
+    (25956, [[11, 6, 10.0]], False),
+    (26370, [[11, 6, 15.0]], False),
+    (1445, [], True),
+    (506, [], True),
+    (3888, None, False),
+    (2048, None, False),
+    (587, None, False),
+    (3413, None, False),
+    (45623, None, False),
+]
+
+# Catalogue-wide counts for the output modifier emissions
+# (docs/output-bonuses-design.md section 3, design-scripted
+# over today's data): CPU rows (91 with entries), marked,
+# entries; power rows (59 with entries plus 26 marked-empty),
+# marked, entries.
+CPU_OUTPUT_MODIFIER_ROWS = 91
+CPU_OUTPUT_MODIFIER_NONEMPTY_ROWS = 91
+CPU_OUTPUT_MODIFIER_MARKED_ROWS = 0
+CPU_OUTPUT_MODIFIER_ENTRIES = 91
+POWER_OUTPUT_MODIFIER_ROWS = 85
+POWER_OUTPUT_MODIFIER_NONEMPTY_ROWS = 59
+POWER_OUTPUT_MODIFIER_MARKED_ROWS = 26
+POWER_OUTPUT_MODIFIER_ENTRIES = 59
 
 # Bay oracles (docs/bay-capacities-design.md section 3.3): each
 # value read directly from invTypes.csv.bz2 / dgmTypeAttributes.csv.bz2
@@ -1693,7 +1774,7 @@ def main():
     # Modifying attributes worth reading operands for:
     # every modifying id appearing in an ItemModifier/shipID
     # resonance modifier anywhere in the zip, extended to
-    # the hit point, capacitor, and shield recharge
+    # the hit point, capacitor, shield recharge, and output
     # modifying attributes so one operand pass serves all
     # legs (design section 3).
     wanted_modifying_ids = set()
@@ -1701,6 +1782,7 @@ def main():
     wanted_hit_point_modifying_ids = set()
     wanted_capacitor_modifying_ids = set()
     wanted_shield_recharge_modifying_ids = set()
+    wanted_output_modifying_ids = set()
     for modifier_info in effect_modifiers.values():
         for modifier in modifier_info:
             if not (
@@ -1725,11 +1807,16 @@ def main():
                 wanted_shield_recharge_modifying_ids.add(
                     modifier["modifyingAttributeID"]
                 )
+            if modified_id in OUTPUT_MODIFIER_ATTRS:
+                wanted_output_modifying_ids.add(
+                    modifier["modifyingAttributeID"]
+                )
     wanted_modifying_ids = (
         wanted_resist_modifying_ids
         | wanted_hit_point_modifying_ids
         | wanted_capacitor_modifying_ids
         | wanted_shield_recharge_modifying_ids
+        | wanted_output_modifying_ids
     )
     category_by_type = {}
     for row in inv_types:
@@ -1745,13 +1832,16 @@ def main():
         in_hp = attribute_id in wanted_hit_point_modifying_ids
         in_cap = attribute_id in wanted_capacitor_modifying_ids
         in_sr = attribute_id in wanted_shield_recharge_modifying_ids
-        if in_sr and not in_resist and not in_hp and not in_cap:
+        in_output = attribute_id in wanted_output_modifying_ids
+        if in_output and not in_resist and not in_hp and not in_cap and not in_sr:
+            return "output modifier operand"
+        if in_sr and not in_resist and not in_hp and not in_cap and not in_output:
             return "shield recharge modifier operand"
-        if in_cap and not in_resist and not in_hp and not in_sr:
+        if in_cap and not in_resist and not in_hp and not in_sr and not in_output:
             return "capacitor modifier operand"
-        if in_hp and not in_resist and not in_cap and not in_sr:
+        if in_hp and not in_resist and not in_cap and not in_sr and not in_output:
             return "hit point modifier operand"
-        if in_resist and not in_hp and not in_cap and not in_sr:
+        if in_resist and not in_hp and not in_cap and not in_sr and not in_output:
             return "resistance modifier operand"
         return "modifier operand"
 
@@ -2177,6 +2267,164 @@ def main():
         )
         if applicable or unapplied:
             shield_recharge_modifiers_by_type[type_id] = (
+                applicable,
+                unapplied,
+            )
+
+    # Fitted-module output modifiers
+    # (docs/output-bonuses-design.md section 3): two
+    # per-attribute families beside the shield recharge leg,
+    # category-7 only, over ItemModifier/shipID modifiers on
+    # 48 (cpuOutput) and 11 (powerOutput) with operators
+    # {2, 4, 6}. Messages say "output modifier", never
+    # "capacitor modifier", "hit point modifier",
+    # "shield recharge modifier", or "resistance modifier".
+    # Per-attribute classification mirrors the capacitor
+    # leg: a future dual carrier's applicable entry on one
+    # attribute must not pardon its absent operand on the
+    # other.
+    cpu_output_modifiers_by_type = {}
+    for type_id, type_category in category_by_type.items():
+        if type_category != 7:
+            continue
+        triple_list = []
+        for effect_id in effects_by_type.get(type_id, set()):
+            for modifier in effect_modifiers.get(effect_id, []):
+                if (
+                    modifier.get("func") == "ItemModifier"
+                    and modifier.get("domain") == "shipID"
+                    and modifier.get("modifiedAttributeID") == 48
+                ):
+                    triple_list.append(
+                        (
+                            modifier["modifiedAttributeID"],
+                            modifier["modifyingAttributeID"],
+                            modifier["operation"],
+                        )
+                    )
+        for triple, count in Counter(triple_list).items():
+            if count > 1:
+                fail(
+                    f"duplicated output modifier triple "
+                    f"{triple} on type {type_id}"
+                )
+        triples = set(triple_list)
+        if not triples:
+            continue
+        operands = operands_by_type.get(type_id, {})
+        applicable = []
+        has_unsupported = False
+        has_zero = False
+        has_absent = False
+        seen_modified = set()
+        seen_triples = set()
+        for modified_id, modifying_id, operator in sorted(triples):
+            triple = (modified_id, modifying_id, operator)
+            if triple in seen_triples:
+                fail(
+                    f"duplicated output modifier triple "
+                    f"{triple} on type {type_id}"
+                )
+            seen_triples.add(triple)
+            if modifying_id not in operands:
+                has_absent = True
+                continue
+            operand = operands[modifying_id]
+            if operand == 0.0:
+                has_zero = True
+                continue
+            if operator not in OUTPUT_MODIFIER_OPERATORS:
+                has_unsupported = True
+                continue
+            if modified_id in seen_modified:
+                fail(
+                    f"two applicable output modifier entries "
+                    f"on modified attribute {modified_id} for "
+                    f"type {type_id}"
+                )
+            seen_modified.add(modified_id)
+            applicable.append([modified_id, operator, operand])
+        applicable.sort(
+            key=lambda entry: OUTPUT_MODIFIER_ORDER.index(entry[0])
+        )
+        unapplied = has_unsupported or (
+            not applicable and not has_zero and has_absent
+        )
+        if applicable or unapplied:
+            cpu_output_modifiers_by_type[type_id] = (
+                applicable,
+                unapplied,
+            )
+
+    power_output_modifiers_by_type = {}
+    for type_id, type_category in category_by_type.items():
+        if type_category != 7:
+            continue
+        triple_list = []
+        for effect_id in effects_by_type.get(type_id, set()):
+            for modifier in effect_modifiers.get(effect_id, []):
+                if (
+                    modifier.get("func") == "ItemModifier"
+                    and modifier.get("domain") == "shipID"
+                    and modifier.get("modifiedAttributeID") == 11
+                ):
+                    triple_list.append(
+                        (
+                            modifier["modifiedAttributeID"],
+                            modifier["modifyingAttributeID"],
+                            modifier["operation"],
+                        )
+                    )
+        for triple, count in Counter(triple_list).items():
+            if count > 1:
+                fail(
+                    f"duplicated output modifier triple "
+                    f"{triple} on type {type_id}"
+                )
+        triples = set(triple_list)
+        if not triples:
+            continue
+        operands = operands_by_type.get(type_id, {})
+        applicable = []
+        has_unsupported = False
+        has_zero = False
+        has_absent = False
+        seen_modified = set()
+        seen_triples = set()
+        for modified_id, modifying_id, operator in sorted(triples):
+            triple = (modified_id, modifying_id, operator)
+            if triple in seen_triples:
+                fail(
+                    f"duplicated output modifier triple "
+                    f"{triple} on type {type_id}"
+                )
+            seen_triples.add(triple)
+            if modifying_id not in operands:
+                has_absent = True
+                continue
+            operand = operands[modifying_id]
+            if operand == 0.0:
+                has_zero = True
+                continue
+            if operator not in OUTPUT_MODIFIER_OPERATORS:
+                has_unsupported = True
+                continue
+            if modified_id in seen_modified:
+                fail(
+                    f"two applicable output modifier entries "
+                    f"on modified attribute {modified_id} for "
+                    f"type {type_id}"
+                )
+            seen_modified.add(modified_id)
+            applicable.append([modified_id, operator, operand])
+        applicable.sort(
+            key=lambda entry: OUTPUT_MODIFIER_ORDER.index(entry[0])
+        )
+        unapplied = has_unsupported or (
+            not applicable and not has_zero and has_absent
+        )
+        if applicable or unapplied:
+            power_output_modifiers_by_type[type_id] = (
                 applicable,
                 unapplied,
             )
@@ -2753,6 +3001,8 @@ def main():
     capacitor_capacity_modifier_counts = Counter()
     capacitor_recharge_modifier_counts = Counter()
     shield_recharge_modifier_counts = Counter()
+    cpu_output_modifier_counts = Counter()
+    power_output_modifier_counts = Counter()
     for row in inv_types:
         if row["published"] != "1":
             continue
@@ -3386,6 +3636,43 @@ def main():
             if mod_unapplied:
                 entry["shieldRechargeModifiersUnapplied"] = True
                 shield_recharge_modifier_counts["unappliedRows"] += 1
+        # Additive, sparse fitted-module output modifier
+        # emission (design section 3): category 7 rows gain
+        # the four keys after the shield recharge modifier
+        # block, in locked order CPU then power. Each family
+        # emits independently, exactly as if it were its own
+        # shield recharge leg: a carrier emits
+        # cpuOutputModifiers iff it has at least one
+        # applicable CPU entry or is marked CPU-unapplied,
+        # and likewise powerOutputModifiers for power. A
+        # marked type additionally emits that family's
+        # unapplied marker beside the (possibly empty) array.
+        # An all-zero carrier emits neither of that family's
+        # keys. Every other row is byte-identical.
+        if category_id == 7 and type_id in cpu_output_modifiers_by_type:
+            mod_entries, mod_unapplied = cpu_output_modifiers_by_type[
+                type_id
+            ]
+            entry["cpuOutputModifiers"] = mod_entries
+            cpu_output_modifier_counts["cpuOutputModifiers"] += 1
+            if mod_entries:
+                cpu_output_modifier_counts["nonEmptyRows"] += 1
+            cpu_output_modifier_counts["totalEntries"] += len(mod_entries)
+            if mod_unapplied:
+                entry["cpuOutputModifiersUnapplied"] = True
+                cpu_output_modifier_counts["unappliedRows"] += 1
+        if category_id == 7 and type_id in power_output_modifiers_by_type:
+            mod_entries, mod_unapplied = power_output_modifiers_by_type[
+                type_id
+            ]
+            entry["powerOutputModifiers"] = mod_entries
+            power_output_modifier_counts["powerOutputModifiers"] += 1
+            if mod_entries:
+                power_output_modifier_counts["nonEmptyRows"] += 1
+            power_output_modifier_counts["totalEntries"] += len(mod_entries)
+            if mod_unapplied:
+                entry["powerOutputModifiersUnapplied"] = True
+                power_output_modifier_counts["unappliedRows"] += 1
         types.append(entry)
 
     types.sort(key=lambda entry: entry["typeId"])
@@ -3820,6 +4107,129 @@ def main():
             f"shield recharge modifier total entries "
             f"{shield_recharge_modifier_counts['totalEntries']}, expected "
             f"{SHIELD_RECHARGE_MODIFIER_ENTRIES}"
+        )
+
+    # Fitted-module output modifier oracles (design
+    # section 3). A None entries means neither of that
+    # family's keys may be present at all.
+    for type_id, expected, expected_unapplied in CPU_OUTPUT_MODIFIER_ORACLES:
+        entry = by_id.get(type_id)
+        if entry is None:
+            fail(
+                f"cpu output modifier oracle type {type_id} "
+                "missing from extract"
+            )
+        if expected is None:
+            if (
+                "cpuOutputModifiers" in entry
+                or "cpuOutputModifiersUnapplied" in entry
+            ):
+                fail(
+                    f"cpu output modifier oracle type {type_id} "
+                    "carries cpu output modifier keys, expected "
+                    "neither"
+                )
+        else:
+            if entry.get("cpuOutputModifiers") != expected:
+                fail(
+                    f"cpu output modifier oracle type {type_id} "
+                    f"cpuOutputModifiers="
+                    f"{entry.get('cpuOutputModifiers')!r}, "
+                    f"expected {expected!r}"
+                )
+            if (
+                entry.get("cpuOutputModifiersUnapplied", False)
+                != expected_unapplied
+            ):
+                fail(
+                    f"cpu output modifier oracle type {type_id} "
+                    "unapplied marker "
+                    f"{entry.get('cpuOutputModifiersUnapplied')!r}, "
+                    f"expected {expected_unapplied!r}"
+                )
+    if cpu_output_modifier_counts["cpuOutputModifiers"] != CPU_OUTPUT_MODIFIER_ROWS:
+        fail(
+            f"cpu output modifier rows "
+            f"{cpu_output_modifier_counts['cpuOutputModifiers']}, "
+            f"expected {CPU_OUTPUT_MODIFIER_ROWS}"
+        )
+    if cpu_output_modifier_counts["nonEmptyRows"] != CPU_OUTPUT_MODIFIER_NONEMPTY_ROWS:
+        fail(
+            f"cpu output modifier non-empty rows "
+            f"{cpu_output_modifier_counts['nonEmptyRows']}, expected "
+            f"{CPU_OUTPUT_MODIFIER_NONEMPTY_ROWS}"
+        )
+    if cpu_output_modifier_counts["unappliedRows"] != CPU_OUTPUT_MODIFIER_MARKED_ROWS:
+        fail(
+            f"cpu output modifier marked rows "
+            f"{cpu_output_modifier_counts['unappliedRows']}, expected "
+            f"{CPU_OUTPUT_MODIFIER_MARKED_ROWS}"
+        )
+    if cpu_output_modifier_counts["totalEntries"] != CPU_OUTPUT_MODIFIER_ENTRIES:
+        fail(
+            f"cpu output modifier total entries "
+            f"{cpu_output_modifier_counts['totalEntries']}, expected "
+            f"{CPU_OUTPUT_MODIFIER_ENTRIES}"
+        )
+
+    for type_id, expected, expected_unapplied in POWER_OUTPUT_MODIFIER_ORACLES:
+        entry = by_id.get(type_id)
+        if entry is None:
+            fail(
+                f"power output modifier oracle type {type_id} "
+                "missing from extract"
+            )
+        if expected is None:
+            if (
+                "powerOutputModifiers" in entry
+                or "powerOutputModifiersUnapplied" in entry
+            ):
+                fail(
+                    f"power output modifier oracle type {type_id} "
+                    "carries power output modifier keys, expected "
+                    "neither"
+                )
+        else:
+            if entry.get("powerOutputModifiers") != expected:
+                fail(
+                    f"power output modifier oracle type {type_id} "
+                    f"powerOutputModifiers="
+                    f"{entry.get('powerOutputModifiers')!r}, "
+                    f"expected {expected!r}"
+                )
+            if (
+                entry.get("powerOutputModifiersUnapplied", False)
+                != expected_unapplied
+            ):
+                fail(
+                    f"power output modifier oracle type {type_id} "
+                    "unapplied marker "
+                    f"{entry.get('powerOutputModifiersUnapplied')!r}, "
+                    f"expected {expected_unapplied!r}"
+                )
+    if power_output_modifier_counts["powerOutputModifiers"] != POWER_OUTPUT_MODIFIER_ROWS:
+        fail(
+            f"power output modifier rows "
+            f"{power_output_modifier_counts['powerOutputModifiers']}, "
+            f"expected {POWER_OUTPUT_MODIFIER_ROWS}"
+        )
+    if power_output_modifier_counts["nonEmptyRows"] != POWER_OUTPUT_MODIFIER_NONEMPTY_ROWS:
+        fail(
+            f"power output modifier non-empty rows "
+            f"{power_output_modifier_counts['nonEmptyRows']}, expected "
+            f"{POWER_OUTPUT_MODIFIER_NONEMPTY_ROWS}"
+        )
+    if power_output_modifier_counts["unappliedRows"] != POWER_OUTPUT_MODIFIER_MARKED_ROWS:
+        fail(
+            f"power output modifier marked rows "
+            f"{power_output_modifier_counts['unappliedRows']}, expected "
+            f"{POWER_OUTPUT_MODIFIER_MARKED_ROWS}"
+        )
+    if power_output_modifier_counts["totalEntries"] != POWER_OUTPUT_MODIFIER_ENTRIES:
+        fail(
+            f"power output modifier total entries "
+            f"{power_output_modifier_counts['totalEntries']}, expected "
+            f"{POWER_OUTPUT_MODIFIER_ENTRIES}"
         )
 
     # Bay oracles (design section 3.3). A None expected value
@@ -4283,6 +4693,129 @@ def main():
                     "without shieldRechargeModifiers"
                 )
             if entry["shieldRechargeModifiersUnapplied"] is not True:
+                fail(
+                    f"type {entry['typeId']} unapplied marker "
+                    "not true"
+                )
+        # Fitted-module CPU output modifier invariants
+        # (design section 3): every present
+        # cpuOutputModifiers value is on a category 7 row;
+        # its entries' modified id is 48, operators in
+        # {2, 4, 6}, operands finite and != 0.0, no duplicate
+        # modified id; cpuOutputModifiersUnapplied appears
+        # only beside cpuOutputModifiers and only as true.
+        if "cpuOutputModifiers" in entry:
+            if entry["categoryId"] != 7:
+                fail(
+                    f"non-module type {entry['typeId']} carries "
+                    "cpuOutputModifiers"
+                )
+            modified_ids = []
+            for triple in entry["cpuOutputModifiers"]:
+                if (
+                    not isinstance(triple, list)
+                    or len(triple) != 3
+                    or not all(
+                        isinstance(part, (int, float))
+                        and not isinstance(part, bool)
+                        for part in triple
+                    )
+                ):
+                    fail(
+                        f"type {entry['typeId']} malformed "
+                        f"cpu output modifier {triple!r}"
+                    )
+                modified_id, operator, operand = triple
+                if modified_id != 48:
+                    fail(
+                        f"type {entry['typeId']} modified id "
+                        f"{modified_id} not a cpu output"
+                    )
+                if operator not in OUTPUT_MODIFIER_OPERATORS:
+                    fail(
+                        f"type {entry['typeId']} operator "
+                        f"{operator} not in (2, 4, 6)"
+                    )
+                if (
+                    not math.isfinite(float(operand))
+                    or float(operand) == 0.0
+                ):
+                    fail(
+                        f"type {entry['typeId']} operand "
+                        f"{operand!r} not finite or zero"
+                    )
+                modified_ids.append(modified_id)
+            if len(modified_ids) != len(set(modified_ids)):
+                fail(
+                    f"type {entry['typeId']} cpu output modifiers "
+                    "duplicated"
+                )
+        if "cpuOutputModifiersUnapplied" in entry:
+            if "cpuOutputModifiers" not in entry:
+                fail(
+                    f"type {entry['typeId']} unapplied marker "
+                    "without cpuOutputModifiers"
+                )
+            if entry["cpuOutputModifiersUnapplied"] is not True:
+                fail(
+                    f"type {entry['typeId']} unapplied marker "
+                    "not true"
+                )
+        # Fitted-module power output modifier invariants
+        # (design section 3): same shape, modified id 11.
+        if "powerOutputModifiers" in entry:
+            if entry["categoryId"] != 7:
+                fail(
+                    f"non-module type {entry['typeId']} carries "
+                    "powerOutputModifiers"
+                )
+            modified_ids = []
+            for triple in entry["powerOutputModifiers"]:
+                if (
+                    not isinstance(triple, list)
+                    or len(triple) != 3
+                    or not all(
+                        isinstance(part, (int, float))
+                        and not isinstance(part, bool)
+                        for part in triple
+                    )
+                ):
+                    fail(
+                        f"type {entry['typeId']} malformed "
+                        f"power output modifier {triple!r}"
+                    )
+                modified_id, operator, operand = triple
+                if modified_id != 11:
+                    fail(
+                        f"type {entry['typeId']} modified id "
+                        f"{modified_id} not a power output"
+                    )
+                if operator not in OUTPUT_MODIFIER_OPERATORS:
+                    fail(
+                        f"type {entry['typeId']} operator "
+                        f"{operator} not in (2, 4, 6)"
+                    )
+                if (
+                    not math.isfinite(float(operand))
+                    or float(operand) == 0.0
+                ):
+                    fail(
+                        f"type {entry['typeId']} operand "
+                        f"{operand!r} not finite or zero"
+                    )
+                modified_ids.append(modified_id)
+            if len(modified_ids) != len(set(modified_ids)):
+                fail(
+                    f"type {entry['typeId']} power output modifiers "
+                    "duplicated"
+                )
+        if "powerOutputModifiersUnapplied" in entry:
+            if "powerOutputModifiers" not in entry:
+                fail(
+                    f"type {entry['typeId']} unapplied marker "
+                    "without powerOutputModifiers"
+                )
+            if entry["powerOutputModifiersUnapplied"] is not True:
                 fail(
                     f"type {entry['typeId']} unapplied marker "
                     "not true"
@@ -5106,6 +5639,18 @@ def main():
         f"nonEmptyRows={shield_recharge_modifier_counts['nonEmptyRows']} "
         f"unappliedRows={shield_recharge_modifier_counts['unappliedRows']} "
         f"totalEntries={shield_recharge_modifier_counts['totalEntries']}"
+    )
+    print(
+        f"cpu_output_modifier_keys cpuOutputModifiers={cpu_output_modifier_counts['cpuOutputModifiers']} "
+        f"nonEmptyRows={cpu_output_modifier_counts['nonEmptyRows']} "
+        f"unappliedRows={cpu_output_modifier_counts['unappliedRows']} "
+        f"totalEntries={cpu_output_modifier_counts['totalEntries']}"
+    )
+    print(
+        f"power_output_modifier_keys powerOutputModifiers={power_output_modifier_counts['powerOutputModifiers']} "
+        f"nonEmptyRows={power_output_modifier_counts['nonEmptyRows']} "
+        f"unappliedRows={power_output_modifier_counts['unappliedRows']} "
+        f"totalEntries={power_output_modifier_counts['totalEntries']}"
     )
     print(
         f"bay_keys volume={bay_key_counts['volume']} "
