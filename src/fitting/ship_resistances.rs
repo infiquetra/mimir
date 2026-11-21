@@ -58,6 +58,16 @@
 //! `crate::fitting::resources::fitting_resources_with_skills`
 //! only.
 //!
+//! The crate-internal `bonused_nav_targeting` helper is the
+//! navigation and targeting sibling serving
+//! `ship_nav_targeting_with_module_bonuses` under
+//! `docs/nav-targeting-bonuses-design.md` section 4: the
+//! same counted-item scan and bounded run arithmetic produce
+//! bonused navigation and targeting values in raw catalogue
+//! units plus the counts the caller must disclose beside any
+//! number derived from them, for the bonused navigation and
+//! targeting block only.
+//!
 //! The module is pure computation over the bundled catalogue — no
 //! egui, no state, no network, no database. It depends on
 //! [`CharacterFitting`] and [`FittingTypes`], the same
@@ -245,6 +255,12 @@ const SHIELD_RECHARGE_MODIFIED_ATTRIBUTE_ID: i64 = 479;
 /// accumulator index used below.
 const OUTPUT_ORDER: [i64; 2] = [48, 11];
 
+/// Catalogue navigation and targeting attribute ids in
+/// the locked display order (600, 70, 4, 552, 76, 564,
+/// 208, 209, 210, 211, 192). Position is the accumulator
+/// index used below.
+const NAV_TARGETING_ORDER: [i64; 11] = [600, 70, 4, 552, 76, 564, 208, 209, 210, 211, 192];
+
 /// The twelve base resonances of a ship row in
 /// `RESONANCE_ORDER` position.
 fn base_resonances(ship: &crate::names::fitting_types::FittingType) -> [Option<f64>; 12] {
@@ -281,6 +297,26 @@ fn base_capacitor(ship: &crate::names::fitting_types::FittingType) -> [Option<f6
 /// position (CPU output tf, power grid output MW).
 fn base_outputs(ship: &crate::names::fitting_types::FittingType) -> [Option<f64>; 2] {
     [ship.cpu_output, ship.power_output]
+}
+
+/// The eleven base navigation and targeting values of a
+/// ship row in `NAV_TARGETING_ORDER` position, in raw
+/// catalogue units (targeting range in metres, locked
+/// targets still an `f64`): the wrapper converts.
+fn base_nav_targeting(ship: &crate::names::fitting_types::FittingType) -> [Option<f64>; 11] {
+    [
+        ship.warp_speed_multiplier,
+        ship.agility,
+        ship.mass,
+        ship.signature_radius,
+        ship.max_target_range,
+        ship.scan_resolution,
+        ship.scan_radar_strength,
+        ship.scan_ladar_strength,
+        ship.scan_magnetometric_strength,
+        ship.scan_gravimetric_strength,
+        ship.max_locked_targets,
+    ]
 }
 
 /// Defensive re-clamp for the output-skill levels: a
@@ -1210,6 +1246,190 @@ pub(crate) fn bonused_outputs(
         values,
         cpu_output_unapplied_modules,
         power_output_unapplied_modules,
+    })
+}
+
+/// Bonused navigation and targeting values in raw
+/// catalogue units (targeting range in metres, locked
+/// targets still an `f64`) plus the counts the caller
+/// must disclose beside any number derived from them.
+pub(crate) struct BonusedNavTargetingValues {
+    /// [600, 70, 4, 552, 76, 564, 208, 209, 210, 211, 192]
+    /// in NAV_TARGETING_ORDER position, each `None`
+    /// exactly where the base value is absent, negative,
+    /// or non-finite, or the bonused result is negative,
+    /// non-finite, or a positive subnormal.
+    pub values: [Option<f64>; 11],
+    /// Counted fitted rows with no catalogue row at all,
+    /// in quantity units. Same definition and source
+    /// predicate as `BonusedResonances::excluded_modules`
+    /// (pinned equal, section 8).
+    pub excluded_modules: usize,
+    /// Per-attribute unapplied counts in
+    /// NAV_TARGETING_ORDER position: counted fitted rows
+    /// the catalogue marks as carriers in that attribute
+    /// whose bonus cannot be applied, in quantity units.
+    /// Never summed across positions.
+    pub unapplied_modules: [usize; 11],
+}
+
+/// `None` only when the ship gate fails (`ship_type_id
+/// <= 0`, no catalogue row, or the row is not category
+/// 6). Otherwise `Some`, per-value `None` as documented
+/// on `values`.
+pub(crate) fn bonused_nav_targeting(
+    fitting: &CharacterFitting,
+    catalogue: &FittingTypes,
+) -> Option<BonusedNavTargetingValues> {
+    let ship_row = if fitting.ship_type_id > 0 {
+        catalogue.lookup_by_id(fitting.ship_type_id)
+    } else {
+        None
+    };
+    let ship = ship_row?;
+    if ship.category_id != 6 {
+        return None;
+    }
+    let mut excluded_modules: usize = 0;
+    let mut unapplied_modules: [usize; 11] = [0; 11];
+    let mut add_runs: [Vec<(f64, u64)>; 11] = Default::default();
+    let mut mul_runs: [Vec<(f64, u64)>; 11] = Default::default();
+    let mut percent_runs: [Vec<(f64, u64)>; 11] = Default::default();
+    for item in &fitting.items {
+        if item.type_id <= 0 {
+            continue;
+        }
+        if item.quantity.max(0) <= 0 {
+            continue;
+        }
+        if !counted_flag(&item.flag) {
+            continue;
+        }
+        let units = usize::try_from(item.quantity).unwrap_or(0);
+        let units_u64 = units as u64;
+        let Some(row) = catalogue.lookup_by_id(item.type_id) else {
+            excluded_modules = excluded_modules.saturating_add(units);
+            continue;
+        };
+        let families: [(
+            &Option<Vec<crate::names::fitting_types::NavTargetingModifier>>,
+            bool,
+        ); 11] = [
+            (
+                &row.warp_speed_multiplier_modifiers,
+                row.warp_speed_multiplier_modifiers_unapplied,
+            ),
+            (&row.agility_modifiers, row.agility_modifiers_unapplied),
+            (&row.mass_modifiers, row.mass_modifiers_unapplied),
+            (
+                &row.signature_radius_modifiers,
+                row.signature_radius_modifiers_unapplied,
+            ),
+            (
+                &row.max_target_range_modifiers,
+                row.max_target_range_modifiers_unapplied,
+            ),
+            (
+                &row.scan_resolution_modifiers,
+                row.scan_resolution_modifiers_unapplied,
+            ),
+            (
+                &row.scan_radar_strength_modifiers,
+                row.scan_radar_strength_modifiers_unapplied,
+            ),
+            (
+                &row.scan_ladar_strength_modifiers,
+                row.scan_ladar_strength_modifiers_unapplied,
+            ),
+            (
+                &row.scan_magnetometric_strength_modifiers,
+                row.scan_magnetometric_strength_modifiers_unapplied,
+            ),
+            (
+                &row.scan_gravimetric_strength_modifiers,
+                row.scan_gravimetric_strength_modifiers_unapplied,
+            ),
+            (
+                &row.max_locked_targets_modifiers,
+                row.max_locked_targets_modifiers_unapplied,
+            ),
+        ];
+        let mut counted_unapplied: [bool; 11] = [false; 11];
+        for (index, (modifiers, unapplied)) in families.iter().enumerate() {
+            if *unapplied {
+                unapplied_modules[index] = unapplied_modules[index].saturating_add(units);
+                counted_unapplied[index] = true;
+            }
+            let Some(modifiers) = modifiers else {
+                continue;
+            };
+            for modifier in modifiers {
+                if modifier.modified_attribute_id != NAV_TARGETING_ORDER[index] {
+                    if !counted_unapplied[index] {
+                        unapplied_modules[index] = unapplied_modules[index].saturating_add(units);
+                        counted_unapplied[index] = true;
+                    }
+                    continue;
+                }
+                if !modifier.operand.is_finite()
+                    || modifier.operand == 0.0
+                    || !matches!(modifier.operator, 2 | 4 | 6)
+                {
+                    if !counted_unapplied[index] {
+                        unapplied_modules[index] = unapplied_modules[index].saturating_add(units);
+                        counted_unapplied[index] = true;
+                    }
+                    continue;
+                }
+                let runs = match modifier.operator {
+                    2 => &mut add_runs[index],
+                    4 => &mut mul_runs[index],
+                    _ => &mut percent_runs[index],
+                };
+                if let Some((_, count)) = runs
+                    .iter_mut()
+                    .find(|(existing, _)| existing == &modifier.operand)
+                {
+                    *count = count.saturating_add(units_u64);
+                } else {
+                    runs.push((modifier.operand, units_u64));
+                }
+            }
+        }
+    }
+    let bases = base_nav_targeting(ship);
+    let mut values: [Option<f64>; 11] = [None; 11];
+    for index in 0..11 {
+        let Some(base) = bases[index].filter(|v| v.is_finite() && *v >= 0.0) else {
+            continue;
+        };
+        let mut add_total = 0.0;
+        for (operand, count) in &add_runs[index] {
+            add_total += operand * (*count as f64);
+        }
+        let mut mul_total = 1.0;
+        for (operand, count) in &mul_runs[index] {
+            mul_total *= mul_product(*operand, *count);
+        }
+        let mut sorted_percent = percent_runs[index].clone();
+        sorted_percent.sort_by(|a, b| b.0.abs().total_cmp(&a.0.abs()));
+        let mut percent_total = 1.0;
+        for (value, count) in &sorted_percent {
+            percent_total *= mul_product(1.0 + value / 100.0, *count);
+        }
+        let bonused = (base + add_total) * mul_total * percent_total;
+        // A positive subnormal is stall residue from a
+        // hostile-quantity run underflowing toward zero,
+        // not an honest navigation or targeting value:
+        // reject it as no data so downstream never renders
+        // it. An exact 0.0 stays a real zero.
+        values[index] =
+            Some(bonused).filter(|v| v.is_finite() && *v >= 0.0 && (*v == 0.0 || v.is_normal()));
+    }
+    Some(BonusedNavTargetingValues {
+        values,
+        excluded_modules,
+        unapplied_modules,
     })
 }
 

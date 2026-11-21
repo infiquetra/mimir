@@ -182,6 +182,68 @@ pub struct FittingType {
     pub power_output_modifiers: Option<Vec<OutputModifier>>,
     #[serde(rename = "powerOutputModifiersUnapplied", default)]
     pub power_output_modifiers_unapplied: bool,
+    // Fitted-module navigation and targeting modifiers
+    // (docs/nav-targeting-bonuses-design.md section 3):
+    // entries are generation-time-proven
+    // ItemModifier/shipID navigation and targeting bonuses
+    // on the eleven attributes in locked display order
+    // with the operand baked in (operator 2 is modAdd, 4
+    // is postMulAlt, 6 is postPercent). Operands can shrink
+    // the value (warp rigs cut warp by 10, cloaks halve
+    // scan resolution, bulkheads raise agility) and are
+    // applied as written. The signature family alone may
+    // carry two entries on one type. `Some(empty)` with
+    // the unapplied flag is a carrier whose bonus in that
+    // family the bundled data cannot ground and must be
+    // counted, never read as "no bonus"; `None` is a
+    // non-carrier or an all-zero carrier in that family —
+    // the other ten families are judged independently.
+    // `default` so old assets and from_json fixtures
+    // without the keys load.
+    #[serde(rename = "warpSpeedMultiplierModifiers", default)]
+    pub warp_speed_multiplier_modifiers: Option<Vec<NavTargetingModifier>>,
+    #[serde(rename = "warpSpeedMultiplierModifiersUnapplied", default)]
+    pub warp_speed_multiplier_modifiers_unapplied: bool,
+    #[serde(rename = "agilityModifiers", default)]
+    pub agility_modifiers: Option<Vec<NavTargetingModifier>>,
+    #[serde(rename = "agilityModifiersUnapplied", default)]
+    pub agility_modifiers_unapplied: bool,
+    #[serde(rename = "massModifiers", default)]
+    pub mass_modifiers: Option<Vec<NavTargetingModifier>>,
+    #[serde(rename = "massModifiersUnapplied", default)]
+    pub mass_modifiers_unapplied: bool,
+    #[serde(rename = "signatureRadiusModifiers", default)]
+    pub signature_radius_modifiers: Option<Vec<NavTargetingModifier>>,
+    #[serde(rename = "signatureRadiusModifiersUnapplied", default)]
+    pub signature_radius_modifiers_unapplied: bool,
+    #[serde(rename = "maxTargetRangeModifiers", default)]
+    pub max_target_range_modifiers: Option<Vec<NavTargetingModifier>>,
+    #[serde(rename = "maxTargetRangeModifiersUnapplied", default)]
+    pub max_target_range_modifiers_unapplied: bool,
+    #[serde(rename = "scanResolutionModifiers", default)]
+    pub scan_resolution_modifiers: Option<Vec<NavTargetingModifier>>,
+    #[serde(rename = "scanResolutionModifiersUnapplied", default)]
+    pub scan_resolution_modifiers_unapplied: bool,
+    #[serde(rename = "scanRadarStrengthModifiers", default)]
+    pub scan_radar_strength_modifiers: Option<Vec<NavTargetingModifier>>,
+    #[serde(rename = "scanRadarStrengthModifiersUnapplied", default)]
+    pub scan_radar_strength_modifiers_unapplied: bool,
+    #[serde(rename = "scanLadarStrengthModifiers", default)]
+    pub scan_ladar_strength_modifiers: Option<Vec<NavTargetingModifier>>,
+    #[serde(rename = "scanLadarStrengthModifiersUnapplied", default)]
+    pub scan_ladar_strength_modifiers_unapplied: bool,
+    #[serde(rename = "scanMagnetometricStrengthModifiers", default)]
+    pub scan_magnetometric_strength_modifiers: Option<Vec<NavTargetingModifier>>,
+    #[serde(rename = "scanMagnetometricStrengthModifiersUnapplied", default)]
+    pub scan_magnetometric_strength_modifiers_unapplied: bool,
+    #[serde(rename = "scanGravimetricStrengthModifiers", default)]
+    pub scan_gravimetric_strength_modifiers: Option<Vec<NavTargetingModifier>>,
+    #[serde(rename = "scanGravimetricStrengthModifiersUnapplied", default)]
+    pub scan_gravimetric_strength_modifiers_unapplied: bool,
+    #[serde(rename = "maxLockedTargetsModifiers", default)]
+    pub max_locked_targets_modifiers: Option<Vec<NavTargetingModifier>>,
+    #[serde(rename = "maxLockedTargetsModifiersUnapplied", default)]
+    pub max_locked_targets_modifiers_unapplied: bool,
     // Bay usage (docs/bay-capacities-design.md section 3.1):
     // `volume` is the invTypes `volume` column on every row,
     // `cargoCapacity` is the invTypes `capacity` column on
@@ -597,6 +659,48 @@ pub struct OutputModifier {
 }
 
 impl<'de> Deserialize<'de> for OutputModifier {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let (modified_attribute_id, operator, operand) =
+            <(i64, i64, f64)>::deserialize(deserializer)?;
+        Ok(Self {
+            modified_attribute_id,
+            operator,
+            operand,
+        })
+    }
+}
+
+/// One fitted-module navigation and targeting modifier entry
+/// (`docs/nav-targeting-bonuses-design.md` section 3):
+/// `[modifiedAttributeId, operator, operand]`, with the
+/// operand baked in at generation time (deserialized from
+/// the 3-element array by the same manual tuple impl as
+/// `OutputModifier`). Entries are generation-time-proven
+/// `ItemModifier`/`shipID` navigation and targeting bonuses
+/// on the eleven attributes in locked display order with
+/// the operand baked in (operator 2 is modAdd, 4 is
+/// postMulAlt, 6 is postPercent). Operands can shrink the
+/// value and are applied as written. The signature family
+/// alone may carry two entries on one type. `Some(empty)`
+/// with the unapplied flag is a carrier whose bonus in that
+/// family the bundled data cannot ground and must be
+/// counted, never read as "no bonus"; `None` is a
+/// non-carrier or an all-zero carrier in that family — the
+/// other ten families are judged independently. One struct
+/// for all eleven families, deliberately: the families are
+/// one slice, one operator set, and one triple shape, with
+/// the modified attribute id carried in every entry.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct NavTargetingModifier {
+    pub modified_attribute_id: i64,
+    pub operator: i64,
+    pub operand: f64,
+}
+
+impl<'de> Deserialize<'de> for NavTargetingModifier {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -1887,6 +1991,141 @@ mod tests {
                     "powerOutputModifiersUnapplied without powerOutputModifiers: {:?}",
                     row.name
                 );
+            }
+            // Fitted-module navigation and targeting modifiers
+            // (docs/nav-targeting-bonuses-design.md section 3):
+            // per family, `Some` only on category 7 rows;
+            // entries' modified id is the family's attribute,
+            // operator 2, 4, or 6, operand finite and != 0.0,
+            // no duplicate modified id except signature's
+            // at-most-two (both 552); each marker only beside
+            // its family's `Some`; 192 operands integral on
+            // today's shipped asset.
+            let nav_families: [(&Option<Vec<NavTargetingModifier>>, bool, i64, &str); 11] = [
+                (
+                    &row.warp_speed_multiplier_modifiers,
+                    row.warp_speed_multiplier_modifiers_unapplied,
+                    600,
+                    "warpSpeedMultiplierModifiers",
+                ),
+                (
+                    &row.agility_modifiers,
+                    row.agility_modifiers_unapplied,
+                    70,
+                    "agilityModifiers",
+                ),
+                (
+                    &row.mass_modifiers,
+                    row.mass_modifiers_unapplied,
+                    4,
+                    "massModifiers",
+                ),
+                (
+                    &row.signature_radius_modifiers,
+                    row.signature_radius_modifiers_unapplied,
+                    552,
+                    "signatureRadiusModifiers",
+                ),
+                (
+                    &row.max_target_range_modifiers,
+                    row.max_target_range_modifiers_unapplied,
+                    76,
+                    "maxTargetRangeModifiers",
+                ),
+                (
+                    &row.scan_resolution_modifiers,
+                    row.scan_resolution_modifiers_unapplied,
+                    564,
+                    "scanResolutionModifiers",
+                ),
+                (
+                    &row.scan_radar_strength_modifiers,
+                    row.scan_radar_strength_modifiers_unapplied,
+                    208,
+                    "scanRadarStrengthModifiers",
+                ),
+                (
+                    &row.scan_ladar_strength_modifiers,
+                    row.scan_ladar_strength_modifiers_unapplied,
+                    209,
+                    "scanLadarStrengthModifiers",
+                ),
+                (
+                    &row.scan_magnetometric_strength_modifiers,
+                    row.scan_magnetometric_strength_modifiers_unapplied,
+                    210,
+                    "scanMagnetometricStrengthModifiers",
+                ),
+                (
+                    &row.scan_gravimetric_strength_modifiers,
+                    row.scan_gravimetric_strength_modifiers_unapplied,
+                    211,
+                    "scanGravimetricStrengthModifiers",
+                ),
+                (
+                    &row.max_locked_targets_modifiers,
+                    row.max_locked_targets_modifiers_unapplied,
+                    192,
+                    "maxLockedTargetsModifiers",
+                ),
+            ];
+            for (modifiers, unapplied, expected_id, label) in nav_families {
+                if let Some(modifiers) = modifiers {
+                    assert_eq!(
+                        row.category_id, 7,
+                        "{label} on non-module row: {:?}",
+                        row.name
+                    );
+                    let mut seen = std::collections::HashSet::new();
+                    for modifier in modifiers {
+                        assert_eq!(
+                            modifier.modified_attribute_id, expected_id,
+                            "{label} modified id {} on {:?}",
+                            modifier.modified_attribute_id, row.name
+                        );
+                        if expected_id != 552 {
+                            assert!(
+                                seen.insert(modifier.modified_attribute_id),
+                                "{label} modifiers duplicated on {:?}",
+                                row.name
+                            );
+                        }
+                        assert!(
+                            matches!(modifier.operator, 2 | 4 | 6),
+                            "{label} modifier operator {} on {:?}",
+                            modifier.operator,
+                            row.name
+                        );
+                        assert!(
+                            modifier.operand.is_finite() && modifier.operand != 0.0,
+                            "{label} modifier operand {} on {:?}",
+                            modifier.operand,
+                            row.name
+                        );
+                        if expected_id == 192 {
+                            assert!(
+                                modifier.operand.fract() == 0.0,
+                                "non-integral maxLockedTargets operand {} on {:?}",
+                                modifier.operand,
+                                row.name
+                            );
+                        }
+                    }
+                    if expected_id == 552 {
+                        assert!(
+                            modifiers.len() <= 2,
+                            "signatureRadiusModifiers beyond two on {:?}",
+                            row.name
+                        );
+                    }
+                }
+                if unapplied {
+                    assert!(
+                        modifiers.is_some(),
+                        "{label}Unapplied without {label}: {:?}",
+                        row.name
+                    );
+                }
             }
         }
         // Spot pins mirroring the generator oracles (design section
@@ -3786,6 +4025,758 @@ mod tests {
             assert_eq!(row.power_output_modifiers, None, "type {type_id}");
             assert!(!row.power_output_modifiers_unapplied, "type {type_id}");
         }
+        // Fitted-module navigation and targeting modifier counts
+        // and spot pins (docs/nav-targeting-bonuses-design.md
+        // section 3, the generator's
+        // NAV_TARGETING_MODIFIER_ORACLES twins).
+        {
+            let warp_rows = types
+                .types
+                .iter()
+                .filter(|row| row.warp_speed_multiplier_modifiers.is_some())
+                .count();
+            assert_eq!(warp_rows, 15);
+            let warp_nonempty = types
+                .types
+                .iter()
+                .filter(|row| {
+                    row.warp_speed_multiplier_modifiers
+                        .as_ref()
+                        .is_some_and(|modifiers| !modifiers.is_empty())
+                })
+                .count();
+            assert_eq!(warp_nonempty, 15);
+            let warp_marked = types
+                .types
+                .iter()
+                .filter(|row| row.warp_speed_multiplier_modifiers_unapplied)
+                .count();
+            assert_eq!(warp_marked, 0);
+            let warp_entries: usize = types
+                .types
+                .iter()
+                .filter_map(|row| row.warp_speed_multiplier_modifiers.as_ref().map(Vec::len))
+                .sum();
+            assert_eq!(warp_entries, 15);
+            let agility_rows = types
+                .types
+                .iter()
+                .filter(|row| row.agility_modifiers.is_some())
+                .count();
+            assert_eq!(agility_rows, 98);
+            let agility_nonempty = types
+                .types
+                .iter()
+                .filter(|row| {
+                    row.agility_modifiers
+                        .as_ref()
+                        .is_some_and(|modifiers| !modifiers.is_empty())
+                })
+                .count();
+            assert_eq!(agility_nonempty, 98);
+            let agility_marked = types
+                .types
+                .iter()
+                .filter(|row| row.agility_modifiers_unapplied)
+                .count();
+            assert_eq!(agility_marked, 0);
+            let agility_entries: usize = types
+                .types
+                .iter()
+                .filter_map(|row| row.agility_modifiers.as_ref().map(Vec::len))
+                .sum();
+            assert_eq!(agility_entries, 98);
+            let mass_rows = types
+                .types
+                .iter()
+                .filter(|row| row.mass_modifiers.is_some())
+                .count();
+            assert_eq!(mass_rows, 68);
+            let mass_nonempty = types
+                .types
+                .iter()
+                .filter(|row| {
+                    row.mass_modifiers
+                        .as_ref()
+                        .is_some_and(|modifiers| !modifiers.is_empty())
+                })
+                .count();
+            assert_eq!(mass_nonempty, 64);
+            let mass_marked = types
+                .types
+                .iter()
+                .filter(|row| row.mass_modifiers_unapplied)
+                .count();
+            assert_eq!(mass_marked, 4);
+            let mass_entries: usize = types
+                .types
+                .iter()
+                .filter_map(|row| row.mass_modifiers.as_ref().map(Vec::len))
+                .sum();
+            assert_eq!(mass_entries, 64);
+            let sig_rows = types
+                .types
+                .iter()
+                .filter(|row| row.signature_radius_modifiers.is_some())
+                .count();
+            assert_eq!(sig_rows, 135);
+            let sig_nonempty = types
+                .types
+                .iter()
+                .filter(|row| {
+                    row.signature_radius_modifiers
+                        .as_ref()
+                        .is_some_and(|modifiers| !modifiers.is_empty())
+                })
+                .count();
+            assert_eq!(sig_nonempty, 132);
+            let sig_marked = types
+                .types
+                .iter()
+                .filter(|row| row.signature_radius_modifiers_unapplied)
+                .count();
+            assert_eq!(sig_marked, 3);
+            let sig_entries: usize = types
+                .types
+                .iter()
+                .filter_map(|row| row.signature_radius_modifiers.as_ref().map(Vec::len))
+                .sum();
+            assert_eq!(sig_entries, 137);
+            let range_rows = types
+                .types
+                .iter()
+                .filter(|row| row.max_target_range_modifiers.is_some())
+                .count();
+            assert_eq!(range_rows, 49);
+            let range_nonempty = types
+                .types
+                .iter()
+                .filter(|row| {
+                    row.max_target_range_modifiers
+                        .as_ref()
+                        .is_some_and(|modifiers| !modifiers.is_empty())
+                })
+                .count();
+            assert_eq!(range_nonempty, 43);
+            let range_marked = types
+                .types
+                .iter()
+                .filter(|row| row.max_target_range_modifiers_unapplied)
+                .count();
+            assert_eq!(range_marked, 6);
+            let range_entries: usize = types
+                .types
+                .iter()
+                .filter_map(|row| row.max_target_range_modifiers.as_ref().map(Vec::len))
+                .sum();
+            assert_eq!(range_entries, 43);
+            let scan_rows = types
+                .types
+                .iter()
+                .filter(|row| row.scan_resolution_modifiers.is_some())
+                .count();
+            assert_eq!(scan_rows, 60);
+            let scan_nonempty = types
+                .types
+                .iter()
+                .filter(|row| {
+                    row.scan_resolution_modifiers
+                        .as_ref()
+                        .is_some_and(|modifiers| !modifiers.is_empty())
+                })
+                .count();
+            assert_eq!(scan_nonempty, 56);
+            let scan_marked = types
+                .types
+                .iter()
+                .filter(|row| row.scan_resolution_modifiers_unapplied)
+                .count();
+            assert_eq!(scan_marked, 4);
+            let scan_entries: usize = types
+                .types
+                .iter()
+                .filter_map(|row| row.scan_resolution_modifiers.as_ref().map(Vec::len))
+                .sum();
+            assert_eq!(scan_entries, 56);
+            let radar_rows = types
+                .types
+                .iter()
+                .filter(|row| row.scan_radar_strength_modifiers.is_some())
+                .count();
+            assert_eq!(radar_rows, 25);
+            let radar_nonempty = types
+                .types
+                .iter()
+                .filter(|row| {
+                    row.scan_radar_strength_modifiers
+                        .as_ref()
+                        .is_some_and(|modifiers| !modifiers.is_empty())
+                })
+                .count();
+            assert_eq!(radar_nonempty, 25);
+            let radar_marked = types
+                .types
+                .iter()
+                .filter(|row| row.scan_radar_strength_modifiers_unapplied)
+                .count();
+            assert_eq!(radar_marked, 0);
+            let radar_entries: usize = types
+                .types
+                .iter()
+                .filter_map(|row| row.scan_radar_strength_modifiers.as_ref().map(Vec::len))
+                .sum();
+            assert_eq!(radar_entries, 25);
+            let ladar_rows = types
+                .types
+                .iter()
+                .filter(|row| row.scan_ladar_strength_modifiers.is_some())
+                .count();
+            assert_eq!(ladar_rows, 25);
+            let ladar_nonempty = types
+                .types
+                .iter()
+                .filter(|row| {
+                    row.scan_ladar_strength_modifiers
+                        .as_ref()
+                        .is_some_and(|modifiers| !modifiers.is_empty())
+                })
+                .count();
+            assert_eq!(ladar_nonempty, 25);
+            let ladar_marked = types
+                .types
+                .iter()
+                .filter(|row| row.scan_ladar_strength_modifiers_unapplied)
+                .count();
+            assert_eq!(ladar_marked, 0);
+            let ladar_entries: usize = types
+                .types
+                .iter()
+                .filter_map(|row| row.scan_ladar_strength_modifiers.as_ref().map(Vec::len))
+                .sum();
+            assert_eq!(ladar_entries, 25);
+            let magn_rows = types
+                .types
+                .iter()
+                .filter(|row| row.scan_magnetometric_strength_modifiers.is_some())
+                .count();
+            assert_eq!(magn_rows, 25);
+            let magn_nonempty = types
+                .types
+                .iter()
+                .filter(|row| {
+                    row.scan_magnetometric_strength_modifiers
+                        .as_ref()
+                        .is_some_and(|modifiers| !modifiers.is_empty())
+                })
+                .count();
+            assert_eq!(magn_nonempty, 25);
+            let magn_marked = types
+                .types
+                .iter()
+                .filter(|row| row.scan_magnetometric_strength_modifiers_unapplied)
+                .count();
+            assert_eq!(magn_marked, 0);
+            let magn_entries: usize = types
+                .types
+                .iter()
+                .filter_map(|row| {
+                    row.scan_magnetometric_strength_modifiers
+                        .as_ref()
+                        .map(Vec::len)
+                })
+                .sum();
+            assert_eq!(magn_entries, 25);
+            let grav_rows = types
+                .types
+                .iter()
+                .filter(|row| row.scan_gravimetric_strength_modifiers.is_some())
+                .count();
+            assert_eq!(grav_rows, 25);
+            let grav_nonempty = types
+                .types
+                .iter()
+                .filter(|row| {
+                    row.scan_gravimetric_strength_modifiers
+                        .as_ref()
+                        .is_some_and(|modifiers| !modifiers.is_empty())
+                })
+                .count();
+            assert_eq!(grav_nonempty, 25);
+            let grav_marked = types
+                .types
+                .iter()
+                .filter(|row| row.scan_gravimetric_strength_modifiers_unapplied)
+                .count();
+            assert_eq!(grav_marked, 0);
+            let grav_entries: usize = types
+                .types
+                .iter()
+                .filter_map(|row| {
+                    row.scan_gravimetric_strength_modifiers
+                        .as_ref()
+                        .map(Vec::len)
+                })
+                .sum();
+            assert_eq!(grav_entries, 25);
+            let locks_rows = types
+                .types
+                .iter()
+                .filter(|row| row.max_locked_targets_modifiers.is_some())
+                .count();
+            assert_eq!(locks_rows, 15);
+            let locks_nonempty = types
+                .types
+                .iter()
+                .filter(|row| {
+                    row.max_locked_targets_modifiers
+                        .as_ref()
+                        .is_some_and(|modifiers| !modifiers.is_empty())
+                })
+                .count();
+            assert_eq!(locks_nonempty, 15);
+            let locks_marked = types
+                .types
+                .iter()
+                .filter(|row| row.max_locked_targets_modifiers_unapplied)
+                .count();
+            assert_eq!(locks_marked, 0);
+            let locks_entries: usize = types
+                .types
+                .iter()
+                .filter_map(|row| row.max_locked_targets_modifiers.as_ref().map(Vec::len))
+                .sum();
+            assert_eq!(locks_entries, 15);
+        }
+        // Spot pins mirroring the generator oracles (design
+        // section 3): single-family and multi-family rows,
+        // the dual-entry suppressor, the two split pins, the
+        // marked-empty rows, the zero-only row, and the
+        // category gates.
+        let hyperspatial = types
+            .lookup_by_id(26322)
+            .expect("Large Hyperspatial Velocity Optimizer II row");
+        assert_eq!(
+            hyperspatial
+                .warp_speed_multiplier_modifiers
+                .as_ref()
+                .expect("hyperspatial warpSpeedMultiplierModifiers"),
+            &[NavTargetingModifier {
+                modified_attribute_id: 600,
+                operator: 6,
+                operand: 25.0,
+            }]
+        );
+        assert!(!hyperspatial.warp_speed_multiplier_modifiers_unapplied);
+        let nanofiber = types
+            .lookup_by_id(2605)
+            .expect("Nanofiber Internal Structure II row");
+        assert_eq!(
+            nanofiber
+                .agility_modifiers
+                .as_ref()
+                .expect("nanofiber agilityModifiers"),
+            &[NavTargetingModifier {
+                modified_attribute_id: 70,
+                operator: 6,
+                operand: -15.75,
+            }]
+        );
+        assert!(!nanofiber.agility_modifiers_unapplied);
+        let plates = types
+            .lookup_by_id(20353)
+            .expect("1600mm Steel Plates II row");
+        assert_eq!(
+            plates
+                .mass_modifiers
+                .as_ref()
+                .expect("plates massModifiers"),
+            &[NavTargetingModifier {
+                modified_attribute_id: 4,
+                operator: 2,
+                operand: 3750000.0,
+            }]
+        );
+        assert!(!plates.mass_modifiers_unapplied);
+        let extender_nav = types
+            .lookup_by_id(3831)
+            .expect("Medium Shield Extender II row");
+        assert_eq!(
+            extender_nav
+                .signature_radius_modifiers
+                .as_ref()
+                .expect("extender signatureRadiusModifiers"),
+            &[NavTargetingModifier {
+                modified_attribute_id: 552,
+                operator: 2,
+                operand: 7.0,
+            }]
+        );
+        assert!(!extender_nav.signature_radius_modifiers_unapplied);
+        let suppressor = types
+            .lookup_by_id(4409)
+            .expect("Signature Radius Suppressor I row");
+        assert_eq!(
+            suppressor
+                .signature_radius_modifiers
+                .as_ref()
+                .expect("suppressor signatureRadiusModifiers"),
+            &[
+                NavTargetingModifier {
+                    modified_attribute_id: 552,
+                    operator: 4,
+                    operand: 0.9,
+                },
+                NavTargetingModifier {
+                    modified_attribute_id: 552,
+                    operator: 4,
+                    operand: 0.3,
+                },
+            ]
+        );
+        assert!(!suppressor.signature_radius_modifiers_unapplied);
+        let booster = types.lookup_by_id(1952).expect("Sensor Booster II row");
+        assert_eq!(
+            booster
+                .max_target_range_modifiers
+                .as_ref()
+                .expect("booster maxTargetRangeModifiers"),
+            &[NavTargetingModifier {
+                modified_attribute_id: 76,
+                operator: 6,
+                operand: 30.0,
+            }]
+        );
+        assert!(!booster.max_target_range_modifiers_unapplied);
+        assert_eq!(
+            booster
+                .scan_resolution_modifiers
+                .as_ref()
+                .expect("booster scanResolutionModifiers"),
+            &[NavTargetingModifier {
+                modified_attribute_id: 564,
+                operator: 6,
+                operand: 30.0,
+            }]
+        );
+        assert!(!booster.scan_resolution_modifiers_unapplied);
+        assert_eq!(
+            booster
+                .scan_radar_strength_modifiers
+                .as_ref()
+                .expect("booster scanRadarStrengthModifiers"),
+            &[NavTargetingModifier {
+                modified_attribute_id: 208,
+                operator: 6,
+                operand: 48.0,
+            }]
+        );
+        assert_eq!(
+            booster
+                .scan_ladar_strength_modifiers
+                .as_ref()
+                .expect("booster scanLadarStrengthModifiers"),
+            &[NavTargetingModifier {
+                modified_attribute_id: 209,
+                operator: 6,
+                operand: 48.0,
+            }]
+        );
+        assert_eq!(
+            booster
+                .scan_magnetometric_strength_modifiers
+                .as_ref()
+                .expect("booster scanMagnetometricStrengthModifiers"),
+            &[NavTargetingModifier {
+                modified_attribute_id: 210,
+                operator: 6,
+                operand: 48.0,
+            }]
+        );
+        assert_eq!(
+            booster
+                .scan_gravimetric_strength_modifiers
+                .as_ref()
+                .expect("booster scanGravimetricStrengthModifiers"),
+            &[NavTargetingModifier {
+                modified_attribute_id: 211,
+                operator: 6,
+                operand: 48.0,
+            }]
+        );
+        let amplifier = types.lookup_by_id(1987).expect("Signal Amplifier II row");
+        assert_eq!(
+            amplifier
+                .max_target_range_modifiers
+                .as_ref()
+                .expect("amplifier maxTargetRangeModifiers"),
+            &[NavTargetingModifier {
+                modified_attribute_id: 76,
+                operator: 6,
+                operand: 30.0,
+            }]
+        );
+        assert_eq!(
+            amplifier
+                .scan_radar_strength_modifiers
+                .as_ref()
+                .expect("amplifier scanRadarStrengthModifiers"),
+            &[NavTargetingModifier {
+                modified_attribute_id: 208,
+                operator: 6,
+                operand: 48.0,
+            }]
+        );
+        assert_eq!(
+            amplifier
+                .scan_ladar_strength_modifiers
+                .as_ref()
+                .expect("amplifier scanLadarStrengthModifiers"),
+            &[NavTargetingModifier {
+                modified_attribute_id: 209,
+                operator: 6,
+                operand: 48.0,
+            }]
+        );
+        assert_eq!(
+            amplifier
+                .scan_magnetometric_strength_modifiers
+                .as_ref()
+                .expect("amplifier scanMagnetometricStrengthModifiers"),
+            &[NavTargetingModifier {
+                modified_attribute_id: 210,
+                operator: 6,
+                operand: 48.0,
+            }]
+        );
+        assert_eq!(
+            amplifier
+                .scan_gravimetric_strength_modifiers
+                .as_ref()
+                .expect("amplifier scanGravimetricStrengthModifiers"),
+            &[NavTargetingModifier {
+                modified_attribute_id: 211,
+                operator: 6,
+                operand: 48.0,
+            }]
+        );
+        assert_eq!(
+            amplifier
+                .max_locked_targets_modifiers
+                .as_ref()
+                .expect("amplifier maxLockedTargetsModifiers"),
+            &[NavTargetingModifier {
+                modified_attribute_id: 192,
+                operator: 2,
+                operand: 2.0,
+            }]
+        );
+        assert!(!amplifier.max_locked_targets_modifiers_unapplied);
+        assert_eq!(
+            amplifier
+                .scan_resolution_modifiers
+                .as_ref()
+                .expect("amplifier scanResolutionModifiers"),
+            &[NavTargetingModifier {
+                modified_attribute_id: 564,
+                operator: 6,
+                operand: 15.0,
+            }]
+        );
+        assert!(!amplifier.scan_resolution_modifiers_unapplied);
+        let auto_targeting = types
+            .lookup_by_id(1182)
+            .expect("Auto Targeting System I row");
+        assert_eq!(
+            auto_targeting
+                .max_target_range_modifiers
+                .as_ref()
+                .expect("auto targeting maxTargetRangeModifiers"),
+            &[]
+        );
+        assert!(auto_targeting.max_target_range_modifiers_unapplied);
+        assert_eq!(
+            auto_targeting
+                .max_locked_targets_modifiers
+                .as_ref()
+                .expect("auto targeting maxLockedTargetsModifiers"),
+            &[NavTargetingModifier {
+                modified_attribute_id: 192,
+                operator: 2,
+                operand: 2.0,
+            }]
+        );
+        assert!(!auto_targeting.max_locked_targets_modifiers_unapplied);
+        let triage = types.lookup_by_id(27951).expect("Triage Module I row");
+        assert_eq!(
+            triage
+                .scan_resolution_modifiers
+                .as_ref()
+                .expect("triage scanResolutionModifiers"),
+            &[]
+        );
+        assert!(triage.scan_resolution_modifiers_unapplied);
+        assert_eq!(
+            triage
+                .mass_modifiers
+                .as_ref()
+                .expect("triage massModifiers"),
+            &[NavTargetingModifier {
+                modified_attribute_id: 4,
+                operator: 4,
+                operand: 10.0,
+            }]
+        );
+        assert!(!triage.mass_modifiers_unapplied);
+        assert_eq!(
+            triage
+                .max_locked_targets_modifiers
+                .as_ref()
+                .expect("triage maxLockedTargetsModifiers"),
+            &[NavTargetingModifier {
+                modified_attribute_id: 192,
+                operator: 2,
+                operand: 4.0,
+            }]
+        );
+        let abyssal_plates = types
+            .lookup_by_id(47812)
+            .expect("Small Abyssal Armor Plates row");
+        assert_eq!(
+            abyssal_plates
+                .mass_modifiers
+                .as_ref()
+                .expect("abyssal plates massModifiers"),
+            &[]
+        );
+        assert!(abyssal_plates.mass_modifiers_unapplied);
+        let abyssal_extender = types
+            .lookup_by_id(47800)
+            .expect("Small Abyssal Shield Extender row");
+        assert_eq!(
+            abyssal_extender
+                .signature_radius_modifiers
+                .as_ref()
+                .expect("abyssal extender signatureRadiusModifiers"),
+            &[]
+        );
+        assert!(abyssal_extender.signature_radius_modifiers_unapplied);
+        let siege = types.lookup_by_id(56313).expect("Abyssal Siege Module row");
+        assert_eq!(
+            siege.mass_modifiers.as_ref().expect("siege massModifiers"),
+            &[]
+        );
+        assert!(siege.mass_modifiers_unapplied);
+        let zero_extender = types
+            .lookup_by_id(8427)
+            .expect("Small Azeotropic Restrained Shield Extender row");
+        assert_eq!(zero_extender.signature_radius_modifiers, None);
+        assert!(!zero_extender.signature_radius_modifiers_unapplied);
+        let higgs = types.lookup_by_id(34266).expect("Small Higgs Anchor I row");
+        assert_eq!(
+            higgs
+                .warp_speed_multiplier_modifiers
+                .as_ref()
+                .expect("higgs warpSpeedMultiplierModifiers"),
+            &[NavTargetingModifier {
+                modified_attribute_id: 600,
+                operator: 6,
+                operand: -10.0,
+            }]
+        );
+        assert_eq!(
+            higgs
+                .agility_modifiers
+                .as_ref()
+                .expect("higgs agilityModifiers"),
+            &[NavTargetingModifier {
+                modified_attribute_id: 70,
+                operator: 6,
+                operand: -55.0,
+            }]
+        );
+        assert_eq!(
+            higgs.mass_modifiers.as_ref().expect("higgs massModifiers"),
+            &[NavTargetingModifier {
+                modified_attribute_id: 4,
+                operator: 6,
+                operand: 100.0,
+            }]
+        );
+        for type_id in [2048, 587, 3117, 3093, 45600] {
+            let row = types
+                .lookup_by_id(type_id)
+                .expect("navigation and targeting non-carrier row");
+            assert_eq!(
+                row.warp_speed_multiplier_modifiers, None,
+                "type {type_id} warp"
+            );
+            assert!(
+                !row.warp_speed_multiplier_modifiers_unapplied,
+                "type {type_id} warp"
+            );
+            assert_eq!(row.agility_modifiers, None, "type {type_id} agility");
+            assert!(!row.agility_modifiers_unapplied, "type {type_id} agility");
+            assert_eq!(row.mass_modifiers, None, "type {type_id} mass");
+            assert!(!row.mass_modifiers_unapplied, "type {type_id} mass");
+            assert_eq!(
+                row.signature_radius_modifiers, None,
+                "type {type_id} signature"
+            );
+            assert!(
+                !row.signature_radius_modifiers_unapplied,
+                "type {type_id} signature"
+            );
+            assert_eq!(row.max_target_range_modifiers, None, "type {type_id} range");
+            assert!(
+                !row.max_target_range_modifiers_unapplied,
+                "type {type_id} range"
+            );
+            assert_eq!(row.scan_resolution_modifiers, None, "type {type_id} scan");
+            assert!(
+                !row.scan_resolution_modifiers_unapplied,
+                "type {type_id} scan"
+            );
+            assert_eq!(
+                row.scan_radar_strength_modifiers, None,
+                "type {type_id} radar"
+            );
+            assert!(
+                !row.scan_radar_strength_modifiers_unapplied,
+                "type {type_id} radar"
+            );
+            assert_eq!(
+                row.scan_ladar_strength_modifiers, None,
+                "type {type_id} ladar"
+            );
+            assert!(
+                !row.scan_ladar_strength_modifiers_unapplied,
+                "type {type_id} ladar"
+            );
+            assert_eq!(
+                row.scan_magnetometric_strength_modifiers, None,
+                "type {type_id} magnetometric"
+            );
+            assert!(
+                !row.scan_magnetometric_strength_modifiers_unapplied,
+                "type {type_id} magnetometric"
+            );
+            assert_eq!(
+                row.scan_gravimetric_strength_modifiers, None,
+                "type {type_id} gravimetric"
+            );
+            assert!(
+                !row.scan_gravimetric_strength_modifiers_unapplied,
+                "type {type_id} gravimetric"
+            );
+            assert_eq!(
+                row.max_locked_targets_modifiers, None,
+                "type {type_id} locks"
+            );
+            assert!(
+                !row.max_locked_targets_modifiers_unapplied,
+                "type {type_id} locks"
+            );
+        }
     }
 
     #[test]
@@ -3827,6 +4818,89 @@ mod tests {
         assert!(!ship.cpu_output_modifiers_unapplied);
         assert_eq!(ship.power_output_modifiers, None);
         assert!(!ship.power_output_modifiers_unapplied);
+    }
+
+    #[test]
+    fn fixture_parse_nav_targeting_modifier_fields() {
+        // A row with the new keys loads into the new fields;
+        // a row without them loads as None/false (old-catalogue
+        // tolerance, the `default` pattern).
+        let with_keys = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":1952,"typeName":"Sensor Booster II","categoryId":7,"slotEffects":[13],"maxTargetRangeModifiers":[[76,6,30.0]],"scanResolutionModifiers":[[564,6,30.0]]},
+                {"typeId":1182,"typeName":"Auto Targeting System I","categoryId":7,"slotEffects":[12],"maxTargetRangeModifiers":[],"maxTargetRangeModifiersUnapplied":true,"maxLockedTargetsModifiers":[[192,2,2.0]]}]}"#,
+        )
+        .expect("fixture parses");
+        let booster = with_keys.lookup_by_id(1952).expect("booster row");
+        assert_eq!(
+            booster.max_target_range_modifiers.as_ref().expect("mods"),
+            &[NavTargetingModifier {
+                modified_attribute_id: 76,
+                operator: 6,
+                operand: 30.0,
+            }]
+        );
+        assert!(!booster.max_target_range_modifiers_unapplied);
+        assert_eq!(
+            booster.scan_resolution_modifiers.as_ref().expect("mods"),
+            &[NavTargetingModifier {
+                modified_attribute_id: 564,
+                operator: 6,
+                operand: 30.0,
+            }]
+        );
+        assert!(!booster.scan_resolution_modifiers_unapplied);
+        assert_eq!(booster.warp_speed_multiplier_modifiers, None);
+        assert!(!booster.warp_speed_multiplier_modifiers_unapplied);
+        let auto_targeting = with_keys.lookup_by_id(1182).expect("auto targeting row");
+        assert_eq!(
+            auto_targeting
+                .max_target_range_modifiers
+                .as_ref()
+                .expect("mods"),
+            &[]
+        );
+        assert!(auto_targeting.max_target_range_modifiers_unapplied);
+        assert_eq!(
+            auto_targeting
+                .max_locked_targets_modifiers
+                .as_ref()
+                .expect("mods"),
+            &[NavTargetingModifier {
+                modified_attribute_id: 192,
+                operator: 2,
+                operand: 2.0,
+            }]
+        );
+        assert!(!auto_targeting.max_locked_targets_modifiers_unapplied);
+        let without_keys = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":587,"typeName":"Rifter","categoryId":6,"slotEffects":[]}]}"#,
+        )
+        .expect("fixture parses");
+        let ship = without_keys.lookup_by_id(587).expect("Rifter row");
+        assert_eq!(ship.warp_speed_multiplier_modifiers, None);
+        assert!(!ship.warp_speed_multiplier_modifiers_unapplied);
+        assert_eq!(ship.agility_modifiers, None);
+        assert!(!ship.agility_modifiers_unapplied);
+        assert_eq!(ship.mass_modifiers, None);
+        assert!(!ship.mass_modifiers_unapplied);
+        assert_eq!(ship.signature_radius_modifiers, None);
+        assert!(!ship.signature_radius_modifiers_unapplied);
+        assert_eq!(ship.max_target_range_modifiers, None);
+        assert!(!ship.max_target_range_modifiers_unapplied);
+        assert_eq!(ship.scan_resolution_modifiers, None);
+        assert!(!ship.scan_resolution_modifiers_unapplied);
+        assert_eq!(ship.scan_radar_strength_modifiers, None);
+        assert!(!ship.scan_radar_strength_modifiers_unapplied);
+        assert_eq!(ship.scan_ladar_strength_modifiers, None);
+        assert!(!ship.scan_ladar_strength_modifiers_unapplied);
+        assert_eq!(ship.scan_magnetometric_strength_modifiers, None);
+        assert!(!ship.scan_magnetometric_strength_modifiers_unapplied);
+        assert_eq!(ship.scan_gravimetric_strength_modifiers, None);
+        assert!(!ship.scan_gravimetric_strength_modifiers_unapplied);
+        assert_eq!(ship.max_locked_targets_modifiers, None);
+        assert!(!ship.max_locked_targets_modifiers_unapplied);
     }
 
     #[test]

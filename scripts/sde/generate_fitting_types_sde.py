@@ -195,6 +195,21 @@ in that dimension. Both families reuse the same
 `dogmaEffects.jsonl` read and the same `dgmTypeAttributes`
 pass with the wanted set extended to the output modifying
 attributes.
+Fitted-module navigation and targeting modifiers
+(docs/nav-targeting-bonuses-design.md section 3) append
+twenty-two further keys after
+`powerOutputModifiersUnapplied` in the locked
+`NAV_TARGETING_MODIFIER_ORDER` order: eleven sparse
+`...Modifiers` arrays of
+[modifiedAttributeId, operator, operand] triples on
+category-7 rows only (one per attribute 600, 70, 4, 552,
+76, 564, 208, 209, 210, 211, 192), each beside its sparse
+`...ModifiersUnapplied` marker when the carrier's bonus
+in that dimension cannot be grounded from the bundled
+data. All eleven families reuse the same
+`dogmaEffects.jsonl` read and the same
+`dgmTypeAttributes` pass with the wanted set extended to
+the navigation and targeting modifying attributes.
 """
 
 import bz2
@@ -337,6 +352,34 @@ SHIELD_RECHARGE_MODIFIER_ATTRS = {479}
 OUTPUT_MODIFIER_ORDER = [48, 11]
 OUTPUT_MODIFIER_OPERATORS = {2, 4, 6}
 OUTPUT_MODIFIER_ATTRS = {48, 11}
+# Fitted-module navigation and targeting modifiers
+# (docs/nav-targeting-bonuses-design.md section 3): the
+# locked display order (600, 70, 4, 552, 76, 564, 208,
+# 209, 210, 211, 192) and operators 2 (modAdd), 4
+# (postMulAlt), 6 (postPercent) per Flutter
+# dogma_engine.dart / dogma_attributes.dart at ed698d3
+# for the ship path (operators 0/3/5 and others are
+# unsupported -> unapplied). One generalized leg emits
+# eleven per-attribute families; per-attribute marking
+# is forced by shipped cross-pardon rows (1182, 27951),
+# and signature (552) alone allows two applicable
+# entries (the five suppressors), every other family one.
+NAV_TARGETING_MODIFIER_ORDER = [600, 70, 4, 552, 76, 564, 208, 209, 210, 211, 192]
+NAV_TARGETING_MODIFIER_OPERATORS = {2, 4, 6}
+NAV_TARGETING_MODIFIER_ATTRS = {600, 70, 4, 552, 76, 564, 208, 209, 210, 211, 192}
+NAV_TARGETING_MODIFIER_KEYS = {
+    600: "warpSpeedMultiplierModifiers",
+    70: "agilityModifiers",
+    4: "massModifiers",
+    552: "signatureRadiusModifiers",
+    76: "maxTargetRangeModifiers",
+    564: "scanResolutionModifiers",
+    208: "scanRadarStrengthModifiers",
+    209: "scanLadarStrengthModifiers",
+    210: "scanMagnetometricStrengthModifiers",
+    211: "scanGravimetricStrengthModifiers",
+    192: "maxLockedTargetsModifiers",
+}
 SDE_ZIP_NAME = "eve-online-static-data-3503375-jsonl.zip"
 SDE_ZIP_MEMBER = "dogmaEffects.jsonl"
 SHIELD_EM_RESONANCE_ATTR = 271
@@ -936,6 +979,134 @@ POWER_OUTPUT_MODIFIER_ROWS = 85
 POWER_OUTPUT_MODIFIER_NONEMPTY_ROWS = 59
 POWER_OUTPUT_MODIFIER_MARKED_ROWS = 26
 POWER_OUTPUT_MODIFIER_ENTRIES = 59
+
+# Fitted-module navigation and targeting modifier oracles
+# (docs/nav-targeting-bonuses-design.md section 3): each
+# value read from dogmaEffects.jsonl (committed zip)
+# joined through dgmTypeEffects / dgmTypeAttributes
+# during design. Dict keyed by modified attribute id;
+# each value is a list in the sibling tuple shape
+# (typeId, expected-entries-or-None, expected-unapplied).
+# A None entries means neither of that family's keys may
+# be present at all (non-carrier, all-zero, or category
+# gate). An empty list means the (possibly empty) array
+# must be present and the unapplied marker must be true.
+# Every family additionally pins 2048 Damage Control II
+# (non-carrier) and 587 Rifter (category 6) with None.
+NAV_TARGETING_MODIFIER_ORACLES = {
+    600: [
+        (26322, [[600, 6, 25.0]], False),
+        (26068, [[600, 6, 20.0]], False),
+        (33985, [[600, 2, 0.3]], False),
+        (33981, [[600, 2, 0.2]], False),
+        (34266, [[600, 6, -10.0]], False),
+        (3117, None, False),
+        (2048, None, False),
+        (587, None, False),
+    ],
+    70: [
+        (1405, [[70, 6, -20.0]], False),
+        (2605, [[70, 6, -15.75]], False),
+        (26310, [[70, 6, -14.0]], False),
+        (34266, [[70, 6, -55.0]], False),
+        (1240, [[70, 6, 1.0]], False),
+        (3093, None, False),
+        (2048, None, False),
+        (587, None, False),
+    ],
+    4: [
+        (20353, [[4, 2, 3750000.0]], False),
+        (27951, [[4, 4, 10.0]], False),
+        (34266, [[4, 6, 100.0]], False),
+        (49099, [[4, 6, -80.0]], False),
+        (47812, [], True),
+        (56313, [], True),
+        (2048, None, False),
+        (587, None, False),
+    ],
+    552: [
+        (3831, [[552, 2, 7.0]], False),
+        (3841, [[552, 2, 25.0]], False),
+        (1405, [[552, 6, 11.0]], False),
+        (4409, [[552, 4, 0.9], [552, 4, 0.3]], False),
+        (47800, [], True),
+        (8427, None, False),
+        (2048, None, False),
+        (587, None, False),
+    ],
+    76: [
+        (1952, [[76, 6, 30.0]], False),
+        (1987, [[76, 6, 30.0]], False),
+        (10998, [[76, 6, -50.0]], False),
+        (1182, [], True),
+        (2048, None, False),
+        (587, None, False),
+    ],
+    564: [
+        (1952, [[564, 6, 30.0]], False),
+        (11370, [[564, 4, 0.5]], False),
+        (41411, [[564, 6, 500.0]], False),
+        (27951, [], True),
+        (4294, [], True),
+        (2048, None, False),
+        (587, None, False),
+    ],
+    208: [
+        (1987, [[208, 6, 48.0]], False),
+        (33400, [[208, 6, 100.0]], False),
+        (41411, [[208, 6, 50.0]], False),
+        (2048, None, False),
+        (587, None, False),
+    ],
+    209: [
+        (1987, [[209, 6, 48.0]], False),
+        (33400, [[209, 6, 100.0]], False),
+        (2048, None, False),
+        (587, None, False),
+    ],
+    210: [
+        (1987, [[210, 6, 48.0]], False),
+        (33400, [[210, 6, 100.0]], False),
+        (2048, None, False),
+        (587, None, False),
+    ],
+    211: [
+        (1987, [[211, 6, 48.0]], False),
+        (33400, [[211, 6, 100.0]], False),
+        (2048, None, False),
+        (587, None, False),
+    ],
+    192: [
+        (1987, [[192, 2, 2.0]], False),
+        (1182, [[192, 2, 2.0]], False),
+        (1436, [[192, 2, 3.0]], False),
+        (4294, [[192, 2, 5.0]], False),
+        (45600, None, False),
+        (2048, None, False),
+        (587, None, False),
+    ],
+}
+
+# Catalogue-wide counts for the navigation and targeting
+# modifier emissions (docs/nav-targeting-bonuses-design.md
+# section 3, design-scripted over today's data), keyed by
+# modified attribute id in NAV_TARGETING_MODIFIER_ORDER.
+NAV_TARGETING_MODIFIER_ROWS = {
+    600: 15, 70: 98, 4: 68, 552: 135, 76: 49, 564: 60,
+    208: 25, 209: 25, 210: 25, 211: 25, 192: 15,
+}
+NAV_TARGETING_MODIFIER_NONEMPTY_ROWS = {
+    600: 15, 70: 98, 4: 64, 552: 132, 76: 43, 564: 56,
+    208: 25, 209: 25, 210: 25, 211: 25, 192: 15,
+}
+NAV_TARGETING_MODIFIER_MARKED_ROWS = {
+    600: 0, 70: 0, 4: 4, 552: 3, 76: 6, 564: 4,
+    208: 0, 209: 0, 210: 0, 211: 0, 192: 0,
+}
+NAV_TARGETING_MODIFIER_ENTRIES = {
+    600: 15, 70: 98, 4: 64, 552: 137, 76: 43, 564: 56,
+    208: 25, 209: 25, 210: 25, 211: 25, 192: 15,
+}
 
 # Bay oracles (docs/bay-capacities-design.md section 3.3): each
 # value read directly from invTypes.csv.bz2 / dgmTypeAttributes.csv.bz2
@@ -1783,6 +1954,7 @@ def main():
     wanted_capacitor_modifying_ids = set()
     wanted_shield_recharge_modifying_ids = set()
     wanted_output_modifying_ids = set()
+    wanted_nav_targeting_modifying_ids = set()
     for modifier_info in effect_modifiers.values():
         for modifier in modifier_info:
             if not (
@@ -1811,12 +1983,17 @@ def main():
                 wanted_output_modifying_ids.add(
                     modifier["modifyingAttributeID"]
                 )
+            if modified_id in NAV_TARGETING_MODIFIER_ATTRS:
+                wanted_nav_targeting_modifying_ids.add(
+                    modifier["modifyingAttributeID"]
+                )
     wanted_modifying_ids = (
         wanted_resist_modifying_ids
         | wanted_hit_point_modifying_ids
         | wanted_capacitor_modifying_ids
         | wanted_shield_recharge_modifying_ids
         | wanted_output_modifying_ids
+        | wanted_nav_targeting_modifying_ids
     )
     category_by_type = {}
     for row in inv_types:
@@ -1833,15 +2010,18 @@ def main():
         in_cap = attribute_id in wanted_capacitor_modifying_ids
         in_sr = attribute_id in wanted_shield_recharge_modifying_ids
         in_output = attribute_id in wanted_output_modifying_ids
-        if in_output and not in_resist and not in_hp and not in_cap and not in_sr:
+        in_nav = attribute_id in wanted_nav_targeting_modifying_ids
+        if in_nav and not in_resist and not in_hp and not in_cap and not in_sr and not in_output:
+            return "navigation and targeting modifier operand"
+        if in_output and not in_resist and not in_hp and not in_cap and not in_sr and not in_nav:
             return "output modifier operand"
-        if in_sr and not in_resist and not in_hp and not in_cap and not in_output:
+        if in_sr and not in_resist and not in_hp and not in_cap and not in_output and not in_nav:
             return "shield recharge modifier operand"
-        if in_cap and not in_resist and not in_hp and not in_sr and not in_output:
+        if in_cap and not in_resist and not in_hp and not in_sr and not in_output and not in_nav:
             return "capacitor modifier operand"
-        if in_hp and not in_resist and not in_cap and not in_sr and not in_output:
+        if in_hp and not in_resist and not in_cap and not in_sr and not in_output and not in_nav:
             return "hit point modifier operand"
-        if in_resist and not in_hp and not in_cap and not in_sr and not in_output:
+        if in_resist and not in_hp and not in_cap and not in_sr and not in_output and not in_nav:
             return "resistance modifier operand"
         return "modifier operand"
 
@@ -2429,6 +2609,97 @@ def main():
                 unapplied,
             )
 
+    # Fitted-module navigation and targeting modifiers
+    # (docs/nav-targeting-bonuses-design.md section 3): one
+    # generalized leg beside the output leg, category-7
+    # only, over ItemModifier/shipID modifiers on the eleven
+    # attributes in NAV_TARGETING_MODIFIER_ORDER with
+    # operators {2, 4, 6}. Messages say "navigation and
+    # targeting modifier", never a sibling family's words.
+    # Per-attribute classification mirrors the capacitor
+    # leg: a carrier's applicable entry on one attribute
+    # never pardons its absent operand on another (the
+    # 1182/27951 cross-pardon pins). Signature (552) alone
+    # allows two applicable entries (the five suppressors
+    # carrying 3113+3114 both at operator 4); every other
+    # family allows one.
+    nav_targeting_modifiers_by_type = {
+        modified_id: {} for modified_id in NAV_TARGETING_MODIFIER_ORDER
+    }
+    for modified_id in NAV_TARGETING_MODIFIER_ORDER:
+        modifiers_by_type = nav_targeting_modifiers_by_type[modified_id]
+        for type_id, type_category in category_by_type.items():
+            if type_category != 7:
+                continue
+            triple_list = []
+            for effect_id in effects_by_type.get(type_id, set()):
+                for modifier in effect_modifiers.get(effect_id, []):
+                    if (
+                        modifier.get("func") == "ItemModifier"
+                        and modifier.get("domain") == "shipID"
+                        and modifier.get("modifiedAttributeID")
+                        == modified_id
+                    ):
+                        triple_list.append(
+                            (
+                                modifier["modifiedAttributeID"],
+                                modifier["modifyingAttributeID"],
+                                modifier["operation"],
+                            )
+                        )
+            for triple, count in Counter(triple_list).items():
+                if count > 1:
+                    fail(
+                        f"duplicated navigation and targeting modifier triple "
+                        f"{triple} on type {type_id}"
+                    )
+            triples = set(triple_list)
+            if not triples:
+                continue
+            operands = operands_by_type.get(type_id, {})
+            applicable = []
+            has_unsupported = False
+            has_zero = False
+            has_absent = False
+            seen_modified = set()
+            seen_triples = set()
+            for entry_modified, modifying_id, operator in sorted(triples):
+                triple = (entry_modified, modifying_id, operator)
+                if triple in seen_triples:
+                    fail(
+                        f"duplicated navigation and targeting modifier triple "
+                        f"{triple} on type {type_id}"
+                    )
+                seen_triples.add(triple)
+                if modifying_id not in operands:
+                    has_absent = True
+                    continue
+                operand = operands[modifying_id]
+                if operand == 0.0:
+                    has_zero = True
+                    continue
+                if operator not in NAV_TARGETING_MODIFIER_OPERATORS:
+                    has_unsupported = True
+                    continue
+                if entry_modified in seen_modified:
+                    limit = 2 if entry_modified == 552 else 1
+                    if len(applicable) >= limit:
+                        fail(
+                            f"two applicable navigation and targeting modifier entries "
+                            f"on modified attribute {entry_modified} for "
+                            f"type {type_id}"
+                        )
+                seen_modified.add(entry_modified)
+                applicable.append([entry_modified, operator, operand])
+            applicable.sort(
+                key=lambda entry: NAV_TARGETING_MODIFIER_ORDER.index(entry[0])
+            )
+            unapplied = has_unsupported or (
+                not applicable and not has_zero and has_absent
+            )
+            if applicable or unapplied:
+                modifiers_by_type[type_id] = (applicable, unapplied)
+
     # Base resource attributes per type (design section 5): only the
     # four locked attributes, each parsed from valueFloat. An
     # unparseable, duplicated, non-finite, or negative wanted row
@@ -3003,6 +3274,9 @@ def main():
     shield_recharge_modifier_counts = Counter()
     cpu_output_modifier_counts = Counter()
     power_output_modifier_counts = Counter()
+    nav_targeting_modifier_counts = {
+        modified_id: Counter() for modified_id in NAV_TARGETING_MODIFIER_ORDER
+    }
     for row in inv_types:
         if row["published"] != "1":
             continue
@@ -3673,6 +3947,37 @@ def main():
             if mod_unapplied:
                 entry["powerOutputModifiersUnapplied"] = True
                 power_output_modifier_counts["unappliedRows"] += 1
+        # Additive, sparse fitted-module navigation and
+        # targeting modifier emission (design section 3):
+        # category 7 rows gain the twenty-two keys after
+        # the power output modifier block, in
+        # NAV_TARGETING_MODIFIER_ORDER, each key followed by
+        # its marker when present. Each family emits
+        # independently, exactly as if it were its own
+        # shield recharge leg: a carrier emits the family's
+        # array key iff it has at least one applicable entry
+        # in that family or is marked unapplied in it, and
+        # the family's unapplied marker beside the
+        # (possibly empty) array iff marked. An all-zero
+        # carrier emits neither of that family's keys.
+        # Every other row is byte-identical.
+        for modified_id in NAV_TARGETING_MODIFIER_ORDER:
+            if category_id != 7:
+                continue
+            modifiers_by_type = nav_targeting_modifiers_by_type[modified_id]
+            if type_id not in modifiers_by_type:
+                continue
+            mod_entries, mod_unapplied = modifiers_by_type[type_id]
+            array_key = NAV_TARGETING_MODIFIER_KEYS[modified_id]
+            counts = nav_targeting_modifier_counts[modified_id]
+            entry[array_key] = mod_entries
+            counts[array_key] += 1
+            if mod_entries:
+                counts["nonEmptyRows"] += 1
+            counts["totalEntries"] += len(mod_entries)
+            if mod_unapplied:
+                entry[array_key + "Unapplied"] = True
+                counts["unappliedRows"] += 1
         types.append(entry)
 
     types.sort(key=lambda entry: entry["typeId"])
@@ -4231,6 +4536,66 @@ def main():
             f"{power_output_modifier_counts['totalEntries']}, expected "
             f"{POWER_OUTPUT_MODIFIER_ENTRIES}"
         )
+
+    # Fitted-module navigation and targeting modifier
+    # oracles (design section 3). A None entries means
+    # neither of that family's keys may be present at all.
+    for modified_id in NAV_TARGETING_MODIFIER_ORDER:
+        array_key = NAV_TARGETING_MODIFIER_KEYS[modified_id]
+        marker_key = array_key + "Unapplied"
+        for type_id, expected, expected_unapplied in NAV_TARGETING_MODIFIER_ORACLES[modified_id]:
+            entry = by_id.get(type_id)
+            if entry is None:
+                fail(
+                    f"navigation and targeting modifier oracle type "
+                    f"{type_id} ({array_key}) missing from extract"
+                )
+            if expected is None:
+                if array_key in entry or marker_key in entry:
+                    fail(
+                        f"navigation and targeting modifier oracle type "
+                        f"{type_id} carries {array_key} keys, expected "
+                        "neither"
+                    )
+            else:
+                if entry.get(array_key) != expected:
+                    fail(
+                        f"navigation and targeting modifier oracle type "
+                        f"{type_id} {array_key}="
+                        f"{entry.get(array_key)!r}, expected {expected!r}"
+                    )
+                if entry.get(marker_key, False) != expected_unapplied:
+                    fail(
+                        f"navigation and targeting modifier oracle type "
+                        f"{type_id} unapplied marker "
+                        f"{entry.get(marker_key)!r}, expected "
+                        f"{expected_unapplied!r}"
+                    )
+        counts = nav_targeting_modifier_counts[modified_id]
+        if counts[array_key] != NAV_TARGETING_MODIFIER_ROWS[modified_id]:
+            fail(
+                f"navigation and targeting modifier rows "
+                f"({array_key}) {counts[array_key]}, expected "
+                f"{NAV_TARGETING_MODIFIER_ROWS[modified_id]}"
+            )
+        if counts["nonEmptyRows"] != NAV_TARGETING_MODIFIER_NONEMPTY_ROWS[modified_id]:
+            fail(
+                f"navigation and targeting modifier non-empty rows "
+                f"({array_key}) {counts['nonEmptyRows']}, expected "
+                f"{NAV_TARGETING_MODIFIER_NONEMPTY_ROWS[modified_id]}"
+            )
+        if counts["unappliedRows"] != NAV_TARGETING_MODIFIER_MARKED_ROWS[modified_id]:
+            fail(
+                f"navigation and targeting modifier marked rows "
+                f"({array_key}) {counts['unappliedRows']}, expected "
+                f"{NAV_TARGETING_MODIFIER_MARKED_ROWS[modified_id]}"
+            )
+        if counts["totalEntries"] != NAV_TARGETING_MODIFIER_ENTRIES[modified_id]:
+            fail(
+                f"navigation and targeting modifier total entries "
+                f"({array_key}) {counts['totalEntries']}, expected "
+                f"{NAV_TARGETING_MODIFIER_ENTRIES[modified_id]}"
+            )
 
     # Bay oracles (design section 3.3). A None expected value
     # means the key must be absent from that row.
@@ -4820,6 +5185,86 @@ def main():
                     f"type {entry['typeId']} unapplied marker "
                     "not true"
                 )
+        # Fitted-module navigation and targeting modifier
+        # invariants (docs/nav-targeting-bonuses-design.md
+        # section 3): every present family array is on a
+        # category 7 row; its entries' modified id is the
+        # family's attribute, operators in {2, 4, 6},
+        # operands finite and != 0.0; no duplicate modified
+        # id except signature's at-most-two (both 552);
+        # each marker only beside its family's array and
+        # only as true.
+        for modified_id in NAV_TARGETING_MODIFIER_ORDER:
+            array_key = NAV_TARGETING_MODIFIER_KEYS[modified_id]
+            marker_key = array_key + "Unapplied"
+            if array_key in entry:
+                if entry["categoryId"] != 7:
+                    fail(
+                        f"non-module type {entry['typeId']} carries "
+                        f"{array_key}"
+                    )
+                modified_ids = []
+                for triple in entry[array_key]:
+                    if (
+                        not isinstance(triple, list)
+                        or len(triple) != 3
+                        or not all(
+                            isinstance(part, (int, float))
+                            and not isinstance(part, bool)
+                            for part in triple
+                        )
+                    ):
+                        fail(
+                            f"type {entry['typeId']} malformed "
+                            f"navigation and targeting modifier {triple!r}"
+                        )
+                    entry_modified, operator, operand = triple
+                    if entry_modified != modified_id:
+                        fail(
+                            f"type {entry['typeId']} modified id "
+                            f"{entry_modified} not a {array_key} "
+                            "navigation and targeting attribute"
+                        )
+                    if operator not in NAV_TARGETING_MODIFIER_OPERATORS:
+                        fail(
+                            f"type {entry['typeId']} operator "
+                            f"{operator} not in (2, 4, 6)"
+                        )
+                    if (
+                        not math.isfinite(float(operand))
+                        or float(operand) == 0.0
+                    ):
+                        fail(
+                            f"type {entry['typeId']} operand "
+                            f"{operand!r} not finite or zero"
+                        )
+                    modified_ids.append(entry_modified)
+                if modified_id == 552:
+                    if len(modified_ids) > 2 or any(
+                        part != 552 for part in modified_ids
+                    ):
+                        fail(
+                            f"type {entry['typeId']} signature "
+                            "navigation and targeting modifiers "
+                            "duplicated beyond two"
+                        )
+                elif len(modified_ids) != len(set(modified_ids)):
+                    fail(
+                        f"type {entry['typeId']} {array_key} "
+                        "navigation and targeting modifiers "
+                        "duplicated"
+                    )
+            if marker_key in entry:
+                if array_key not in entry:
+                    fail(
+                        f"type {entry['typeId']} unapplied marker "
+                        f"without {array_key}"
+                    )
+                if entry[marker_key] is not True:
+                    fail(
+                        f"type {entry['typeId']} unapplied marker "
+                        "not true"
+                    )
         # Bay invariants (design section 3.4): every present bay
         # value is finite and >= 0.0; `volume` is present on every
         # row; `cargoCapacity` is present on every category 6 row
@@ -5652,6 +6097,15 @@ def main():
         f"unappliedRows={power_output_modifier_counts['unappliedRows']} "
         f"totalEntries={power_output_modifier_counts['totalEntries']}"
     )
+    for modified_id in NAV_TARGETING_MODIFIER_ORDER:
+        array_key = NAV_TARGETING_MODIFIER_KEYS[modified_id]
+        counts = nav_targeting_modifier_counts[modified_id]
+        print(
+            f"nav_targeting_modifier_keys {array_key}={counts[array_key]} "
+            f"nonEmptyRows={counts['nonEmptyRows']} "
+            f"unappliedRows={counts['unappliedRows']} "
+            f"totalEntries={counts['totalEntries']}"
+        )
     print(
         f"bay_keys volume={bay_key_counts['volume']} "
         f"cargoCapacity={bay_key_counts['cargoCapacity']} "
