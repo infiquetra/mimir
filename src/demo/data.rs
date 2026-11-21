@@ -1272,30 +1272,9 @@ pub fn apply_character(state: &mut AppState, bundle: &DemoBundle, character_id: 
 /// already resolved through the bundled SDE (never raw skill IDs).
 pub fn seed_demo_state(state: &mut AppState) {
     tracing::info!("[DEMO] seed_demo_state entry");
+    state.reset_for_mode_switch();
     state.demo = true;
     state.offline = false;
-    state.auth = crate::app::state::AuthState::Idle;
-    state.portraits.clear();
-    state.portrait_requests.clear();
-    state.confirm_delete_id = None;
-    state.refresh_requested = false;
-    state.retry_requested = false;
-    state.login_requested = false;
-    state.stepup_requested = None;
-    state.logout_requested_id = None;
-    state.delete_requested_id = None;
-    state.market_fetch_requested = false;
-    state.market_lookup_requested = None;
-    state.planetary_detail_fetch_requested = false;
-    state.fittings_write_confirm = None;
-    state.fittings_write_requested = None;
-    state.fittings_write_in_flight = None;
-    state.fittings_pending_selection = None;
-    state.skill_plan_confirm = None;
-    state.skill_plan_action = None;
-    state.assets_needs_reauthorize = false;
-    state.structures_needs_reauthorize = false;
-    state.fittings_write_needs_reauthorize = false;
     match load_demo_bundle() {
         Ok(bundle) => {
             state.characters = bundle
@@ -2492,5 +2471,87 @@ mod tests {
         assert!(!state.assets_needs_reauthorize);
         assert!(!state.structures_needs_reauthorize);
         assert!(!state.fittings_write_needs_reauthorize);
+    }
+
+    #[test]
+    fn seed_demo_state_clears_drafts_even_when_live_character_id_overlaps_demo() {
+        let mut state = AppState::new(false);
+        state.characters = vec![CharacterRow {
+            character_id: 90000001,
+            name: "Live Overlap".to_string(),
+            corporation_id: 98000001,
+            alliance_id: None,
+            is_active: true,
+        }];
+        state.active_character_id = Some(90000001);
+        state.selected_queue_row = 4;
+        state.selected_journal_row = 7;
+        state.fittings_selected_fitting_id = Some(555);
+        state.fittings_import_text = "[Rifter, Live Draft]".to_string();
+        state.fittings_imported = Some(crate::fitting::eft::ImportedFitting {
+            name: "Live Draft".to_string(),
+            ship_type_id: 587,
+            ship_name: "Rifter".to_string(),
+            format: crate::fitting::eft::ImportFormat::Eft,
+            items: Vec::new(),
+            report: crate::fitting::eft::ImportReport {
+                imported_lines: 0,
+                placeholder_lines: 0,
+                charges_noted: 0,
+                issues: Vec::new(),
+            },
+        });
+        state.fittings_import_error = Some("live import error".to_string());
+        state.fittings_import_edited = true;
+        state.fittings_editor_error = Some("live editor error".to_string());
+        state.selected_skill_plan_id = Some(777);
+        state.skill_plan_editor = Some(crate::app::state::SkillPlanEditor::Create {
+            character_id: 90000001,
+        });
+        state.skill_plan_name_draft = "Live Plan Draft".to_string();
+        state.skill_plan_description_draft = "Secret live draft notes".to_string();
+        state.skill_plan_picker_open = true;
+        state.skill_plan_picker_search = "Live Filter".to_string();
+        state.fittings_editor_add_name = "Damage Control II".to_string();
+        state.fittings_editor_quantity.insert(0, "42".to_string());
+        state.market_selected_type_id = Some(999_999);
+        state.market_selected_type_name = Some("Live Bogus Item".to_string());
+        state.planetary_selected_planet_id = Some(999_999);
+        state.focus_search = true;
+
+        let prev_active_gen = state.active_character_generation;
+        let prev_market_gen = state.market_generation;
+        let prev_planetary_gen = state.planetary_generation;
+
+        seed_demo_state(&mut state);
+
+        assert!(state.demo);
+        assert_eq!(state.active_character_id, Some(90000001));
+        assert!(state.active_character_generation > prev_active_gen);
+        assert!(state.market_generation > prev_market_gen);
+        assert!(state.planetary_generation > prev_planetary_gen);
+        assert_eq!(state.selected_queue_row, 0);
+        assert_eq!(state.selected_journal_row, 0);
+        assert_ne!(state.fittings_selected_fitting_id, Some(555));
+        assert!(state.fittings_import_text.is_empty());
+        assert!(state.fittings_imported.is_none());
+        assert_eq!(state.fittings_import_error, None);
+        assert!(!state.fittings_import_edited);
+        assert_eq!(state.fittings_editor_error, None);
+        assert!(state.fittings_editor_add_name.is_empty());
+        assert!(state.fittings_editor_quantity.is_empty());
+        assert_eq!(state.selected_skill_plan_id, None);
+        assert_eq!(state.skill_plan_editor, None);
+        assert!(state.skill_plan_name_draft.is_empty());
+        assert!(state.skill_plan_description_draft.is_empty());
+        assert!(!state.skill_plan_picker_open);
+        assert!(state.skill_plan_picker_search.is_empty());
+        assert_ne!(state.market_selected_type_id, Some(999_999));
+        assert_ne!(
+            state.market_selected_type_name.as_deref(),
+            Some("Live Bogus Item")
+        );
+        assert_ne!(state.planetary_selected_planet_id, Some(999_999));
+        assert!(!state.focus_search);
     }
 }
