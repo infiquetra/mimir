@@ -1750,7 +1750,11 @@ impl MimirApp {
                                 .planetary
                                 .as_ready()
                                 .and_then(|bundle| bundle.detail.clone())
-                                .filter(|d| d.selection.character_id == character_id)
+                                .filter(|d| {
+                                    d.selection.character_id == character_id
+                                        && Some(d.selection.planet_id)
+                                            == self.state.planetary_selected_planet_id
+                                })
                         } else {
                             None
                         };
@@ -4185,8 +4189,12 @@ impl MimirApp {
         }
         if let LoadState::Ready(bundle) = &self.state.planetary {
             if let Some(detail) = &bundle.detail {
-                if let Ok(colony) = &detail.result {
-                    return ui::planets::has_active_extractor(&colony.pins, chrono::Utc::now());
+                if Some(detail.selection.character_id) == self.state.active_character_id
+                    && Some(detail.selection.planet_id) == self.state.planetary_selected_planet_id
+                {
+                    if let Ok(colony) = &detail.result {
+                        return ui::planets::has_active_extractor(&colony.pins, chrono::Utc::now());
+                    }
                 }
             }
         }
@@ -4211,7 +4219,11 @@ impl MimirApp {
     }
 
     fn persist_startup_view_if_changed(&mut self) {
+        // Check both `state.demo` and `last_demo_mode` so unchecking Demo mode
+        // mid-frame never flushes a demo-mode `startup_view` into live `mimir.db`
+        // before `drain_requests()` reloads the live setting on the next frame.
         if !self.state.demo
+            && !self.last_demo_mode
             && self.persisted_startup_view.as_deref() != Some(self.state.startup_view.label())
         {
             if let Some(backends) = self.backends.as_ref() {
@@ -4223,8 +4235,9 @@ impl MimirApp {
                     )
                     .is_ok()
                     {
-                        self.persisted_startup_view =
-                            Some(self.state.startup_view.label().to_string());
+                        let label = self.state.startup_view.label().to_string();
+                        tracing::debug!("[UI] persisted startup_view={}", label);
+                        self.persisted_startup_view = Some(label);
                     }
                 }
             }
@@ -6068,5 +6081,100 @@ mod tests {
         assert_eq!(app.state.active_character_id, Some(11));
         assert!(app.state.characters[0].is_active);
         assert!(!app.state.characters[1].is_active);
+    }
+
+    #[test]
+    fn demo_exit_does_not_flush_demo_startup_view_into_live_db() {
+        let conn = db::open_in_memory().expect("in-memory db");
+        repositories::set_setting(&conn, "startup_view", View::Wallet.label())
+            .expect("seed startup_view");
+
+        let dir = tempfile::tempdir().expect("tempdir");
+        let db_handle = Arc::new(Mutex::new(conn));
+        let backends = Backends {
+            esi: Arc::new(EsiClient::default()),
+            token_store: Arc::new(TokenStore::file_only(dir.path().join("tokens.json"))),
+            db: db_handle.clone(),
+            jwt_verifier: None,
+            portraits: Arc::new(PortraitService::new(dir.path().to_path_buf())),
+        };
+        let mut app = MimirApp::new(
+            false,
+            Arc::new(Mutex::new(Vec::new())),
+            None,
+            Some(backends),
+        );
+        assert_eq!(app.state.startup_view, View::Wallet);
+
+        // Enter demo and edit startup_view while in demo mode.
+        app.state.demo = true;
+        crate::demo::data::seed_demo_state(&mut app.state);
+        app.drain_requests();
+        app.state.startup_view = View::Fittings;
+        app.persist_startup_view_if_changed();
+
+        // Exit demo in UI: state.demo becomes false while last_demo_mode is still true.
+        app.state.clear_for_demo_exit();
+        app.persist_startup_view_if_changed();
+        {
+            let conn = db_handle.lock().expect("db lock");
+            assert_eq!(
+                repositories::get_setting(&conn, "startup_view").expect("read setting"),
+                Some(View::Wallet.label().to_string())
+            );
+        }
+
+        // Next frame drain reloads the live startup_view without touching live DB.
+        app.drain_requests();
+        assert_eq!(app.state.startup_view, View::Wallet);
+        app.persist_startup_view_if_changed();
+        let conn = db_handle.lock().expect("db lock");
+        assert_eq!(
+            repositories::get_setting(&conn, "startup_view").expect("read setting"),
+            Some(View::Wallet.label().to_string())
+        );
+    }
+
+    #[test]
+    fn needs_tick_ignores_planetary_detail_for_unselected_planet() {
+        use crate::esi::models::{ExtractorDetails, PlanetColonyDetail, PlanetPin};
+
+        let mut app = MimirApp::new(false, Arc::new(Mutex::new(Vec::new())), None, None);
+        app.state.active_character_id = Some(42);
+        app.state.planetary_selected_planet_id = Some(700000002);
+        app.state.planetary = LoadState::Ready(PlanetaryData {
+            colonies: Ok(Vec::new()),
+            detail: Some(SelectedColonyDetail {
+                selection: PlanetSelection {
+                    character_id: 42,
+                    planet_id: 700000001,
+                },
+                result: Ok(PlanetColonyDetail {
+                    pins: vec![PlanetPin {
+                        pin_id: 1,
+                        type_id: 20001,
+                        expiry_time: Some(
+                            (chrono::Utc::now() + chrono::Duration::hours(2)).to_rfc3339(),
+                        ),
+                        extractor_details: Some(ExtractorDetails {
+                            product_type_id: Some(34),
+                            qty_per_cycle: Some(100),
+                            cycle_time: Some(3600),
+                        }),
+                        ..Default::default()
+                    }],
+                    links: Vec::new(),
+                    routes: Vec::new(),
+                }),
+            }),
+        });
+
+        assert!(
+            !app.needs_tick(),
+            "detail stamped for planet 700000001 must not trigger ticks while 700000002 is selected"
+        );
+
+        app.state.planetary_selected_planet_id = Some(700000001);
+        assert!(app.needs_tick());
     }
 }
