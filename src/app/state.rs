@@ -719,6 +719,9 @@ pub struct AppState {
     pub view: View,
     pub characters: Vec<CharacterRow>,
     pub active_character_id: Option<i64>,
+    /// Monotonic counter incremented whenever `active_character_id` changes so
+    /// same-frame `A -> B -> A` switches still trigger reloads in the shell.
+    pub active_character_generation: u64,
     pub auth: AuthState,
     pub demo: bool,
     pub offline: bool,
@@ -1107,6 +1110,9 @@ impl AppState {
         let previous = self.active_character_id;
         tracing::info!("[CHAR] set active character_id={}", character_id);
         self.active_character_id = Some(character_id);
+        if previous != Some(character_id) {
+            self.active_character_generation = self.active_character_generation.wrapping_add(1);
+        }
         for c in &mut self.characters {
             c.is_active = c.character_id == character_id;
         }
@@ -1393,6 +1399,7 @@ impl AppState {
             .retain(|(kind, id)| logo_known(kind, *id));
         if self.active_character_id == Some(character_id) {
             self.active_character_id = None;
+            self.active_character_generation = self.active_character_generation.wrapping_add(1);
             // The removed character owned the loaded assets; never show
             // them under the replacement active character. set_active
             // below cannot detect this (previous is already None), and
@@ -1546,6 +1553,7 @@ impl AppState {
         self.auth = AuthState::Idle;
         self.characters.clear();
         self.active_character_id = None;
+        self.active_character_generation = self.active_character_generation.wrapping_add(1);
         self.summaries.clear();
         self.demo_skill_plans.clear();
         self.portraits.clear();
