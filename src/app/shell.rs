@@ -967,6 +967,20 @@ fn load_cached_state(
                     .unwrap_or(false),
             })
             .or_else(|| sorted_queue.first().copied());
+        // Preserve in-session resolved location/ship across character switches;
+        // SQLite does not persist them and wiping them here would regress the
+        // character back to "not loaded" if offline or while refresh runs.
+        let (location_name, ship_name) = state
+            .summaries
+            .get(&character_id)
+            .map(|existing| (existing.location_name.clone(), existing.ship_name.clone()))
+            .unwrap_or((None, None));
+        tracing::debug!(
+            "[DB] cached summary loaded character_id={} preserved_location={} preserved_ship={}",
+            character_id,
+            location_name.is_some(),
+            ship_name.is_some()
+        );
         state.summaries.insert(
             character_id,
             CharacterSummary {
@@ -977,8 +991,8 @@ fn load_cached_state(
                 total_sp: Some(
                     repositories::total_skillpoints(conn, character_id).unwrap_or_default(),
                 ),
-                location_name: None,
-                ship_name: None,
+                location_name,
+                ship_name,
             },
         );
     }
@@ -6176,5 +6190,47 @@ mod tests {
 
         app.state.planetary_selected_planet_id = Some(700000001);
         assert!(app.needs_tick());
+    }
+
+    #[test]
+    fn load_cached_state_preserves_existing_location_and_ship_summary() {
+        let conn = db::open_in_memory().expect("in-memory db");
+        repositories::upsert_character(
+            &conn,
+            &CharacterRow {
+                character_id: 42,
+                name: "Pilot".to_string(),
+                corporation_id: 1000166,
+                alliance_id: None,
+                is_active: true,
+            },
+        )
+        .expect("insert character");
+        repositories::set_wallet_balance(
+            &conn,
+            &repositories::WalletBalanceRow {
+                character_id: 42,
+                balance: 123_456.78,
+            },
+        )
+        .expect("insert wallet balance");
+
+        let sde = Sde::load_bundled().expect("bundled SDE loads");
+        let mut state = AppState::new(false);
+        state.summaries.insert(
+            42,
+            CharacterSummary {
+                balance: Some(100.0),
+                location_name: Some("Jita IV - Moon 4".to_string()),
+                ship_name: Some("Rifter".to_string()),
+                ..Default::default()
+            },
+        );
+
+        load_cached_state(&conn, &sde, &mut state, 42);
+        let summary = state.summaries.get(&42).expect("summary retained");
+        assert_eq!(summary.balance, Some(123_456.78));
+        assert_eq!(summary.location_name.as_deref(), Some("Jita IV - Moon 4"));
+        assert_eq!(summary.ship_name.as_deref(), Some("Rifter"));
     }
 }
