@@ -853,12 +853,25 @@ fn load_cached_state(
                 })
                 .collect(),
         });
+        let now = chrono::Utc::now();
+        let mut sorted_queue: Vec<&repositories::SkillQueueRow> = queue_rows.iter().collect();
+        sorted_queue.sort_by_key(|q| q.queue_position);
+        let training = sorted_queue
+            .iter()
+            .copied()
+            .find(|q| match q.finish_date.as_deref() {
+                None => true,
+                Some(raw) => ui::widgets::parse_esi_date(raw)
+                    .map(|dt| dt > now)
+                    .unwrap_or(false),
+            })
+            .or_else(|| sorted_queue.first().copied());
         state.summaries.insert(
             character_id,
             CharacterSummary {
                 balance: Some(balance),
-                training_skill_name: queue_rows.first().map(|q| sde.skill_name(q.skill_id)),
-                training_finish_date: queue_rows.first().and_then(|q| q.finish_date.clone()),
+                training_skill_name: training.map(|q| sde.skill_name(q.skill_id)),
+                training_finish_date: training.and_then(|q| q.finish_date.clone()),
                 queue_len: Some(queue_rows.len()),
                 total_sp: Some(
                     repositories::total_skillpoints(conn, character_id).unwrap_or_default(),
@@ -1020,6 +1033,15 @@ impl MimirApp {
             app.state.request_refresh("startup");
         }
         app
+    }
+
+    /// Override the active view from CLI startup options (`--view`).
+    pub fn apply_initial_view(&mut self, view: View) {
+        tracing::info!(
+            "[STARTUP] CLI --view override applied view={}",
+            view.label()
+        );
+        self.state.view = view;
     }
 
     /// Runtime "Try demo" entry points only seed `AppState`; load the full
@@ -1456,7 +1478,10 @@ impl MimirApp {
                         .iter()
                         .any(|c| c.character_id == character_id)
                     {
-                        let training = skills.queue.first();
+                        let training = crate::ui::skills::active_or_first_queue_item(
+                            &skills.queue,
+                            chrono::Utc::now(),
+                        );
                         let (location_name, ship_name) =
                             detail_summary_names(&detail, &self.resolver);
                         self.state.summaries.insert(
@@ -1894,8 +1919,42 @@ impl MimirApp {
         // the transition itself. When the active id also changed,
         // the block above already loaded from the new source.
         if self.state.demo != self.last_demo_mode {
+            let exiting_demo = self.last_demo_mode && !self.state.demo;
             self.last_demo_mode = self.state.demo;
-            if !active_id_changed {
+            if exiting_demo {
+                self.state.clear_for_demo_exit();
+                if let Some(b) = &self.backends {
+                    if let Ok(conn) = b.db.lock() {
+                        match repositories::list_characters(&conn) {
+                            Ok(rows) => {
+                                tracing::info!(
+                                    "[CHAR] reloaded {} stored characters after demo exit",
+                                    rows.len()
+                                );
+                                let active = rows
+                                    .iter()
+                                    .find(|r| r.is_active)
+                                    .or_else(|| rows.first())
+                                    .map(|r| r.character_id);
+                                self.state.characters = rows;
+                                self.state.active_character_id = active;
+                                for c in &mut self.state.characters {
+                                    c.is_active = Some(c.character_id) == active;
+                                }
+                                if let Some(active_id) = active {
+                                    load_cached_state(&conn, &self.sde, &mut self.state, active_id);
+                                    self.state.request_refresh("demo-exit");
+                                }
+                            }
+                            Err(e) => {
+                                tracing::warn!("[CHAR] list_characters on demo exit failed: {}", e);
+                            }
+                        }
+                    }
+                }
+                self.last_active_id = self.state.active_character_id;
+                self.load_skill_plans_into_state();
+            } else if !active_id_changed {
                 self.load_skill_plans_into_state();
             }
         }
@@ -3624,7 +3683,7 @@ impl MimirApp {
     }
 
     fn collect_keys(&self, ctx: &egui::Context) -> KeyActions {
-        let typing = self.state.text_input_focused;
+        let typing = self.state.text_input_focused || ctx.wants_keyboard_input();
         ctx.input(|i| {
             let mut actions = KeyActions::default();
             let command_r =
@@ -3734,7 +3793,9 @@ impl eframe::App for MimirApp {
         self.drain_requests();
         // Persist startup-view choice only when it actually changed since
         // the last write (settings view edits it); no per-frame DB reads.
-        if self.persisted_startup_view.as_deref() != Some(self.state.startup_view.label()) {
+        if !self.state.demo
+            && self.persisted_startup_view.as_deref() != Some(self.state.startup_view.label())
+        {
             if let Some(backends) = self.backends.as_ref() {
                 if let Ok(conn) = backends.db.lock() {
                     if repositories::set_setting(

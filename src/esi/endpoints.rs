@@ -79,7 +79,11 @@ pub async fn get_wallet_journal_page(
     Ok(items)
 }
 
-/// Full wallet journal: walks pages until `X-Pages`/an empty page ends it.
+/// Defensive cap on paginated character endpoints when ESI omits `X-Pages`.
+pub const UNBOUNDED_PAGE_CAP: u32 = 50;
+
+/// Full wallet journal: walks pages until `X-Pages`/an empty page ends it
+/// (or `UNBOUNDED_PAGE_CAP` if `X-Pages` is omitted).
 pub async fn get_wallet_journal(
     client: &EsiClient,
     character_id: i64,
@@ -108,7 +112,20 @@ pub async fn get_wallet_journal(
         all.extend(items);
         let last = match meta.pages {
             Some(total) => page >= total,
-            None => count == 0,
+            None => {
+                if count == 0 {
+                    true
+                } else if page >= UNBOUNDED_PAGE_CAP {
+                    tracing::warn!(
+                        "[WALLET] journal stopped at missing X-Pages cap page={} character_id={}",
+                        page,
+                        character_id
+                    );
+                    true
+                } else {
+                    false
+                }
+            }
         };
         if last {
             break;
@@ -184,8 +201,9 @@ pub async fn get_assets_page(
 }
 
 /// Full character asset list: walks pages until `X-Pages`/an empty page
-/// ends it. Any page error (including the 403 scope failure) propagates;
-/// partial asset lists are never returned as success.
+/// ends it (or `UNBOUNDED_PAGE_CAP` if `X-Pages` is omitted). Any page error
+/// (including the 403 scope failure) propagates; partial asset lists are
+/// never returned as success.
 pub async fn get_assets(client: &EsiClient, character_id: i64) -> AppResult<Vec<AssetItem>> {
     tracing::debug!(
         "[ASSETS] GET /characters/{}/assets/ (all pages)",
@@ -211,7 +229,20 @@ pub async fn get_assets(client: &EsiClient, character_id: i64) -> AppResult<Vec<
         all.extend(items);
         let last = match meta.pages {
             Some(total) => page >= total,
-            None => count == 0,
+            None => {
+                if count == 0 {
+                    true
+                } else if page >= UNBOUNDED_PAGE_CAP {
+                    tracing::warn!(
+                        "[ASSETS] assets stopped at missing X-Pages cap page={} character_id={}",
+                        page,
+                        character_id
+                    );
+                    true
+                } else {
+                    false
+                }
+            }
         };
         if last {
             break;
@@ -2159,5 +2190,41 @@ mod tests {
             (WriteFailureClass::Unknown, false),
             "error: {err:?}"
         );
+    }
+
+    #[tokio::test]
+    async fn unbounded_pagination_stops_at_cap_when_x_pages_missing() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");
+        let addr = listener.local_addr().expect("addr");
+        tokio::spawn(async move {
+            loop {
+                let Ok((mut socket, _)) = listener.accept().await else {
+                    break;
+                };
+                tokio::spawn(async move {
+                    let mut buf = vec![0u8; 4096];
+                    let _ = socket.read(&mut buf).await;
+                    let req = String::from_utf8_lossy(&buf);
+                    let body = if req.contains("/assets/") {
+                        r#"[{"item_id":1,"type_id":34,"quantity":1,"location_id":60003760,"location_type":"station","location_flag":"Hangar","is_singleton":false}]"#
+                    } else {
+                        r#"[{"id":1,"amount":10.0,"balance":10.0,"date":"d","description":"x","ref_type":"a"}]"#
+                    };
+                    let payload = format!(
+                        "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                        body.len()
+                    );
+                    let _ = socket.write_all(payload.as_bytes()).await;
+                    let _ = socket.flush().await;
+                });
+            }
+        });
+        let (client, _dir) = client_with_fresh_tokens(format!("http://{addr}"));
+        let journal = get_wallet_journal(&client, 7)
+            .await
+            .expect("journal stops at cap");
+        assert_eq!(journal.len(), UNBOUNDED_PAGE_CAP as usize);
+        let assets = get_assets(&client, 7).await.expect("assets stop at cap");
+        assert_eq!(assets.len(), UNBOUNDED_PAGE_CAP as usize);
     }
 }

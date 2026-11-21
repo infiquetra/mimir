@@ -61,7 +61,7 @@ pub fn show(
     if state.auth == AuthState::Error {
         ui.colored_label(
             egui::Color32::LIGHT_RED,
-            "Sign-in failed. Check the log in Settings (key 5), then try again.",
+            "Sign-in failed. Check the log in Settings (key 0), then try again.",
         );
     }
 

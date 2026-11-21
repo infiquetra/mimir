@@ -24,6 +24,17 @@
 
 ---
 
+## 2026-11-21
+
+### Demo DB isolation via in-memory SQLite and strict per-character state boundaries (`fix/rust-audit-and-cleanup`)
+
+**Author.** Mimir audit and cleanup pass
+**Decision.** `--demo` launches now open `db::open_in_memory()` in `src/main.rs` instead of `db::db_path()`, `MimirApp::update` skips persisting `startup_view` while `state.demo` is true (`src/app/shell.rs:3796`), and `AppState` adds explicit boundaries on character switches (`set_active_character`, `src/app/state.rs:1122`), active character removal (`remove_character`, `:1390`), and demo exit (`clear_for_demo_exit`, `:1529`, wired from both `src/ui/settings.rs` and `shell.rs`). Added `--view <name>` / `--view=<name>` startup routing via `View::from_cli_name` (`src/app/state.rs:94`) and `parse_view_arg` (`src/main.rs:16`), and bounded missing-`X-Pages` pagination in `get_wallet_journal` / `get_assets` with `UNBOUNDED_PAGE_CAP = 50` (`src/esi/endpoints.rs:83`).
+**Rejected alternatives.** Guarding individual write paths while still opening `db::db_path()` in `--demo`: leaves reads (`startup_view`, `universe_names`) coupled to live user files and risks accidental future writes corrupting live storage. Leaving demo character state in memory when toggling Demo OFF: leaves Aria/Marcus sample rows visible until restart.
+**Rationale.** Opening an in-memory SQLite connection guarantees demo mode and headless smoke runs can never mutate or be skewed by a user's live `mimir.db`, while resetting `wallet`, `character_detail`, and `dashboard` alongside `skills`/`assets`/`fittings` prevents brief cross-character data bleed.
+**Revisit when.** Demo mode introduces persistent sample-session workspaces separate from the live database, or ESI pagination adds cursor tokens for journal/assets.
+**Refs.** `src/main.rs`, `src/app/state.rs`, `src/app/shell.rs`, `src/ui/settings.rs`, `src/esi/endpoints.rs`, LEARNINGS 2026-11-21 Wave 1 audit fixes entry.
+
 ## 2026-11-19
 
 ### Fitted-module navigation and targeting bonuses: eleven bonused attributes, max velocity deferred whole (feat/rust-nav-targeting-bonuses)

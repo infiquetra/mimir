@@ -35,6 +35,19 @@ fn within_window(date: &str, now: DateTime<Utc>, days: Option<i64>) -> bool {
     }
 }
 
+/// Resolve the other party of a wallet journal row, preferring whichever of
+/// `second_party_id` / `first_party_id` differs from the active character.
+pub fn journal_counterparty_id(
+    row: &WalletJournalItem,
+    self_character_id: Option<i64>,
+) -> Option<i64> {
+    [row.second_party_id, row.first_party_id]
+        .into_iter()
+        .flatten()
+        .find(|id| Some(*id) != self_character_id)
+        .or_else(|| row.second_party_id.or(row.first_party_id))
+}
+
 /// Pure analytics over journal rows. Non-finite amounts are skipped.
 pub fn compute_analytics(
     journal: &[WalletJournalItem],
@@ -57,12 +70,7 @@ pub fn compute_analytics(
             analytics.total_out += row.amount.abs();
         }
         *ref_totals.entry(row.ref_type.clone()).or_default() += row.amount;
-        let counterparty = [row.second_party_id, row.first_party_id]
-            .into_iter()
-            .flatten()
-            .find(|id| Some(*id) != self_character_id)
-            .or_else(|| row.second_party_id.or(row.first_party_id));
-        if let Some(id) = counterparty {
+        if let Some(id) = journal_counterparty_id(row, self_character_id) {
             *party_totals.entry(resolver.name(id)).or_default() += row.amount;
         }
     }
@@ -172,6 +180,7 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState, resolver: &NameResolver) {
             }
 
             // --- Journal table ---
+            let active_id = state.active_character_id;
             let query = state.wallet_search.clone();
             let ref_filter = state.wallet_ref_filter.clone();
             let mut visible: Vec<&WalletJournalItem> = w
@@ -185,8 +194,7 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState, resolver: &NameResolver) {
                         .unwrap_or(true)
                 })
                 .filter(|row| {
-                    let party = row
-                        .second_party_id
+                    let party = journal_counterparty_id(row, active_id)
                         .map(|id| resolver.name(id))
                         .unwrap_or_default();
                     widgets::matches_search(&row.description, &query)
@@ -234,8 +242,7 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState, resolver: &NameResolver) {
                                 ui.label("Description");
                                 ui.end_row();
                                 for (idx, row) in visible.iter().enumerate() {
-                                    let party = row
-                                        .second_party_id
+                                    let party = journal_counterparty_id(row, active_id)
                                         .map(|id| resolver.name(id))
                                         .unwrap_or_default();
                                     let marker = if idx == state.selected_journal_row {
@@ -264,16 +271,21 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState, resolver: &NameResolver) {
             if w.transactions.is_empty() {
                 widgets::empty_panel(ui, "No market transactions yet.");
             } else {
-                let mut shown = 0usize;
-                for row in &w.transactions {
+                let mut visible_tx: Vec<_> = w
+                    .transactions
+                    .iter()
+                    .filter(|row| within_window(&row.date, now, state.wallet_period.days()))
+                    .filter(|row| {
+                        let item = resolver.name(row.type_id);
+                        let location = resolver.location_name(row.location_id);
+                        widgets::matches_search(&item, &query)
+                            || widgets::matches_search(&location, &query)
+                    })
+                    .collect();
+                visible_tx.sort_by(|a, b| b.date.cmp(&a.date));
+                for row in &visible_tx {
                     let item = resolver.name(row.type_id);
                     let location = resolver.location_name(row.location_id);
-                    if !widgets::matches_search(&item, &query)
-                        && !widgets::matches_search(&location, &query)
-                    {
-                        continue;
-                    }
-                    shown += 1;
                     let verb = if row.is_buy { "Bought" } else { "Sold" };
                     ui.label(format!(
                         "{}: {} {} x{} at {} each ({})",
@@ -285,8 +297,8 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState, resolver: &NameResolver) {
                         location
                     ));
                 }
-                if shown == 0 {
-                    widgets::empty_panel(ui, "No transactions match the search.");
+                if visible_tx.is_empty() {
+                    widgets::empty_panel(ui, "No transactions match the current filters.");
                 }
             }
 
@@ -385,5 +397,29 @@ mod tests {
         let result = compute_analytics(&journal, now(), Some(7), None, &resolver);
         assert_eq!(result.counted, 1, "unparseable date stays visible");
         assert_eq!(result.top_counterparties[0].0, "Unknown Item");
+    }
+
+    #[test]
+    fn journal_counterparty_id_handles_incoming_and_outgoing_rows() {
+        let incoming = WalletJournalItem {
+            first_party_id: Some(1000125),
+            second_party_id: Some(90000001),
+            ..Default::default()
+        };
+        assert_eq!(
+            journal_counterparty_id(&incoming, Some(90000001)),
+            Some(1000125)
+        );
+
+        let outgoing = WalletJournalItem {
+            first_party_id: Some(90000001),
+            second_party_id: Some(90000003),
+            ..Default::default()
+        };
+        assert_eq!(
+            journal_counterparty_id(&outgoing, Some(90000001)),
+            Some(90000003)
+        );
+        assert_eq!(journal_counterparty_id(&incoming, None), Some(90000001));
     }
 }

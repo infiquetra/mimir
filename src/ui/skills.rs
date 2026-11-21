@@ -3,7 +3,7 @@
 
 use std::collections::BTreeMap;
 
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 
 use super::portraits::{
     ensure_type_icon_requested, show_type_icon, PortraitImageCache, TYPE_ICON_PX,
@@ -45,6 +45,63 @@ pub fn sorted_queue(queue: &[SkillQueueItem]) -> Vec<&SkillQueueItem> {
     let mut sorted: Vec<&SkillQueueItem> = queue.iter().collect();
     sorted.sort_by_key(|item| item.queue_position);
     sorted
+}
+
+fn is_queue_entry_unfinished(finish_date: Option<&str>, now: DateTime<Utc>) -> bool {
+    match finish_date {
+        None => true,
+        Some(raw) => widgets::parse_esi_date(raw)
+            .map(|finish| finish > now)
+            .unwrap_or(false),
+    }
+}
+
+/// First index in an already-sorted queue whose entry has not yet finished
+/// (paused entries with `finish_date == None` count as unfinished). Returns
+/// `None` if all entries finished at or before `now`.
+pub fn active_queue_index(queue: &[&SkillQueueItem], now: DateTime<Utc>) -> Option<usize> {
+    let idx = queue
+        .iter()
+        .position(|item| is_queue_entry_unfinished(item.finish_date.as_deref(), now));
+    tracing::debug!(
+        "[SKILLS] active_queue_index queue_len={} active={:?}",
+        queue.len(),
+        idx
+    );
+    idx
+}
+
+/// First unfinished entry in queue-position order, falling back to the head
+/// entry only when every queued item has already finished.
+pub fn active_or_first_queue_item(
+    queue: &[SkillQueueItem],
+    now: DateTime<Utc>,
+) -> Option<&SkillQueueItem> {
+    let sorted = sorted_queue(queue);
+    let picked = active_queue_index(&sorted, now)
+        .and_then(|idx| sorted.get(idx).copied())
+        .or_else(|| sorted.first().copied());
+    tracing::debug!(
+        "[SKILLS] active_or_first_queue_item queue_len={} picked={}",
+        queue.len(),
+        picked.map(|item| item.skill_id).unwrap_or(0)
+    );
+    picked
+}
+
+/// All queue entries in queue-position order that have not yet finished.
+pub fn upcoming_queue_items(queue: &[SkillQueueItem], now: DateTime<Utc>) -> Vec<&SkillQueueItem> {
+    let sorted = sorted_queue(queue);
+    let upcoming: Vec<&SkillQueueItem> = sorted
+        .into_iter()
+        .filter(|item| is_queue_entry_unfinished(item.finish_date.as_deref(), now))
+        .collect();
+    tracing::debug!(
+        "[SKILLS] upcoming_queue_items total={} upcoming={}",
+        queue.len(),
+        upcoming.len()
+    );
+    upcoming
 }
 
 /// Trained level per skill id, for catalogue display.
@@ -388,6 +445,7 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState, sde: &Sde, cache: &mut Port
                 if state.selected_queue_row >= queue.len() {
                     state.selected_queue_row = queue.len().saturating_sub(1);
                 }
+                let progress_idx = active_queue_index(&queue, now);
                 egui::ScrollArea::vertical()
                     .id_salt("skill_queue_scroll")
                     .max_height(240.0)
@@ -413,7 +471,7 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState, sde: &Sde, cache: &mut Port
                                     .map(widgets::format_date_short)
                                     .unwrap_or_else(|| "paused".to_string())
                             ));
-                            if idx == 0 {
+                            if Some(idx) == progress_idx {
                                 let fraction = widgets::progress_fraction(
                                     item.start_date.as_deref(),
                                     item.finish_date.as_deref(),
@@ -1981,5 +2039,48 @@ mod tests {
                 PortraitState::Ready(_)
             ));
         }
+    }
+
+    #[test]
+    fn active_queue_helpers_skip_finished_and_respect_order() {
+        let now = widgets::parse_esi_date("2026-11-21T00:00:00Z").expect("valid date");
+        let item = |skill_id: i64, pos: i32, finish: Option<&str>| SkillQueueItem {
+            skill_id,
+            finished_level: 5,
+            queue_position: pos,
+            finish_date: finish.map(str::to_string),
+            ..Default::default()
+        };
+
+        // Unsorted queue where pos 0 already finished before `now`.
+        let queue = vec![
+            item(3301, 1, Some("2026-11-25T00:00:00Z")),
+            item(3300, 0, Some("2026-11-20T12:00:00Z")),
+            item(3310, 2, None), // paused
+        ];
+        let sorted = sorted_queue(&queue);
+        assert_eq!(active_queue_index(&sorted, now), Some(1));
+        assert_eq!(
+            active_or_first_queue_item(&queue, now).map(|q| q.skill_id),
+            Some(3301)
+        );
+        let upcoming_ids: Vec<i64> = upcoming_queue_items(&queue, now)
+            .iter()
+            .map(|q| q.skill_id)
+            .collect();
+        assert_eq!(upcoming_ids, vec![3301, 3310]);
+
+        // All finished: active_queue_index & upcoming return empty; active_or_first falls back to head.
+        let finished_queue = vec![
+            item(3301, 1, Some("2026-11-20T18:00:00Z")),
+            item(3300, 0, Some("2026-11-20T12:00:00Z")),
+        ];
+        let finished_sorted = sorted_queue(&finished_queue);
+        assert_eq!(active_queue_index(&finished_sorted, now), None);
+        assert!(upcoming_queue_items(&finished_queue, now).is_empty());
+        assert_eq!(
+            active_or_first_queue_item(&finished_queue, now).map(|q| q.skill_id),
+            Some(3300)
+        );
     }
 }

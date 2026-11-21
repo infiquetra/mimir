@@ -1,14 +1,48 @@
 //! Dashboard: multi-character overview grid, combined wealth, training
 //! overview with countdowns, and a wallet summary.
 
+use std::collections::HashMap;
+
 use chrono::Utc;
 
 use super::portraits::{self, PortraitImageCache};
+use super::skills;
 use super::wallet::compute_analytics;
 use super::widgets;
-use crate::app::state::{AppState, LoadState, View};
+use crate::app::state::{AppState, CharacterSummary, LoadState, View};
 use crate::names::resolver::NameResolver;
 use crate::names::sde::Sde;
+use crate::storage::repositories::CharacterRow;
+
+/// Sum wallet balances across the current character roster, falling back to the
+/// active character's live wallet balance if its summary is absent.
+pub fn combined_wallet_balance(
+    characters: &[CharacterRow],
+    summaries: &HashMap<i64, CharacterSummary>,
+    active_id: Option<i64>,
+    active_balance: Option<f64>,
+) -> Option<f64> {
+    let mut combined: Option<f64> = None;
+    for character in characters {
+        let balance = summaries
+            .get(&character.character_id)
+            .and_then(|s| s.balance)
+            .or(if active_id == Some(character.character_id) {
+                active_balance
+            } else {
+                None
+            });
+        if let Some(value) = balance {
+            combined = Some(combined.unwrap_or(0.0) + value);
+        }
+    }
+    tracing::debug!(
+        "[UI] combined_wallet_balance characters={} has_total={}",
+        characters.len(),
+        combined.is_some()
+    );
+    combined
+}
 
 pub fn show(
     ui: &mut egui::Ui,
@@ -102,33 +136,21 @@ pub fn show(
                         .map(widgets::format_isk)
                         .unwrap_or_else(|| "not loaded".to_string()),
                 );
+                let active_training = if *is_active {
+                    state
+                        .skills
+                        .as_ready()
+                        .and_then(|d| skills::active_or_first_queue_item(&d.queue, now))
+                } else {
+                    None
+                };
                 let training = summary
                     .and_then(|s| s.training_skill_name.clone())
-                    .or_else(|| {
-                        if *is_active {
-                            state
-                                .skills
-                                .as_ready()
-                                .and_then(|d| d.queue.first())
-                                .map(|q| sde.skill_name(q.skill_id))
-                        } else {
-                            None
-                        }
-                    });
+                    .or_else(|| active_training.map(|q| sde.skill_name(q.skill_id)));
                 ui.label(training.unwrap_or_else(|| "not loaded".to_string()));
                 let finish = summary
                     .and_then(|s| s.training_finish_date.as_deref())
-                    .or_else(|| {
-                        if *is_active {
-                            state
-                                .skills
-                                .as_ready()
-                                .and_then(|d| d.queue.first())
-                                .and_then(|q| q.finish_date.as_deref())
-                        } else {
-                            None
-                        }
-                    });
+                    .or_else(|| active_training.and_then(|q| q.finish_date.as_deref()));
                 ui.label(widgets::countdown_label(finish, now));
                 let queue_len = summary.and_then(|s| s.queue_len).or_else(|| {
                     if *is_active {
@@ -159,13 +181,13 @@ pub fn show(
         state.set_active_character(id);
     }
 
-    // --- Combined wealth (only loaded balances are summed) ---
-    let mut combined: Option<f64> = None;
-    for summary in state.summaries.values() {
-        if let Some(balance) = summary.balance {
-            combined = Some(combined.unwrap_or(0.0) + balance);
-        }
-    }
+    // --- Combined wealth (only loaded balances across active roster are summed) ---
+    let combined = combined_wallet_balance(
+        &state.characters,
+        &state.summaries,
+        active_id,
+        active_balance,
+    );
     ui.separator();
     match (combined, active_balance) {
         (Some(total), _) => {
@@ -201,18 +223,20 @@ pub fn show(
                 "Total skill points: {}",
                 widgets::format_sp(data.skills.total_sp)
             ));
-            let mut queue: Vec<_> = data.queue.iter().collect();
-            queue.sort_by_key(|item| item.queue_position);
-            if queue.is_empty() {
+            let upcoming = skills::upcoming_queue_items(&data.queue, now);
+            if data.queue.is_empty() {
                 ui.label("Skill queue is empty.");
-            }
-            for next in queue.iter().take(3) {
-                ui.label(format!(
-                    "{} level {} — {}",
-                    sde.skill_name(next.skill_id),
-                    next.finished_level,
-                    widgets::countdown_label(next.finish_date.as_deref(), now)
-                ));
+            } else if upcoming.is_empty() {
+                ui.label("All queued skills have finished.");
+            } else {
+                for next in upcoming.iter().take(3) {
+                    ui.label(format!(
+                        "{} level {} — {}",
+                        sde.skill_name(next.skill_id),
+                        next.finished_level,
+                        widgets::countdown_label(next.finish_date.as_deref(), now)
+                    ));
+                }
             }
             if ui.button("Open Skills (key 3)").clicked() {
                 state.switch_view(View::Skills);
@@ -254,5 +278,48 @@ pub fn show(
                 state.retry_requested = true;
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn char_row(id: i64, name: &str) -> CharacterRow {
+        CharacterRow {
+            character_id: id,
+            name: name.to_string(),
+            corporation_id: 1000166,
+            alliance_id: None,
+            is_active: false,
+        }
+    }
+
+    #[test]
+    fn combined_wallet_ignores_orphan_summaries_and_falls_back_to_active() {
+        let chars = vec![char_row(1, "Aria"), char_row(2, "Marcus")];
+        let mut summaries = HashMap::new();
+        summaries.insert(
+            1,
+            CharacterSummary {
+                balance: Some(100.0),
+                ..Default::default()
+            },
+        );
+        // Orphaned summary for removed character 99 must not contribute.
+        summaries.insert(
+            99,
+            CharacterSummary {
+                balance: Some(9_999.0),
+                ..Default::default()
+            },
+        );
+
+        let total = combined_wallet_balance(&chars, &summaries, Some(2), Some(50.0));
+        assert_eq!(total, Some(150.0));
+
+        // If no summary or active balance exists, result is None.
+        let empty = combined_wallet_balance(&chars, &HashMap::new(), Some(2), None);
+        assert_eq!(empty, None);
     }
 }
