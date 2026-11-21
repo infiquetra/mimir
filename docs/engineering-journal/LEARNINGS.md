@@ -31,6 +31,17 @@
 
 ## 2026-11-21
 
+### Post-render persistence must check both `state.demo` and `last_demo_mode` across mode-exit frames
+
+**Author.** Mimir Pass-5 reliability pass
+**Context.** PR #626 moved `persist_startup_view_if_changed()` to the bottom of `MimirApp::update` so Settings edits take effect immediately. Pass-5 auditing caught that unchecking Demo mode inside Settings flips `state.demo` to `false` mid-frame while `last_demo_mode` remains `true` until the next frame's `drain_requests()` reloads live `mimir.db`.
+**Evidence.** `src/ui/settings.rs` (demo toggle sets `state.demo = false` and calls `clear_for_demo_exit()` without resetting `startup_view`), `src/app/shell.rs` (`persist_startup_view_if_changed` ran at the end of `update()` checking only `!self.state.demo`).
+**Mechanism.** Deferring `drain_requests()` mode-exit cleanup to frame N+1 leaves a single-frame window where `state.demo` is already `false` while demo-mode edits are still resident in `AppState`.
+**Fix.** Gated `persist_startup_view_if_changed` on `!self.state.demo && !self.last_demo_mode`, prioritized live `state.skills` over stale `state.summaries` in `dashboard::character_training_cells`, and required both `character_id` and `planet_id` matches when reading `bundle.detail`.
+**Validation.** Regression unit tests in `src/app/shell.rs` and `src/ui/dashboard.rs`, `cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test && cargo build`, and headless Xvfb demo verification.
+**Generalizable rule.** Any side-effecting persistence gated on "not in demo mode" inside an immediate-mode loop must require both `!self.state.demo && !self.last_demo_mode` so the mode-exit frame never flushes demo state to live storage.
+**Refs.** `src/app/shell.rs`, `src/ui/dashboard.rs`, `src/ui/settings.rs`.
+
 ### Per-frame pure UI helpers must use `tracing::trace!`, not `tracing::debug!`, to protect the in-app log buffer
 
 **Author.** Mimir Wave 6 dashboard & log hygiene pass

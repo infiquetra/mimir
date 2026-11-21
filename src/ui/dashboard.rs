@@ -37,14 +37,18 @@ pub fn character_training_cells(
             true,
         );
     }
-    let active_training =
-        active_skills.and_then(|d| skills::active_or_first_queue_item(&d.queue, now));
-    let training = summary
-        .and_then(|s| s.training_skill_name.clone())
-        .or_else(|| active_training.map(|q| sde.skill_name(q.skill_id)));
-    let finish = summary
-        .and_then(|s| s.training_finish_date.as_deref())
-        .or_else(|| active_training.and_then(|q| q.finish_date.as_deref()));
+    let (training, finish) = if let Some(data) = active_skills {
+        let item = skills::active_or_first_queue_item(&data.queue, now);
+        (
+            item.map(|q| sde.skill_name(q.skill_id)),
+            item.and_then(|q| q.finish_date.as_deref()),
+        )
+    } else {
+        (
+            summary.and_then(|s| s.training_skill_name.clone()),
+            summary.and_then(|s| s.training_finish_date.as_deref()),
+        )
+    };
     let (training_text, training_muted) = match training {
         Some(name) => (name, false),
         None => ("idle".to_string(), true),
@@ -198,7 +202,10 @@ pub fn operations_snapshot(state: &AppState, now: chrono::DateTime<Utc>) -> Oper
                         format!("{} total", format_count_noun(total_pins, "pin", "pins"));
                     let mut tone = OpsTone::Accent;
                     if let Some(selected) = &bundle.detail {
-                        if Some(selected.selection.character_id) == state.active_character_id {
+                        if Some(selected.selection.character_id) == state.active_character_id
+                            && Some(selected.selection.planet_id)
+                                == state.planetary_selected_planet_id
+                        {
                             if let Ok(colony) = &selected.result {
                                 if super::planets::has_active_extractor(&colony.pins, now) {
                                     detail.push_str(" — extracting");
@@ -919,5 +926,62 @@ mod tests {
             assert_eq!(metric.value, "Needs authorization");
             assert_eq!(metric.tone, OpsTone::Warning);
         }
+    }
+
+    #[test]
+    fn character_training_cells_prefers_live_active_skills_over_stale_summary() {
+        use crate::esi::models::{CharacterSkills, SkillQueueItem};
+
+        let sde = Sde::load_bundled().expect("bundled SDE loads");
+        let now = Utc::now();
+        let finished_skill_id = 3300;
+        let running_skill_id = 3301;
+        let stale_summary = CharacterSummary {
+            queue_len: Some(2),
+            training_skill_name: Some(sde.skill_name(finished_skill_id)),
+            training_finish_date: Some((now - chrono::Duration::minutes(10)).to_rfc3339()),
+            ..Default::default()
+        };
+        let active_skills = SkillsData {
+            skills: CharacterSkills::default(),
+            queue: vec![
+                SkillQueueItem {
+                    skill_id: finished_skill_id,
+                    finished_level: 5,
+                    queue_position: 0,
+                    finish_date: Some((now - chrono::Duration::minutes(10)).to_rfc3339()),
+                    ..Default::default()
+                },
+                SkillQueueItem {
+                    skill_id: running_skill_id,
+                    finished_level: 4,
+                    queue_position: 1,
+                    finish_date: Some((now + chrono::Duration::hours(3)).to_rfc3339()),
+                    ..Default::default()
+                },
+            ],
+        };
+
+        let (training, tr_muted, finish, fin_muted) =
+            character_training_cells(Some(&stale_summary), Some(&active_skills), &sde, now);
+        assert_eq!(training, sde.skill_name(running_skill_id));
+        assert!(!tr_muted);
+        assert!(!fin_muted);
+        assert!(finish.starts_with("in "));
+        assert_ne!(finish, "finished");
+    }
+
+    #[test]
+    fn operations_snapshot_ignores_planetary_detail_for_other_selected_planet() {
+        let mut state = AppState::new(true);
+        crate::demo::data::seed_demo_state(&mut state);
+        let now = widgets::parse_esi_date("2026-11-18T12:00:00Z").expect("valid date");
+
+        // Switch selection away from 700000001 while bundle.detail is still stamped for 700000001.
+        state.set_planetary_selection(700000002);
+        let ops = operations_snapshot(&state, now);
+        assert_eq!(ops.planets.value, "2 colonies");
+        assert_eq!(ops.planets.detail.as_deref(), Some("8 pins total"));
+        assert_eq!(ops.planets.tone, OpsTone::Accent);
     }
 }
