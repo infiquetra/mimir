@@ -230,6 +230,7 @@ pub struct MimirApp {
     backends: Option<Backends>,
     demo_bundle: Option<DemoBundle>,
     last_active_id: Option<i64>,
+    last_active_generation: u64,
     /// Demo flag as of the last drain: demo entry/exit can happen
     /// inside a view (`seed_demo_state`, the settings toggle), so
     /// the shell detects the transition here and reloads skill
@@ -1138,6 +1139,7 @@ impl MimirApp {
             crate::demo::data::seed_demo_state(&mut state);
         }
         let last_active_id = state.active_character_id;
+        let last_active_generation = state.active_character_generation;
         let mut app = Self {
             state,
             sde,
@@ -1150,6 +1152,7 @@ impl MimirApp {
             backends,
             demo_bundle,
             last_active_id,
+            last_active_generation,
             last_demo_mode: demo,
             demo_in_memory_backends,
             refresh_generation: HashMap::new(),
@@ -1983,8 +1986,10 @@ impl MimirApp {
                         self.state.characters.push(row);
                     }
                     self.state.set_active_character(id);
-                    self.state.status_message = "Signed in. Refreshing...".to_string();
+                    // request_refresh overwrites status_message, so the
+                    // signed-in wording must be applied after it.
                     self.state.request_refresh("post-login");
+                    self.state.status_message = "Signed in. Refreshing...".to_string();
                 }
                 BackendMsg::StepUpLoggedIn { character_id } => {
                     self.auth_task = None;
@@ -2302,6 +2307,7 @@ impl MimirApp {
                     }
                 }
                 self.last_active_id = self.state.active_character_id;
+                self.last_active_generation = self.state.active_character_generation;
                 self.load_skill_plans_into_state();
             } else {
                 self.resolver = NameResolver::new();
@@ -2311,8 +2317,11 @@ impl MimirApp {
             }
         }
         // Demo character switching swaps per-view data from the cached bundle.
-        if self.state.active_character_id != self.last_active_id {
+        if self.state.active_character_id != self.last_active_id
+            || self.state.active_character_generation != self.last_active_generation
+        {
             self.last_active_id = self.state.active_character_id;
+            self.last_active_generation = self.state.active_character_generation;
             if self.state.demo {
                 if let (Some(bundle), Some(id)) =
                     (self.demo_bundle.clone(), self.state.active_character_id)
@@ -2329,7 +2338,9 @@ impl MimirApp {
                             load_cached_state(&conn, &self.sde, &mut self.state, id);
                         }
                     }
-                    self.state.request_refresh("character-switch");
+                    if !self.state.refresh_requested {
+                        self.state.request_refresh("character-switch");
+                    }
                     if self.state.market_selected_type_id.is_some() {
                         tracing::debug!("[MARKET] market refetch queued after character switch");
                         self.state.market_fetch_requested = true;
@@ -4234,6 +4245,7 @@ impl MimirApp {
             || self.state.skill_plan_action.is_some()
             || self.state.demo != self.last_demo_mode
             || self.state.active_character_id != self.last_active_id
+            || self.state.active_character_generation != self.last_active_generation
     }
 
     fn persist_startup_view_if_changed(&mut self) {
@@ -6312,5 +6324,42 @@ mod tests {
             "demo region switch without active demo character must settle to Empty"
         );
         assert!(!app.state.market_fetch_requested);
+    }
+
+    #[test]
+    fn same_frame_aba_character_switch_reloads_all_views() {
+        let mut app = MimirApp::new(true, Arc::new(Mutex::new(Vec::new())), None, None);
+        let a = app.state.characters[0].character_id;
+        let b = app.state.characters[1].character_id;
+
+        app.state.set_active_character(b);
+        app.state.set_active_character(a);
+        assert_eq!(app.state.active_character_id, Some(a));
+        assert!(app.has_pending_work());
+
+        app.drain_requests();
+        assert!(!app.has_pending_work());
+        assert!(app.state.skills.is_ready());
+        assert!(app.state.skill_plans.is_ready());
+        assert!(app.state.market.is_ready());
+        assert_eq!(app.state.skill_plans_owner, Some(a));
+    }
+
+    #[test]
+    fn logged_in_preserves_signed_in_refreshing_status_message() {
+        let mut app = MimirApp::new(false, Arc::new(Mutex::new(Vec::new())), None, None);
+        app.tx.send(BackendMsg::LoggedIn {
+            row: CharacterRow {
+                character_id: 777,
+                name: "Pilot".to_string(),
+                corporation_id: 1000166,
+                alliance_id: None,
+                is_active: true,
+            },
+        });
+        app.drain_requests();
+
+        assert_eq!(app.state.active_character_id, Some(777));
+        assert_eq!(app.state.status_message, "Signed in. Refreshing...");
     }
 }
