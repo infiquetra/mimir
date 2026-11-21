@@ -4,6 +4,8 @@
 
 use chrono::{DateTime, Utc};
 
+use super::theme;
+
 /// Thousands-group a digit string (no sign, no fraction).
 fn group_digits(digits: &str) -> String {
     let mut grouped = String::new();
@@ -202,6 +204,85 @@ pub fn progress_fraction(start: Option<&str>, finish: Option<&str>, now: DateTim
     (elapsed as f64 / total as f64).clamp(0.0, 1.0) as f32
 }
 
+/// Compact integer count with thousands grouping (`150,000`, `-1,250`).
+pub fn format_count(count: i64) -> String {
+    let digits = count.unsigned_abs().to_string();
+    let sign = if count < 0 { "-" } else { "" };
+    format!("{sign}{}", group_digits(&digits))
+}
+
+/// Semantic text color for ISK / signed values.
+pub fn isk_color(amount: f64) -> egui::Color32 {
+    if !amount.is_finite() {
+        theme::TEXT_PRIMARY
+    } else if amount > 0.0 {
+        theme::POSITIVE
+    } else if amount < 0.0 {
+        theme::NEGATIVE
+    } else {
+        theme::TEXT_PRIMARY
+    }
+}
+
+/// Framed card container using Mimir's EVE dark theme tokens.
+pub fn card(ui: &mut egui::Ui, add_contents: impl FnOnce(&mut egui::Ui)) {
+    egui::Frame::none()
+        .fill(theme::BG_CARD)
+        .stroke(egui::Stroke::new(1.0_f32, theme::BORDER_SUBTLE))
+        .rounding(egui::Rounding::same(8.0))
+        .inner_margin(egui::Margin::symmetric(14.0, 10.0))
+        .outer_margin(egui::Margin::symmetric(0.0, 4.0))
+        .show(ui, add_contents);
+}
+
+/// Compact KPI tile with a muted uppercase-style label and large colored value.
+pub fn metric_tile(ui: &mut egui::Ui, label: &str, value: &str, value_color: egui::Color32) {
+    egui::Frame::none()
+        .fill(theme::BG_CARD_ALT)
+        .stroke(egui::Stroke::new(1.0_f32, theme::BORDER_SUBTLE))
+        .rounding(egui::Rounding::same(8.0))
+        .inner_margin(egui::Margin::symmetric(14.0, 10.0))
+        .show(ui, |ui| {
+            ui.set_min_width(180.0);
+            ui.vertical(|ui| {
+                ui.label(
+                    egui::RichText::new(label)
+                        .size(11.5)
+                        .color(theme::TEXT_SECONDARY),
+                );
+                ui.add_space(2.0);
+                ui.label(
+                    egui::RichText::new(value)
+                        .size(17.0)
+                        .strong()
+                        .color(value_color),
+                );
+            });
+        });
+}
+
+/// Rounded status or tag pill.
+pub fn badge(ui: &mut egui::Ui, text: &str, bg: egui::Color32, fg: egui::Color32) {
+    egui::Frame::none()
+        .fill(bg)
+        .stroke(egui::Stroke::new(1.0_f32, fg.gamma_multiply(0.45)))
+        .rounding(egui::Rounding::same(10.0))
+        .inner_margin(egui::Margin::symmetric(8.0, 2.0))
+        .show(ui, |ui| {
+            ui.label(egui::RichText::new(text).size(11.5).strong().color(fg));
+        });
+}
+
+/// Accent section title inside cards and views.
+pub fn section_title(ui: &mut egui::Ui, text: &str) {
+    ui.label(
+        egui::RichText::new(text)
+            .size(15.5)
+            .strong()
+            .color(theme::ACCENT_CYAN),
+    );
+}
+
 /// Case-insensitive substring match used by every search box.
 pub fn matches_search(haystack: &str, needle: &str) -> bool {
     needle.is_empty() || haystack.to_lowercase().contains(&needle.to_lowercase())
@@ -244,16 +325,36 @@ pub fn no_character_panel(ui: &mut egui::Ui) {
 
 /// Demo/offline notice shown at the top of data views.
 pub fn mode_notice(ui: &mut egui::Ui, demo: bool, offline: bool) {
-    if demo {
-        ui.colored_label(
-            egui::Color32::YELLOW,
+    let message = if demo {
+        Some((
+            "DEMO",
             "Demo data: invented sample rows, no network or EVE account involved.",
-        );
+            theme::WARNING_BG,
+            theme::WARNING,
+        ))
     } else if offline {
-        ui.colored_label(
-            egui::Color32::YELLOW,
+        Some((
+            "OFFLINE",
             "Offline: showing cached data; it may be stale.",
-        );
+            theme::WARNING_BG,
+            theme::WARNING,
+        ))
+    } else {
+        None
+    };
+    if let Some((tag, text, bg, fg)) = message {
+        egui::Frame::none()
+            .fill(bg)
+            .stroke(egui::Stroke::new(1.0_f32, fg.gamma_multiply(0.45)))
+            .rounding(egui::Rounding::same(6.0))
+            .inner_margin(egui::Margin::symmetric(10.0, 6.0))
+            .outer_margin(egui::Margin::symmetric(0.0, 4.0))
+            .show(ui, |ui| {
+                ui.horizontal(|ui| {
+                    badge(ui, tag, bg, fg);
+                    ui.colored_label(fg, text);
+                });
+            });
     }
 }
 
@@ -261,17 +362,27 @@ pub fn mode_notice(ui: &mut egui::Ui, demo: bool, offline: bool) {
 /// shell can suppress single-key navigation, and grabs focus when the
 /// shell saw `/` (`focus_search` is consumed by the caller).
 pub fn search_box(ui: &mut egui::Ui, text: &mut String, hint: &str, grab_focus: bool) -> bool {
-    let response = ui.text_edit_singleline(text);
-    if response.changed() {
-        tracing::debug!("[UI] search changed len={}", text.len());
-    }
-    if grab_focus {
-        response.request_focus();
-    }
-    if text.is_empty() {
-        ui.label(hint);
-    }
-    response.has_focus()
+    let mut has_focus = false;
+    ui.horizontal(|ui| {
+        let width = (ui.available_width() - 60.0).clamp(200.0, 460.0);
+        let response = ui.add(
+            egui::TextEdit::singleline(text)
+                .hint_text(hint)
+                .desired_width(width),
+        );
+        if response.changed() {
+            tracing::debug!("[UI] search changed len={}", text.len());
+        }
+        if grab_focus {
+            response.request_focus();
+        }
+        has_focus = response.has_focus();
+        if !text.is_empty() && ui.button("Clear").clicked() {
+            tracing::debug!("[UI] search cleared");
+            text.clear();
+        }
+    });
+    has_focus
 }
 
 #[cfg(test)]
@@ -414,5 +525,16 @@ mod tests {
         assert!(matches_search("Small Hybrid Turret", "hybrid"));
         assert!(matches_search("Gunnery", ""));
         assert!(!matches_search("Gunnery", "mining"));
+    }
+
+    #[test]
+    fn count_and_isk_color_helpers_work() {
+        assert_eq!(format_count(0), "0");
+        assert_eq!(format_count(150_000), "150,000");
+        assert_eq!(format_count(-1234), "-1,234");
+        assert_eq!(isk_color(10.0), theme::POSITIVE);
+        assert_eq!(isk_color(-10.0), theme::NEGATIVE);
+        assert_eq!(isk_color(0.0), theme::TEXT_PRIMARY);
+        assert_eq!(isk_color(f64::NAN), theme::TEXT_PRIMARY);
     }
 }

@@ -31,6 +31,17 @@
 
 ## 2026-11-21
 
+### Headless screenshot inspection caught clipped tag rows, buried primary workflows, and a 1 Hz idle-queue repaint loop
+
+**Author.** Mimir UI/UX overhaul pass
+**Context.** After fixing functional Wave 1 bugs, capturing and visually inspecting screenshots of all 11 views (`--demo --view <name>`) surfaced concrete layout, typography, and repaint bugs that unit tests alone missed.
+**Evidence.** (1) `src/ui/settings.rs` placed all 17 `LOG_TAGS` and 11 `View::ALL` buttons in `ui.horizontal`, clipping `[PLANS]` at the right edge; switching both to `ui.horizontal_wrapped` wraps them cleanly. (2) `src/ui/fittings.rs`, `src/ui/industry.rs`, and `src/ui/exploration.rs` expanded 100-row choosers or calculator sections inline ahead of Saved Fittings, Jobs/Blueprints, and item/wormhole details. (3) `src/ui/skills.rs` rendered `"finishes finished"` / `"paused (paused)"` when formatting completed/paused items (fixed via `format_queue_finish_phrase` at `:93`), and `src/app/shell.rs` `needs_tick` kept requesting 1-second repaints whenever `finish_date.is_some()` even after every queued skill had finished (fixed via `queue_has_unfinished_skill` at `:3791`). (4) Rust's `-D warnings` flags untyped `1.0` inside `egui::Stroke::new(1.0, ...)` under `float_literal_f32_fallback`, requiring `1.0_f32` / `1.5_f32`.
+**Mechanism.** Pure state tests and portrait-budget tests assert data/request invariants without inspecting pixel geometry or scroll offsets, so multi-screen layout inversions and horizontal overflow only appear in rendered frames.
+**Fix.** Applied `src/ui/theme.rs`, card/metric-tile primitives in `src/ui/widgets.rs`, bounded scroll pickers + collapsed secondary calculators + side-by-side list/detail panes, `format_queue_finish_phrase`, and `queue_has_unfinished_skill` on `feat/rust-ui-ux-overhaul`.
+**Validation.** `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `cargo test`, `cargo build`, and visual inspection of all 11 rendered Xvfb demo screenshots.
+**Generalizable rule.** Pair every headless unit/portrait test suite with full-view screenshot inspection via `--demo --view <view>` so layout inversions, horizontal overflow, and idle timer loops cannot hide behind passing unit assertions.
+**Refs.** `src/ui/theme.rs`, `src/ui/widgets.rs`, `src/app/shell.rs`, `src/ui/{skills,settings,fittings,industry,exploration,planets,market,wallet,dashboard,characters,assets}.rs`, DECISIONS 2026-11-21 entry.
+
 ### Head-of-queue assumptions, asymmetric wallet counterparties, and keyboard-focus timing gaps in the Rust port
 
 **Author.** Mimir audit and cleanup pass

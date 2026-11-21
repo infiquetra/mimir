@@ -3998,571 +3998,983 @@ fn render_slot_layout(
     }
 }
 
-/// The EFT import panel: paste box, Import/Clear/sample actions, the
-/// fatal error, and the imported fitting with its honest parse report.
-/// Reachable without the fittings read scope (design section 8.2):
-/// `show` calls it before the `LoadState` match. Logs counts only,
-/// never pasted text.
-fn fittings_import_panel(
+/// Active imported/created draft editor rendered prominently when owned by the
+/// active character.
+fn fittings_draft_editor_panel(
     ui: &mut egui::Ui,
     state: &mut AppState,
     fitting_types: Option<&FittingTypes>,
     sde: &Sde,
 ) {
-    ui.heading("Import a fitting from EFT or DNA text");
-    ui.label("Paste an EFT block (the [Ship, Fitting name] text format) or a DNA fitting link (the single line of separated numbers the EVE client copies). The imported fitting stays in Mimir on this device unless you save it to EVE below, and it is gone when you switch characters or close Mimir.");
     let Some(catalogue) = fitting_types else {
-        ui.label("Could not import: Mimir's bundled item data failed to load. Restart Mimir and try again.");
         return;
     };
-    // Ship chooser (new fitting from scratch design sections
-    // 2.1, 4, 6): heading, standing note, a name search, then
-    // rows. It lives outside the owner guard below on purpose:
-    // it must exist with no draft, because creating one is its
-    // purpose, and it stays visible with a draft, because
-    // choosing again is the replacement path.
-    ui.heading(FITTINGS_SHIP_HEADING);
-    ui.label(FITTINGS_SHIP_NOTE);
-    let ship_search_response = ui.add(
-        egui::TextEdit::singleline(&mut state.fittings_ship_search).hint_text("Search by name"),
-    );
-    state.text_input_focused |= ship_search_response.has_focus();
-    if !state.fittings_ship_rows_built {
-        state.fittings_ship_rows = ship_candidates(catalogue);
-        state.fittings_ship_rows_built = true;
-        tracing::debug!(
-            "[FITTING] ship candidates built rows={}",
-            state.fittings_ship_rows.len()
-        );
-    }
-    let ship_search = state.fittings_ship_search.clone();
-    let ship_filtered: Vec<&ShipRow> = state
-        .fittings_ship_rows
-        .iter()
-        .filter(|row| ship_row_matches(row, &ship_search))
-        .collect();
-    if ship_filtered.is_empty() {
-        if ship_search.is_empty() {
-            ui.label("No ships to show.");
-        } else {
-            ui.label("No matches.");
-        }
-    } else {
-        let shown = ship_filtered.len().min(FITTINGS_RENDER_MAX);
-        if ship_filtered.len() > FITTINGS_RENDER_MAX {
-            ui.label(format!("Showing {shown} of {} ships.", ship_filtered.len()));
-        }
-        let mut ship_clicked: Option<ShipRow> = None;
-        for row in ship_filtered.iter().take(FITTINGS_RENDER_MAX) {
-            if ui.selectable_label(false, &row.name).clicked() {
-                ship_clicked = Some((*row).clone());
-            }
-        }
-        if let Some(clicked) = ship_clicked {
-            install_created_fitting(state, catalogue, &clicked);
-        }
-    }
-    let response = ui.add(
-        egui::TextEdit::multiline(&mut state.fittings_import_text)
-            .hint_text("Paste EFT text ([Ship, Fitting name] then one item per line) or a DNA fitting link (one line, ending ::)")
-            .desired_rows(8)
-            .desired_width(f32::INFINITY),
-    );
-    state.text_input_focused |= response.has_focus();
-    let import_enabled = !state.fittings_import_text.trim().is_empty();
-    let clear_enabled = !state.fittings_import_text.is_empty()
-        || state.fittings_imported.is_some()
-        || state.fittings_import_error.is_some();
-    ui.horizontal(|ui| {
-        if ui
-            .add_enabled(import_enabled, egui::Button::new("Import fitting"))
-            .clicked()
-        {
-            let text = state.fittings_import_text.clone();
-            tracing::info!(
-                "[FITTING] import requested bytes={} lines={}",
-                text.len(),
-                text.lines().count()
-            );
-            match parse_import(&text, catalogue) {
-                EftImportOutcome::Imported(fitting) => {
-                    tracing::info!(
-                        "[FITTING] import complete items={} issues={} placeholders={} charges={}",
-                        fitting.items.len(),
-                        fitting.report.issues.len(),
-                        fitting.report.placeholder_lines,
-                        fitting.report.charges_noted
-                    );
-                    state.fittings_imported = Some(fitting);
-                    state.fittings_import_error = None;
-                    state.fittings_import_owner = state.active_character_id;
-                    clear_editor_state(state);
-                }
-                EftImportOutcome::Failed(fatal) => {
-                    tracing::info!("[FITTING] import failed fatal={fatal:?}");
-                    state.fittings_imported = None;
-                    state.fittings_import_error = Some(fatal.message().to_string());
-                    state.fittings_import_owner = state.active_character_id;
-                    clear_editor_state(state);
-                }
-            }
-        }
-        if ui
-            .add_enabled(clear_enabled, egui::Button::new("Clear import"))
-            .clicked()
-        {
-            tracing::debug!("[FITTING] import cleared");
-            state.fittings_import_text.clear();
-            state.fittings_imported = None;
-            state.fittings_import_error = None;
-            state.fittings_import_owner = None;
-            clear_editor_state(state);
-        }
-        if state.demo && ui.button("Use sample EFT").clicked() {
-            tracing::debug!("[FITTING] demo sample EFT loaded");
-            state.fittings_import_text = DEMO_SAMPLE_EFT.to_string();
-            state.fittings_imported = None;
-            state.fittings_import_error = None;
-            state.fittings_import_owner = None;
-            clear_editor_state(state);
-        }
-        if state.demo && ui.button("Use sample DNA").clicked() {
-            tracing::debug!("[FITTING] demo sample DNA loaded");
-            state.fittings_import_text = DEMO_SAMPLE_DNA.to_string();
-            state.fittings_imported = None;
-            state.fittings_import_error = None;
-            state.fittings_import_owner = None;
-            clear_editor_state(state);
-        }
-    });
-    // The fatal-error label belongs to its owner like the detail
-    // below (equality also covers no-character imports); resets
-    // clear it on switch, so this only matters as defense-in-depth.
-    if state.fittings_import_owner == state.active_character_id {
-        if let Some(error) = state.fittings_import_error.clone() {
-            ui.label(error);
-        }
-    }
-    // Render guard (design section 8.1): the imported detail renders only
-    // for the character it was imported for. The resets make this an
-    // invariant; the check is defense-in-depth.
     let owner_ok = state.fittings_import_owner.is_some()
         && state.fittings_import_owner == state.active_character_id;
     if !owner_ok {
         return;
     }
-    // Working clone (design section 8.2): edits mutate the clone;
-    // the state draft is written back after rendering, never
-    // held borrowed across egui calls.
     let Some(mut imported) = state.fittings_imported.clone() else {
         return;
     };
-    ui.label(imported_summary_line_edited(
-        &imported,
-        state.fittings_import_edited,
-    ));
-    ui.label(draft_label(imported.format));
-    if let Some(note) = placeholder_note(imported.report.placeholder_lines) {
-        ui.label(note);
-    }
-    if let Some(note) = charges_note(imported.report.charges_noted) {
-        ui.label(note);
-    }
-    // Edit block (design section 6.1): heading, standing note,
-    // rename row, then the add row; remove and quantity controls
-    // sit on the item rows below.
-    ui.heading(FITTINGS_EDITOR_HEADING);
-    ui.label(editor_note(imported.format));
-    ui.horizontal(|ui| {
-        // The rename box edits a separate draft, seeded from
-        // the fitting's name; the fitting itself changes only
-        // when Rename applies it (typing alone never edits,
-        // so an armed save confirmation cannot be bypassed).
-        if state.fittings_editor_name.is_none() {
-            state.fittings_editor_name = Some(imported.name.clone());
+
+    widgets::card(ui, |ui| {
+        widgets::section_title(ui, "Working fitting draft (in memory)");
+        ui.label(imported_summary_line_edited(
+            &imported,
+            state.fittings_import_edited,
+        ));
+        ui.label(draft_label(imported.format));
+        if let Some(note) = placeholder_note(imported.report.placeholder_lines) {
+            ui.label(note);
         }
-        let mut apply_rename = false;
-        if let Some(name_draft) = state.fittings_editor_name.as_mut() {
-            let response = ui.add(egui::TextEdit::singleline(name_draft).hint_text("Fitting name"));
-            state.text_input_focused |= response.has_focus();
-            apply_rename = ui.button("Rename fitting").clicked();
+        if let Some(note) = charges_note(imported.report.charges_noted) {
+            ui.label(note);
         }
-        if apply_rename {
-            if let Some(draft_name) = state.fittings_editor_name.clone() {
-                editor_rename(&mut imported, &draft_name);
+
+        ui.add_space(4.0);
+        ui.heading(FITTINGS_EDITOR_HEADING);
+        ui.label(editor_note(imported.format));
+        ui.horizontal(|ui| {
+            if state.fittings_editor_name.is_none() {
                 state.fittings_editor_name = Some(imported.name.clone());
-                note_successful_edit(state);
             }
+            let mut apply_rename = false;
+            if let Some(name_draft) = state.fittings_editor_name.as_mut() {
+                let response =
+                    ui.add(egui::TextEdit::singleline(name_draft).hint_text("Fitting name"));
+                state.text_input_focused |= response.has_focus();
+                apply_rename = ui.button("Rename fitting").clicked();
+            }
+            if apply_rename {
+                if let Some(draft_name) = state.fittings_editor_name.clone() {
+                    editor_rename(&mut imported, &draft_name);
+                    state.fittings_editor_name = Some(imported.name.clone());
+                    note_successful_edit(state);
+                }
+            }
+        });
+
+        egui::CollapsingHeader::new(FITTINGS_SHIP_CHANGE_HEADING)
+            .default_open(false)
+            .show(ui, |ui| {
+                ui.label(FITTINGS_SHIP_CHANGE_NOTE);
+                let ship_change_search_response = ui.add(
+                    egui::TextEdit::singleline(&mut state.fittings_ship_change_search)
+                        .hint_text("Search by name"),
+                );
+                state.text_input_focused |= ship_change_search_response.has_focus();
+                let ship_change_search = state.fittings_ship_change_search.clone();
+                let ship_change_filtered: Vec<&ShipRow> = state
+                    .fittings_ship_rows
+                    .iter()
+                    .filter(|row| ship_row_matches(row, &ship_change_search))
+                    .collect();
+                if ship_change_filtered.is_empty() {
+                    if ship_change_search.is_empty() {
+                        ui.label("No ships to show.");
+                    } else {
+                        ui.label("No matches.");
+                    }
+                } else {
+                    let shown = ship_change_filtered.len().min(FITTINGS_RENDER_MAX);
+                    if ship_change_filtered.len() > FITTINGS_RENDER_MAX {
+                        ui.label(format!(
+                            "Showing {shown} of {} ships.",
+                            ship_change_filtered.len()
+                        ));
+                    }
+                    let mut blocked_clicked: Option<ShipRow> = None;
+                    egui::ScrollArea::vertical()
+                        .id_salt("fittings_ship_change_scroll")
+                        .max_height(180.0)
+                        .show(ui, |ui| {
+                            for row in ship_change_filtered.iter().take(FITTINGS_RENDER_MAX) {
+                                if ui.selectable_label(false, &row.name).clicked() {
+                                    blocked_clicked = Some((*row).clone());
+                                }
+                            }
+                        });
+                    if let Some(clicked) = blocked_clicked {
+                        apply_ship_change(state, &mut imported, catalogue, &clicked);
+                    }
+                }
+            });
+
+        ui.horizontal_wrapped(|ui| {
+            let name_response = ui.add(
+                egui::TextEdit::singleline(&mut state.fittings_editor_add_name)
+                    .hint_text("Exact item name, like Damage Control II"),
+            );
+            state.text_input_focused |= name_response.has_focus();
+            let quantity_response = ui.add(
+                egui::TextEdit::singleline(&mut state.fittings_editor_add_quantity)
+                    .hint_text("Quantity (drones, fighters, cargo only)"),
+            );
+            state.text_input_focused |= quantity_response.has_focus();
+            let add_enabled = !state.fittings_editor_add_name.trim().is_empty();
+            if ui
+                .add_enabled(add_enabled, egui::Button::new("Add item"))
+                .clicked()
+            {
+                let add_name = state.fittings_editor_add_name.clone();
+                let add_quantity = state.fittings_editor_add_quantity.clone();
+                let quantity_trimmed = add_quantity.trim().to_string();
+                let quantity = if quantity_trimmed.is_empty() {
+                    None
+                } else {
+                    Some(quantity_trimmed.as_str())
+                };
+                match editor_add_item(&mut imported, catalogue, &add_name, quantity) {
+                    Ok(()) => note_successful_edit(state),
+                    Err(refusal) => {
+                        state.fittings_editor_error = Some(add_refusal_message(refusal));
+                    }
+                }
+            }
+        });
+        if let Some(error) = state.fittings_editor_error.clone() {
+            ui.label(error);
         }
-    });
-    // Change-ship block (change-ship design sections 2.1, 6):
-    // a second chooser inside the editor, sharing the cached
-    // rows with the top block and keeping its own search text.
-    ui.heading(FITTINGS_SHIP_CHANGE_HEADING);
-    ui.label(FITTINGS_SHIP_CHANGE_NOTE);
-    let ship_change_search_response = ui.add(
-        egui::TextEdit::singleline(&mut state.fittings_ship_change_search)
-            .hint_text("Search by name"),
-    );
-    state.text_input_focused |= ship_change_search_response.has_focus();
-    let ship_change_search = state.fittings_ship_change_search.clone();
-    let ship_change_filtered: Vec<&ShipRow> = state
-        .fittings_ship_rows
-        .iter()
-        .filter(|row| ship_row_matches(row, &ship_change_search))
-        .collect();
-    if ship_change_filtered.is_empty() {
-        if ship_change_search.is_empty() {
-            ui.label("No ships to show.");
+
+        ui.horizontal_wrapped(|ui| {
+            for (section, label) in BROWSER_TABS {
+                let selected = state.fittings_browser_section == section;
+                if ui.selectable_label(selected, label).clicked() {
+                    state.fittings_browser_section = section;
+                }
+            }
+        });
+        let browser_search_response = ui.add(
+            egui::TextEdit::singleline(&mut state.fittings_browser_search)
+                .hint_text("Search by name"),
+        );
+        state.text_input_focused |= browser_search_response.has_focus();
+        if state.fittings_browser_rows_section != Some(state.fittings_browser_section) {
+            let section = state.fittings_browser_section;
+            state.fittings_browser_rows = browser_candidates(catalogue, section);
+            state.fittings_browser_rows_section = Some(section);
+            tracing::debug!(
+                "[FITTING] module browser candidates built section={section:?} rows={}",
+                state.fittings_browser_rows.len()
+            );
+        }
+        let browser_search = state.fittings_browser_search.clone();
+        let browser_filtered: Vec<&BrowserRow> = state
+            .fittings_browser_rows
+            .iter()
+            .filter(|row| browser_row_matches(row, &browser_search))
+            .collect();
+        if browser_filtered.is_empty() {
+            if browser_search.is_empty() {
+                ui.label("No items in this section.");
+            } else {
+                ui.label("No matches.");
+            }
         } else {
-            ui.label("No matches.");
-        }
-    } else {
-        let shown = ship_change_filtered.len().min(FITTINGS_RENDER_MAX);
-        if ship_change_filtered.len() > FITTINGS_RENDER_MAX {
-            ui.label(format!(
-                "Showing {shown} of {} ships.",
-                ship_change_filtered.len()
-            ));
-        }
-        let mut blocked_clicked: Option<ShipRow> = None;
-        for row in ship_change_filtered.iter().take(FITTINGS_RENDER_MAX) {
-            if ui.selectable_label(false, &row.name).clicked() {
-                blocked_clicked = Some((*row).clone());
+            let shown = browser_filtered.len().min(FITTINGS_RENDER_MAX);
+            if browser_filtered.len() > FITTINGS_RENDER_MAX {
+                ui.label(format!(
+                    "Showing {shown} of {} items.",
+                    browser_filtered.len()
+                ));
+            }
+            let mut browser_clicked: Option<String> = None;
+            egui::ScrollArea::vertical()
+                .id_salt("fittings_browser_scroll")
+                .max_height(200.0)
+                .show(ui, |ui| {
+                    for row in browser_filtered.iter().take(FITTINGS_RENDER_MAX) {
+                        if ui.selectable_label(false, browser_row_label(row)).clicked() {
+                            browser_clicked = Some(row.name.clone());
+                        }
+                    }
+                });
+            if let Some(clicked_name) = browser_clicked {
+                let stacked = matches!(
+                    state.fittings_browser_section,
+                    ImportSection::Drones | ImportSection::Fighters
+                );
+                let browser_quantity_trimmed =
+                    state.fittings_editor_add_quantity.trim().to_string();
+                let browser_quantity: Option<String> = if stacked {
+                    Some(if browser_quantity_trimmed.is_empty() {
+                        "1".to_string()
+                    } else {
+                        browser_quantity_trimmed
+                    })
+                } else {
+                    None
+                };
+                match editor_add_item(
+                    &mut imported,
+                    catalogue,
+                    &clicked_name,
+                    browser_quantity.as_deref(),
+                ) {
+                    Ok(()) => note_successful_edit(state),
+                    Err(refusal) => {
+                        state.fittings_editor_error = Some(add_refusal_message(refusal));
+                    }
+                }
             }
         }
-        if let Some(clicked) = blocked_clicked {
-            apply_ship_change(state, &mut imported, catalogue, &clicked);
+
+        let local_resolver = imported.name_resolver();
+        let item_rows = imported_item_rows(&imported, &local_resolver, catalogue);
+        if item_rows.is_empty() {
+            ui.label("This fitting has no items to show.");
+        } else if let Some(intent) = render_imported_item_rows(ui, state, &item_rows) {
+            match intent {
+                ImportedEditIntent::Remove(index) => {
+                    if editor_remove_item(&mut imported, index) {
+                        note_successful_edit(state);
+                    }
+                }
+                ImportedEditIntent::SetQuantity(index, text) => {
+                    match editor_set_quantity(&mut imported, index, &text) {
+                        Ok(()) => note_successful_edit(state),
+                        Err(refusal) => {
+                            state.fittings_editor_error = Some(quantity_refusal_message(refusal));
+                        }
+                    }
+                }
+                ImportedEditIntent::SetCharge(index, text) => {
+                    match editor_set_charge(&mut imported, catalogue, index, &text) {
+                        Ok(()) => note_successful_edit(state),
+                        Err(refusal) => {
+                            state.fittings_editor_error = Some(charge_refusal_message(refusal));
+                        }
+                    }
+                }
+                ImportedEditIntent::ClearCharge(index) => {
+                    if editor_clear_charge(&mut imported, index) {
+                        note_successful_edit(state);
+                    }
+                }
+            }
         }
-    }
-    ui.horizontal(|ui| {
-        let name_response = ui.add(
-            egui::TextEdit::singleline(&mut state.fittings_editor_add_name)
-                .hint_text("Exact item name, like Damage Control II"),
-        );
-        state.text_input_focused |= name_response.has_focus();
-        let quantity_response = ui.add(
-            egui::TextEdit::singleline(&mut state.fittings_editor_add_quantity)
-                .hint_text("Quantity (drones, fighters, cargo only)"),
-        );
-        state.text_input_focused |= quantity_response.has_focus();
-        let add_enabled = !state.fittings_editor_add_name.trim().is_empty();
-        if ui
-            .add_enabled(add_enabled, egui::Button::new("Add item"))
+
+        state.fittings_imported = Some(imported.clone());
+        let synth = imported.to_character_fitting();
+        let levels = state
+            .skills
+            .as_ready()
+            .map(|data| resource_skill_levels(&data.skills));
+        render_fitting_resources(ui, &synth, fitting_types, levels, sde);
+        render_rig_calibration(ui, &synth, fitting_types);
+        render_bay_usage(ui, &synth, fitting_types);
+        render_fitting_dps(ui, &synth, Some(&imported), fitting_types);
+        render_fitting_cap_stability(ui, &synth, fitting_types);
+        render_fitting_cap_stability_with_module_bonuses(ui, &synth, fitting_types);
+        render_fitting_active_repair(ui, &synth, fitting_types);
+        render_slot_layout(ui, &synth, fitting_types);
+        render_ship_base_stats(ui, &synth, fitting_types);
+        render_ship_shield_peak_recharge_with_module_bonuses(ui, &synth, fitting_types);
+        render_ship_resistances(ui, &synth, fitting_types);
+        render_ship_resistances_with_module_bonuses(ui, &synth, fitting_types);
+        render_ship_base_ehp(ui, &synth, fitting_types);
+        render_ship_ehp_with_module_bonuses(ui, &synth, fitting_types);
+        render_ship_nav_targeting(ui, &synth, fitting_types);
+        render_ship_nav_targeting_with_module_bonuses(ui, &synth, fitting_types);
+
+        let charged_total = imported
+            .items
+            .iter()
+            .filter(|item| item.charge.is_some())
+            .count();
+        if charged_total > 0 {
+            ui.heading("Loaded charges");
+            let shown = charged_total.min(FITTINGS_RENDER_MAX);
+            if charged_total > FITTINGS_RENDER_MAX {
+                ui.label(format!("Showing {shown} of {} items.", charged_total));
+            }
+            let mut rendered = 0;
+            for item in &imported.items {
+                if rendered >= FITTINGS_RENDER_MAX {
+                    break;
+                }
+                if let Some(charge) = &item.charge {
+                    ui.label(format!("{} - {}", item.name, charge.name));
+                    rendered += 1;
+                }
+            }
+        }
+
+        let issues = &imported.report.issues;
+        if !issues.is_empty() {
+            let import_format = imported.format;
+            ui.heading(import_issues_heading(issues.len(), import_format));
+            let shown = issues.len().min(IMPORT_ISSUES_RENDER_MAX);
+            for issue in issues.iter().take(shown) {
+                ui.label(format_import_issue(issue, import_format));
+            }
+            if issues.len() > IMPORT_ISSUES_RENDER_MAX {
+                ui.label(import_issues_overflow_label(
+                    issues.len() - shown,
+                    import_format,
+                ));
+            }
+        }
+
+        ui.horizontal_wrapped(|ui| {
+            if ui.button(copy_eft_button_label(imported.format)).clicked() {
+                match fitting_to_eft(&synth, &local_resolver) {
+                    None => {
+                        tracing::warn!(
+                            "[FITTING] copy imported fitting blocked ship not resolved"
+                        );
+                        state.status_message = "That fitting cannot be copied yet: its ship name has not loaded. Refresh and try again.".to_string();
+                    }
+                    Some(export) => {
+                        let line_count = export.text.lines().count();
+                        tracing::info!(
+                            "[FITTING] copied imported fitting lines={} skipped_unknown={} skipped_empty={} charges_left_out={}",
+                            line_count,
+                            export.skipped_unknown,
+                            export.skipped_empty,
+                            imported.report.charges_noted
+                        );
+                        ui.ctx().copy_text(export.text.clone());
+                        let display_name = fitting_display_name(&imported.name);
+                        state.status_message =
+                            copy_imported_status_message(&display_name, imported.report.charges_noted);
+                    }
+                }
+            }
+            if ui.button(copy_dna_button_label(imported.format)).clicked() {
+                match fitting_to_dna(&synth) {
+                    None => {
+                        tracing::warn!("[FITTING] copy imported fitting as DNA blocked");
+                        state.status_message =
+                            "That fitting cannot be copied: it has no ship. Refresh and try again."
+                                .to_string();
+                    }
+                    Some(export) => {
+                        let left_out = export
+                            .skipped_unsupported
+                            .saturating_add(export.skipped_empty)
+                            .saturating_add(export.skipped_capped);
+                        tracing::info!(
+                            "[FITTING] copied imported fitting as DNA skipped_unsupported={} skipped_empty={} skipped_capped={} charges_left_out={}",
+                            export.skipped_unsupported,
+                            export.skipped_empty,
+                            export.skipped_capped,
+                            imported.report.charges_noted
+                        );
+                        ui.ctx().copy_text(export.text.clone());
+                        let display_name = fitting_display_name(&imported.name);
+                        state.status_message = copy_imported_dna_status_message(
+                            &display_name,
+                            imported.report.charges_noted,
+                            left_out,
+                        );
+                    }
+                }
+            }
+        });
+
+        if render_write_in_flight(ui, state) {
+            return;
+        }
+        if state.demo {
+            ui.label(DEMO_FIT_WRITE_LABEL);
+            return;
+        }
+        let active_id = state.active_character_id;
+        let mapping = build_save_request(&synth);
+        if matches!(
+            state.fittings_write_confirm,
+            Some(FittingWriteConfirm::SaveImported { character_id }) if Some(character_id) == active_id
+        ) {
+            if let Some(label) = unsaveable_label(&mapping) {
+                state.fittings_write_confirm = None;
+                ui.label(label);
+                return;
+            }
+            let enabled = write_enabled(state);
+            let ship_name = imported.ship_name.clone();
+            let charges_noted = imported.report.charges_noted;
+            let summary = save_confirm_summary_for(imported.format);
+            match render_save_confirm(
+                ui,
+                enabled,
+                &mapping,
+                &ship_name,
+                summary,
+                Some(charges_noted),
+                &local_resolver,
+            ) {
+                Some(SaveConfirmAction::Confirmed) => {
+                    if let Some(character_id) = active_id {
+                        queue_save_request(state, character_id, mapping);
+                    }
+                }
+                Some(SaveConfirmAction::Cancelled) => {
+                    state.fittings_write_confirm = None;
+                }
+                None => {}
+            }
+        } else if let Some(label) = unsaveable_label(&mapping) {
+            ui.label(label);
+        } else if ui
+            .add_enabled(
+                write_enabled(state),
+                egui::Button::new(save_arm_button_label(imported.format)),
+            )
             .clicked()
         {
-            let add_name = state.fittings_editor_add_name.clone();
-            let add_quantity = state.fittings_editor_add_quantity.clone();
-            let quantity_trimmed = add_quantity.trim().to_string();
-            let quantity = if quantity_trimmed.is_empty() {
-                None
-            } else {
-                Some(quantity_trimmed.as_str())
-            };
-            match editor_add_item(&mut imported, catalogue, &add_name, quantity) {
-                Ok(()) => note_successful_edit(state),
-                Err(refusal) => {
-                    state.fittings_editor_error = Some(add_refusal_message(refusal));
-                }
+            if let Some(character_id) = active_id {
+                tracing::info!(
+                    "[FITTING] save confirmation armed character_id={} kind=save_imported kept={} dropped={}",
+                    character_id,
+                    mapping.request.items.len(),
+                    mapping.dropped.len()
+                );
+                state.fittings_write_confirm =
+                    Some(FittingWriteConfirm::SaveImported { character_id });
             }
         }
     });
-    if let Some(error) = state.fittings_editor_error.clone() {
-        ui.label(error);
-    }
-    // Module browser (module browser design sections 2, 4-7):
-    // tabs, a name search, and single-click rows that add through
-    // the same add path as the typed add row above. Candidates
-    // are cached per tab, so the catalogue is scanned at most
-    // once per tab selection.
-    ui.horizontal(|ui| {
-        for (section, label) in BROWSER_TABS {
-            let selected = state.fittings_browser_section == section;
-            if ui.selectable_label(selected, label).clicked() {
-                state.fittings_browser_section = section;
-            }
-        }
-    });
-    let browser_search_response = ui.add(
-        egui::TextEdit::singleline(&mut state.fittings_browser_search).hint_text("Search by name"),
-    );
-    state.text_input_focused |= browser_search_response.has_focus();
-    if state.fittings_browser_rows_section != Some(state.fittings_browser_section) {
-        let section = state.fittings_browser_section;
-        state.fittings_browser_rows = browser_candidates(catalogue, section);
-        state.fittings_browser_rows_section = Some(section);
-        tracing::debug!(
-            "[FITTING] module browser candidates built section={section:?} rows={}",
-            state.fittings_browser_rows.len()
+}
+
+/// EFT/DNA import box plus collapsed `"Start a new fitting"` ship chooser.
+fn fittings_import_controls_panel(
+    ui: &mut egui::Ui,
+    state: &mut AppState,
+    fitting_types: Option<&FittingTypes>,
+) {
+    widgets::card(ui, |ui| {
+        widgets::section_title(ui, "Import a fitting from EFT or DNA text");
+        ui.label("Paste an EFT block (the [Ship, Fitting name] text format) or a DNA fitting link (the single line of separated numbers the EVE client copies). The imported fitting stays in Mimir on this device unless you save it to EVE below, and it is gone when you switch characters or close Mimir.");
+        let Some(catalogue) = fitting_types else {
+            ui.label("Could not import: Mimir's bundled item data failed to load. Restart Mimir and try again.");
+            return;
+        };
+
+        let response = ui.add(
+            egui::TextEdit::multiline(&mut state.fittings_import_text)
+                .hint_text("Paste EFT text ([Ship, Fitting name] then one item per line) or a DNA fitting link (one line, ending ::)")
+                .desired_rows(6)
+                .desired_width(f32::INFINITY),
         );
-    }
-    let browser_search = state.fittings_browser_search.clone();
-    let browser_filtered: Vec<&BrowserRow> = state
-        .fittings_browser_rows
-        .iter()
-        .filter(|row| browser_row_matches(row, &browser_search))
-        .collect();
-    if browser_filtered.is_empty() {
-        if browser_search.is_empty() {
-            ui.label("No items in this section.");
-        } else {
-            ui.label("No matches.");
-        }
-    } else {
-        let shown = browser_filtered.len().min(FITTINGS_RENDER_MAX);
-        if browser_filtered.len() > FITTINGS_RENDER_MAX {
-            ui.label(format!(
-                "Showing {shown} of {} items.",
-                browser_filtered.len()
-            ));
-        }
-        let mut browser_clicked: Option<String> = None;
-        for row in browser_filtered.iter().take(FITTINGS_RENDER_MAX) {
-            if ui.selectable_label(false, browser_row_label(row)).clicked() {
-                browser_clicked = Some(row.name.clone());
-            }
-        }
-        if let Some(clicked_name) = browser_clicked {
-            let stacked = matches!(
-                state.fittings_browser_section,
-                ImportSection::Drones | ImportSection::Fighters
-            );
-            let browser_quantity_trimmed = state.fittings_editor_add_quantity.trim().to_string();
-            let browser_quantity: Option<String> = if stacked {
-                Some(if browser_quantity_trimmed.is_empty() {
-                    "1".to_string()
-                } else {
-                    browser_quantity_trimmed
-                })
-            } else {
-                None
-            };
-            match editor_add_item(
-                &mut imported,
-                catalogue,
-                &clicked_name,
-                browser_quantity.as_deref(),
-            ) {
-                Ok(()) => note_successful_edit(state),
-                Err(refusal) => {
-                    state.fittings_editor_error = Some(add_refusal_message(refusal));
+        state.text_input_focused |= response.has_focus();
+        let import_enabled = !state.fittings_import_text.trim().is_empty();
+        let clear_enabled = !state.fittings_import_text.is_empty()
+            || state.fittings_imported.is_some()
+            || state.fittings_import_error.is_some();
+        ui.horizontal_wrapped(|ui| {
+            if ui
+                .add_enabled(import_enabled, egui::Button::new("Import fitting"))
+                .clicked()
+            {
+                let text = state.fittings_import_text.clone();
+                tracing::info!(
+                    "[FITTING] import requested bytes={} lines={}",
+                    text.len(),
+                    text.lines().count()
+                );
+                match parse_import(&text, catalogue) {
+                    EftImportOutcome::Imported(fitting) => {
+                        tracing::info!(
+                            "[FITTING] import complete items={} issues={} placeholders={} charges={}",
+                            fitting.items.len(),
+                            fitting.report.issues.len(),
+                            fitting.report.placeholder_lines,
+                            fitting.report.charges_noted
+                        );
+                        state.fittings_imported = Some(fitting);
+                        state.fittings_import_error = None;
+                        state.fittings_import_owner = state.active_character_id;
+                        clear_editor_state(state);
+                    }
+                    EftImportOutcome::Failed(fatal) => {
+                        tracing::info!("[FITTING] import failed fatal={fatal:?}");
+                        state.fittings_imported = None;
+                        state.fittings_import_error = Some(fatal.message().to_string());
+                        state.fittings_import_owner = state.active_character_id;
+                        clear_editor_state(state);
+                    }
                 }
             }
+            if ui
+                .add_enabled(clear_enabled, egui::Button::new("Clear import"))
+                .clicked()
+            {
+                tracing::debug!("[FITTING] import cleared");
+                state.fittings_import_text.clear();
+                state.fittings_imported = None;
+                state.fittings_import_error = None;
+                state.fittings_import_owner = None;
+                clear_editor_state(state);
+            }
+            if state.demo && ui.button("Use sample EFT").clicked() {
+                tracing::debug!("[FITTING] demo sample EFT loaded");
+                state.fittings_import_text = DEMO_SAMPLE_EFT.to_string();
+                state.fittings_imported = None;
+                state.fittings_import_error = None;
+                state.fittings_import_owner = None;
+                clear_editor_state(state);
+            }
+            if state.demo && ui.button("Use sample DNA").clicked() {
+                tracing::debug!("[FITTING] demo sample DNA loaded");
+                state.fittings_import_text = DEMO_SAMPLE_DNA.to_string();
+                state.fittings_imported = None;
+                state.fittings_import_error = None;
+                state.fittings_import_owner = None;
+                clear_editor_state(state);
+            }
+        });
+        if state.fittings_import_owner == state.active_character_id {
+            if let Some(error) = state.fittings_import_error.clone() {
+                ui.label(error);
+            }
+        }
+
+        ui.add_space(4.0);
+        egui::CollapsingHeader::new(FITTINGS_SHIP_HEADING)
+            .default_open(false)
+            .show(ui, |ui| {
+                ui.label(FITTINGS_SHIP_NOTE);
+                let ship_search_response = ui.add(
+                    egui::TextEdit::singleline(&mut state.fittings_ship_search)
+                        .hint_text("Search by name"),
+                );
+                state.text_input_focused |= ship_search_response.has_focus();
+                let ship_search = state.fittings_ship_search.clone();
+                let ship_filtered: Vec<&ShipRow> = state
+                    .fittings_ship_rows
+                    .iter()
+                    .filter(|row| ship_row_matches(row, &ship_search))
+                    .collect();
+                if ship_filtered.is_empty() {
+                    if ship_search.is_empty() {
+                        ui.label("No ships to show.");
+                    } else {
+                        ui.label("No matches.");
+                    }
+                } else {
+                    let shown = ship_filtered.len().min(FITTINGS_RENDER_MAX);
+                    if ship_filtered.len() > FITTINGS_RENDER_MAX {
+                        ui.label(format!("Showing {shown} of {} ships.", ship_filtered.len()));
+                    }
+                    let mut ship_clicked: Option<ShipRow> = None;
+                    egui::ScrollArea::vertical()
+                        .id_salt("fittings_ship_chooser_scroll")
+                        .max_height(200.0)
+                        .show(ui, |ui| {
+                            for row in ship_filtered.iter().take(FITTINGS_RENDER_MAX) {
+                                if ui.selectable_label(false, &row.name).clicked() {
+                                    ship_clicked = Some((*row).clone());
+                                }
+                            }
+                        });
+                    if let Some(clicked) = ship_clicked {
+                        install_created_fitting(state, catalogue, &clicked);
+                    }
+                }
+            });
+    });
+}
+
+fn show_saved_fitting_detail(
+    ui: &mut egui::Ui,
+    state: &mut AppState,
+    selected: &CharacterFitting,
+    resolver: &NameResolver,
+    fitting_types: Option<&FittingTypes>,
+    sde: &Sde,
+    cache: &mut PortraitImageCache,
+) {
+    let display_name = fitting_display_name(&selected.name);
+    ui.heading(display_name.clone());
+    let ship_type_id = selected.ship_type_id;
+    if ship_type_id > 0 {
+        ensure_type_icon_requested(state, ship_type_id);
+        let ship_name = resolver.name(ship_type_id).to_string();
+        ui.horizontal(|ui| {
+            show_type_icon(ui, cache, state, ship_type_id, TYPE_ICON_PX);
+            ui.label(ship_name);
+        });
+    } else {
+        ui.label(resolver.name(ship_type_id));
+    }
+    if let Some(desc) = selected.description.as_deref() {
+        let sanitized = sanitize_single_line(desc);
+        if !sanitized.is_empty() {
+            ui.label(sanitized);
         }
     }
-    let local_resolver = imported.name_resolver();
-    let item_rows = imported_item_rows(&imported, &local_resolver, catalogue);
+    let item_rows = fitting_item_rows(selected, resolver);
     if item_rows.is_empty() {
         ui.label("This fitting has no items to show.");
-    } else if let Some(intent) = render_imported_item_rows(ui, state, &item_rows) {
-        match intent {
-            ImportedEditIntent::Remove(index) => {
-                if editor_remove_item(&mut imported, index) {
-                    note_successful_edit(state);
-                }
-            }
-            ImportedEditIntent::SetQuantity(index, text) => {
-                match editor_set_quantity(&mut imported, index, &text) {
-                    Ok(()) => note_successful_edit(state),
-                    Err(refusal) => {
-                        state.fittings_editor_error = Some(quantity_refusal_message(refusal));
-                    }
-                }
-            }
-            ImportedEditIntent::SetCharge(index, text) => {
-                match editor_set_charge(&mut imported, catalogue, index, &text) {
-                    Ok(()) => note_successful_edit(state),
-                    Err(refusal) => {
-                        state.fittings_editor_error = Some(charge_refusal_message(refusal));
-                    }
-                }
-            }
-            ImportedEditIntent::ClearCharge(index) => {
-                if editor_clear_charge(&mut imported, index) {
-                    note_successful_edit(state);
-                }
-            }
-        }
+    } else {
+        render_fitting_items(ui, &item_rows, Some((state, cache)));
     }
-    // Write the working draft back, then derive every statistic,
-    // copy, and save decision from the edited draft.
-    state.fittings_imported = Some(imported.clone());
-    let synth = imported.to_character_fitting();
     let levels = state
         .skills
         .as_ready()
         .map(|data| resource_skill_levels(&data.skills));
-    render_fitting_resources(ui, &synth, fitting_types, levels, sde);
-    render_rig_calibration(ui, &synth, fitting_types);
-    render_bay_usage(ui, &synth, fitting_types);
-    render_fitting_dps(ui, &synth, Some(&imported), fitting_types);
-    render_fitting_cap_stability(ui, &synth, fitting_types);
-    render_fitting_cap_stability_with_module_bonuses(ui, &synth, fitting_types);
-    render_fitting_active_repair(ui, &synth, fitting_types);
-    render_slot_layout(ui, &synth, fitting_types);
-    render_ship_base_stats(ui, &synth, fitting_types);
-    render_ship_shield_peak_recharge_with_module_bonuses(ui, &synth, fitting_types);
-    render_ship_resistances(ui, &synth, fitting_types);
-    render_ship_resistances_with_module_bonuses(ui, &synth, fitting_types);
-    render_ship_base_ehp(ui, &synth, fitting_types);
-    render_ship_ehp_with_module_bonuses(ui, &synth, fitting_types);
-    render_ship_nav_targeting(ui, &synth, fitting_types);
-    render_ship_nav_targeting_with_module_bonuses(ui, &synth, fitting_types);
-    // Loaded charges, in item order (design section 8.2).
-    let charged_total = imported
-        .items
-        .iter()
-        .filter(|item| item.charge.is_some())
-        .count();
-    if charged_total > 0 {
-        ui.heading("Loaded charges");
-        let shown = charged_total.min(FITTINGS_RENDER_MAX);
-        if charged_total > FITTINGS_RENDER_MAX {
-            ui.label(format!("Showing {shown} of {} items.", charged_total));
-        }
-        let mut rendered = 0;
-        for item in &imported.items {
-            if rendered >= FITTINGS_RENDER_MAX {
-                break;
+    render_fitting_resources(ui, selected, fitting_types, levels, sde);
+    render_rig_calibration(ui, selected, fitting_types);
+    render_bay_usage(ui, selected, fitting_types);
+    render_fitting_dps(ui, selected, None, fitting_types);
+    render_fitting_cap_stability(ui, selected, fitting_types);
+    render_fitting_cap_stability_with_module_bonuses(ui, selected, fitting_types);
+    render_fitting_active_repair(ui, selected, fitting_types);
+    render_slot_layout(ui, selected, fitting_types);
+    render_ship_base_stats(ui, selected, fitting_types);
+    render_ship_shield_peak_recharge_with_module_bonuses(ui, selected, fitting_types);
+    render_ship_resistances(ui, selected, fitting_types);
+    render_ship_resistances_with_module_bonuses(ui, selected, fitting_types);
+    render_ship_base_ehp(ui, selected, fitting_types);
+    render_ship_ehp_with_module_bonuses(ui, selected, fitting_types);
+    render_ship_nav_targeting(ui, selected, fitting_types);
+    render_ship_nav_targeting_with_module_bonuses(ui, selected, fitting_types);
+    ui.horizontal_wrapped(|ui| {
+        if ui.button("Copy as EFT").clicked() {
+            tracing::info!(
+                "[FITTING] copy as EFT requested for fitting name={}",
+                display_name
+            );
+            match fitting_to_eft(selected, resolver) {
+                None => {
+                    tracing::warn!(
+                        "[FITTING] copy as EFT blocked ship not resolved fitting name={}",
+                        display_name
+                    );
+                    state.status_message = "That fitting cannot be copied yet: its ship name has not loaded. Refresh and try again.".to_string();
+                }
+                Some(export) => {
+                    ui.ctx().copy_text(export.text.clone());
+                    let skipped = export
+                        .skipped_unknown
+                        .saturating_add(export.skipped_empty);
+                    let line_count = export.text.lines().count();
+                    if skipped == 0 {
+                        state.status_message = format!("Copied \"{}\" as EFT", display_name);
+                    } else {
+                        state.status_message = format!(
+                            "Copied \"{}\" as EFT ({} items left out: names not loaded yet)",
+                            display_name, skipped
+                        );
+                    }
+                    tracing::info!(
+                        "[FITTING] copied fitting name={} lines={} skipped_unknown={} skipped_empty={}",
+                        display_name,
+                        line_count,
+                        export.skipped_unknown,
+                        export.skipped_empty
+                    );
+                }
             }
-            if let Some(charge) = &item.charge {
-                ui.label(format!("{} - {}", item.name, charge.name));
-                rendered += 1;
+        }
+        if ui.button("Copy as DNA").clicked() {
+            match fitting_to_dna(selected) {
+                None => {
+                    tracing::warn!(
+                        "[FITTING] copy as DNA blocked fitting name={}",
+                        display_name
+                    );
+                    state.status_message =
+                        "That fitting cannot be copied: it has no ship. Refresh and try again."
+                            .to_string();
+                }
+                Some(export) => {
+                    ui.ctx().copy_text(export.text.clone());
+                    let skipped = export
+                        .skipped_unsupported
+                        .saturating_add(export.skipped_empty)
+                        .saturating_add(export.skipped_capped);
+                    if skipped == 0 {
+                        state.status_message =
+                            format!("Copied \"{}\" as a DNA link", display_name);
+                    } else {
+                        state.status_message = format!(
+                            "Copied \"{}\" as a DNA link ({} items left out: DNA links hold fitted modules only)",
+                            display_name, skipped
+                        );
+                    }
+                    tracing::info!(
+                        "[FITTING] copied fitting as DNA name={} skipped_unsupported={} skipped_empty={} skipped_capped={}",
+                        display_name,
+                        export.skipped_unsupported,
+                        export.skipped_empty,
+                        export.skipped_capped
+                    );
+                }
             }
         }
+    });
+    if fitting_types.is_some() && state.active_character_id.is_some() {
+        if ui.button("Edit a copy in Mimir").clicked() {
+            let outcome = convert_saved_fitting(selected, resolver);
+            match outcome {
+                SavedCopyOutcome::Converted(draft) => install_copied_fitting(state, draft),
+                SavedCopyOutcome::Refused(reason) => apply_copied_refusal(state, reason),
+            }
+        }
+        ui.label("Editing a copy changes only the copy in Mimir and replaces the fitting above, if there is one. The saved fitting in EVE stays as it is, and saving the copy adds a new fitting.");
     }
-    let issues = &imported.report.issues;
-    if !issues.is_empty() {
-        let import_format = imported.format;
-        ui.heading(import_issues_heading(issues.len(), import_format));
-        let shown = issues.len().min(IMPORT_ISSUES_RENDER_MAX);
-        for issue in issues.iter().take(shown) {
-            ui.label(format_import_issue(issue, import_format));
-        }
-        if issues.len() > IMPORT_ISSUES_RENDER_MAX {
-            ui.label(import_issues_overflow_label(
-                issues.len() - shown,
-                import_format,
-            ));
-        }
-    }
-    if ui.button(copy_eft_button_label(imported.format)).clicked() {
-        match fitting_to_eft(&synth, &local_resolver) {
-            None => {
-                tracing::warn!("[FITTING] copy imported fitting blocked ship not resolved");
-                state.status_message = "That fitting cannot be copied yet: its ship name has not loaded. Refresh and try again.".to_string();
-            }
-            Some(export) => {
-                let line_count = export.text.lines().count();
-                tracing::info!(
-                    "[FITTING] copied imported fitting lines={} skipped_unknown={} skipped_empty={} charges_left_out={}",
-                    line_count,
-                    export.skipped_unknown,
-                    export.skipped_empty,
-                    imported.report.charges_noted
-                );
-                ui.ctx().copy_text(export.text.clone());
-                let display_name = fitting_display_name(&imported.name);
-                state.status_message =
-                    copy_imported_status_message(&display_name, imported.report.charges_noted);
-            }
-        }
-    }
-    if ui.button(copy_dna_button_label(imported.format)).clicked() {
-        match fitting_to_dna(&synth) {
-            None => {
-                tracing::warn!("[FITTING] copy imported fitting as DNA blocked");
-                state.status_message =
-                    "That fitting cannot be copied: it has no ship. Refresh and try again."
-                        .to_string();
-            }
-            Some(export) => {
-                let left_out = export
-                    .skipped_unsupported
-                    .saturating_add(export.skipped_empty)
-                    .saturating_add(export.skipped_capped);
-                tracing::info!(
-                    "[FITTING] copied imported fitting as DNA skipped_unsupported={} skipped_empty={} skipped_capped={} charges_left_out={}",
-                    export.skipped_unsupported,
-                    export.skipped_empty,
-                    export.skipped_capped,
-                    imported.report.charges_noted
-                );
-                ui.ctx().copy_text(export.text.clone());
-                let display_name = fitting_display_name(&imported.name);
-                state.status_message = copy_imported_dna_status_message(
-                    &display_name,
-                    imported.report.charges_noted,
-                    left_out,
-                );
-            }
-        }
-    }
-    // Save affordance (write design section 6.1): the arm
-    // button, its armed confirmation block, the demo label,
-    // or the in-flight row — never more than one.
     if render_write_in_flight(ui, state) {
         return;
     }
     if state.demo {
         ui.label(DEMO_FIT_WRITE_LABEL);
-        return;
-    }
-    let active_id = state.active_character_id;
-    let mapping = build_save_request(&synth);
-    if matches!(
-        state.fittings_write_confirm,
-        Some(FittingWriteConfirm::SaveImported { character_id }) if Some(character_id) == active_id
-    ) {
-        // Recomputed every frame from the current imported
-        // fitting: what the block displays is bit-for-bit what
-        // Confirm sends. An un-saveable source drops the
-        // confirmation (write design section 6.1).
-        if let Some(label) = unsaveable_label(&mapping) {
-            state.fittings_write_confirm = None;
-            ui.label(label);
-            return;
-        }
-        let enabled = write_enabled(state);
-        let ship_name = imported.ship_name.clone();
-        let charges_noted = imported.report.charges_noted;
-        let summary = save_confirm_summary_for(imported.format);
-        match render_save_confirm(
-            ui,
-            enabled,
-            &mapping,
-            &ship_name,
-            summary,
-            Some(charges_noted),
-            &local_resolver,
-        ) {
-            Some(SaveConfirmAction::Confirmed) => {
-                if let Some(character_id) = active_id {
-                    queue_save_request(state, character_id, mapping);
+    } else if let Some(active_id) = state.active_character_id {
+        let selected_fitting_id = selected.fitting_id;
+        let mapping = build_save_request(selected);
+        let armed_copy = matches!(
+            state.fittings_write_confirm,
+            Some(FittingWriteConfirm::SaveCopy {
+                character_id,
+                fitting_id,
+            }) if character_id == active_id && fitting_id == selected_fitting_id
+        );
+        let armed_delete = matches!(
+            state.fittings_write_confirm,
+            Some(FittingWriteConfirm::Delete {
+                character_id,
+                fitting_id,
+            }) if character_id == active_id && fitting_id == selected_fitting_id
+        );
+        if armed_copy {
+            if let Some(label) = unsaveable_label(&mapping) {
+                state.fittings_write_confirm = None;
+                ui.label(label);
+            } else {
+                let enabled = write_enabled(state);
+                let ship_name = resolver.name(selected.ship_type_id);
+                match render_save_confirm(
+                    ui,
+                    enabled,
+                    &mapping,
+                    &ship_name,
+                    SaveConfirmSummary::SavedCopy,
+                    None,
+                    resolver,
+                ) {
+                    Some(SaveConfirmAction::Confirmed) => {
+                        queue_save_request(state, active_id, mapping);
+                    }
+                    Some(SaveConfirmAction::Cancelled) => {
+                        state.fittings_write_confirm = None;
+                    }
+                    None => {}
                 }
             }
-            Some(SaveConfirmAction::Cancelled) => {
-                state.fittings_write_confirm = None;
+        } else if armed_delete {
+            let enabled = write_enabled(state);
+            let name = mapping.request.name.clone();
+            let ship_name = resolver.name(selected.ship_type_id);
+            let item_count = selected.items.len();
+            match render_delete_confirm(ui, enabled, &name, &ship_name, item_count) {
+                Some(DeleteConfirmAction::Confirmed) => {
+                    tracing::info!(
+                        "[FITTING] delete confirmed character_id={} fitting_id={}",
+                        active_id,
+                        selected_fitting_id
+                    );
+                    state.fittings_write_requested = Some(FittingWriteRequest::Delete {
+                        character_id: active_id,
+                        fitting_id: selected_fitting_id,
+                    });
+                    state.fittings_write_confirm = None;
+                }
+                Some(DeleteConfirmAction::Cancelled) => {
+                    state.fittings_write_confirm = None;
+                }
+                None => {}
             }
-            None => {}
+        } else {
+            ui.horizontal_wrapped(|ui| {
+                if let Some(label) = unsaveable_label(&mapping) {
+                    ui.label(label);
+                } else if ui
+                    .add_enabled(
+                        write_enabled(state),
+                        egui::Button::new("Save a copy to EVE..."),
+                    )
+                    .clicked()
+                {
+                    tracing::info!(
+                        "[FITTING] save confirmation armed character_id={} kind=save_copy kept={} dropped={}",
+                        active_id,
+                        mapping.request.items.len(),
+                        mapping.dropped.len()
+                    );
+                    state.fittings_write_confirm = Some(FittingWriteConfirm::SaveCopy {
+                        character_id: active_id,
+                        fitting_id: selected_fitting_id,
+                    });
+                }
+                if selected_fitting_id > 0
+                    && ui
+                        .add_enabled(
+                            write_enabled(state),
+                            egui::Button::new("Delete fitting from EVE..."),
+                        )
+                        .clicked()
+                {
+                    tracing::info!(
+                        "[FITTING] delete confirmation armed character_id={} fitting_id={}",
+                        active_id,
+                        selected_fitting_id
+                    );
+                    state.fittings_write_confirm = Some(FittingWriteConfirm::Delete {
+                        character_id: active_id,
+                        fitting_id: selected_fitting_id,
+                    });
+                }
+            });
         }
-    } else if let Some(label) = unsaveable_label(&mapping) {
-        ui.label(label);
-    } else if ui
-        .add_enabled(
-            write_enabled(state),
-            egui::Button::new(save_arm_button_label(imported.format)),
-        )
-        .clicked()
-    {
-        if let Some(character_id) = active_id {
-            tracing::info!(
-                "[FITTING] save confirmation armed character_id={} kind=save_imported kept={} dropped={}",
-                character_id,
-                mapping.request.items.len(),
-                mapping.dropped.len()
-            );
-            state.fittings_write_confirm = Some(FittingWriteConfirm::SaveImported { character_id });
+    }
+}
+
+fn show_saved_fittings_section(
+    ui: &mut egui::Ui,
+    state: &mut AppState,
+    resolver: &NameResolver,
+    fitting_types: Option<&FittingTypes>,
+    sde: &Sde,
+    cache: &mut PortraitImageCache,
+) {
+    let snapshot: LoadState<FittingsData> = state.fittings.clone();
+    match snapshot {
+        LoadState::Loading => widgets::card(ui, |ui| {
+            widgets::loading_panel(ui, "Loading fittings data...");
+        }),
+        LoadState::Empty => widgets::card(ui, |ui| {
+            widgets::empty_panel(ui, "No fittings data yet.");
+        }),
+        LoadState::Error(e) => widgets::card(ui, |ui| {
+            if widgets::error_panel_with_retry(ui, &e) {
+                tracing::warn!("[FITTING] retry requested after load error");
+                state.retry_requested = true;
+            }
+        }),
+        LoadState::Ready(bundle) => {
+            let panel_shown = !state.demo
+                && state.active_character_id.is_some()
+                && bundle.needs_fittings_stepup();
+            match &bundle.fittings {
+                Err(error) => widgets::card(ui, |ui| {
+                    if error.needs_reauthorize && panel_shown {
+                        tracing::debug!(
+                            "[FITTING] showing step-up guidance (missing fittings scope)"
+                        );
+                        fittings_reauthorize_panel(ui, state);
+                    } else {
+                        section_error_label(ui, error, panel_shown);
+                    }
+                }),
+                Ok(fittings) => {
+                    if fittings.is_empty() {
+                        widgets::card(ui, |ui| {
+                            ui.label("No saved fittings for this character yet. Fittings you save in EVE will appear here after a refresh.");
+                        });
+                        return;
+                    }
+                    let rows = fitting_rows(fittings, resolver);
+                    let total_w = ui.available_width();
+                    let render_list = |ui: &mut egui::Ui, state: &mut AppState| {
+                        widgets::section_title(ui, "Saved fittings");
+                        let focus = widgets::search_box(
+                            ui,
+                            &mut state.fittings_search,
+                            "Search fittings and ships",
+                            state.focus_search,
+                        );
+                        state.text_input_focused |= focus;
+                        if focus {
+                            state.focus_search = false;
+                        }
+                        let query = state.fittings_search.clone();
+                        let filtered: Vec<&FittingRow> = rows
+                            .iter()
+                            .filter(|row| fitting_matches_search(row, &query))
+                            .collect();
+                        if filtered.is_empty() {
+                            ui.label("No fittings match that search.");
+                        } else {
+                            let shown = filtered.len().min(FITTINGS_RENDER_MAX);
+                            ui.label(format!("Showing {shown} of {} fittings.", filtered.len()));
+                            egui::ScrollArea::vertical()
+                                .id_salt("fittings_saved_scroll")
+                                .max_height(520.0)
+                                .show(ui, |ui| {
+                                    for row in filtered.iter().take(FITTINGS_RENDER_MAX) {
+                                        let selected = Some(row.fitting_id)
+                                            == state.fittings_selected_fitting_id;
+                                        if ui
+                                            .selectable_label(selected, row.display_name.clone())
+                                            .clicked()
+                                        {
+                                            tracing::info!(
+                                                "[FITTING] selected fitting name={}",
+                                                row.display_name
+                                            );
+                                            state.fittings_selected_fitting_id =
+                                                Some(row.fitting_id);
+                                            state.fittings_pending_selection = None;
+                                        }
+                                        ui.label(
+                                            egui::RichText::new(format!(
+                                                "{} • {} items",
+                                                row.ship_name, row.item_count
+                                            ))
+                                            .size(12.0)
+                                            .color(super::theme::TEXT_SECONDARY),
+                                        );
+                                    }
+                                });
+                        }
+                    };
+                    let render_detail =
+                        |ui: &mut egui::Ui,
+                         state: &mut AppState,
+                         cache: &mut PortraitImageCache| {
+                            let selected_id = state.fittings_selected_fitting_id;
+                            match selected_id
+                                .and_then(|sid| fittings.iter().find(|f| f.fitting_id == sid))
+                            {
+                                Some(selected) => show_saved_fitting_detail(
+                                    ui,
+                                    state,
+                                    selected,
+                                    resolver,
+                                    fitting_types,
+                                    sde,
+                                    cache,
+                                ),
+                                None => {
+                                    widgets::empty_panel(
+                                    ui,
+                                    "Select a saved fitting to view details and ship statistics.",
+                                );
+                                }
+                            }
+                        };
+
+                    if total_w >= 640.0 {
+                        let left_w = (total_w * 0.30).clamp(240.0, 320.0);
+                        let right_w = (total_w - left_w - 16.0).max(280.0);
+                        ui.horizontal_top(|ui| {
+                            ui.vertical(|ui| {
+                                ui.set_width(left_w);
+                                widgets::card(ui, |ui| render_list(ui, state));
+                            });
+                            ui.vertical(|ui| {
+                                ui.set_width(right_w);
+                                widgets::card(ui, |ui| render_detail(ui, state, cache));
+                            });
+                        });
+                    } else {
+                        widgets::card(ui, |ui| render_list(ui, state));
+                        widgets::card(ui, |ui| render_detail(ui, state, cache));
+                    }
+                }
+            }
         }
     }
 }
@@ -4582,369 +4994,27 @@ pub fn show(
         widgets::no_character_panel(ui);
         return;
     }
-    // Import needs no ESI read scope: render it before the LoadState
-    // match so it works while saved fittings load, fail, or await a
-    // step-up grant (design section 8.2).
-    fittings_import_panel(ui, state, fitting_types, sde);
-    ui.separator();
-    // A confirmation never outlives the thing it confirms (write
-    // design section 6): sweep stale armed values before any
-    // confirmation block renders.
+    if let Some(catalogue) = fitting_types {
+        if !state.fittings_ship_rows_built {
+            state.fittings_ship_rows = ship_candidates(catalogue);
+            state.fittings_ship_rows_built = true;
+            tracing::debug!(
+                "[FITTING] ship candidates built rows={}",
+                state.fittings_ship_rows.len()
+            );
+        }
+    }
     if write_confirm_is_stale(state) {
         state.fittings_write_confirm = None;
     }
-    // The write step-up panel stays reachable while the read
-    // section awaits its own grant or shows an error (write
-    // design section 3.2), ahead of the LoadState match.
     fittings_write_reauthorize_panel(ui, state);
-    let snapshot: LoadState<FittingsData> = state.fittings.clone();
-    match snapshot {
-        LoadState::Loading => widgets::loading_panel(ui, "Loading fittings data..."),
-        LoadState::Empty => widgets::empty_panel(ui, "No fittings data yet."),
-        LoadState::Error(e) => {
-            if widgets::error_panel_with_retry(ui, &e) {
-                tracing::warn!("[FITTING] retry requested after load error");
-                state.retry_requested = true;
-            }
-        }
-        LoadState::Ready(bundle) => {
-            let panel_shown = !state.demo
-                && state.active_character_id.is_some()
-                && bundle.needs_fittings_stepup();
-            match &bundle.fittings {
-                Err(error) => {
-                    if error.needs_reauthorize && panel_shown {
-                        tracing::debug!(
-                            "[FITTING] showing step-up guidance (missing fittings scope)"
-                        );
-                        fittings_reauthorize_panel(ui, state);
-                        return;
-                    }
-                    section_error_label(ui, error, panel_shown);
-                }
-                Ok(fittings) => {
-                    if fittings.is_empty() {
-                        ui.label("No saved fittings for this character yet. Fittings you save in EVE will appear here after a refresh.");
-                        return;
-                    }
-                    // Search
-                    let focus = widgets::search_box(
-                        ui,
-                        &mut state.fittings_search,
-                        "Search fittings and ships",
-                        state.focus_search,
-                    );
-                    state.text_input_focused |= focus;
-                    if focus {
-                        state.focus_search = false;
-                    }
-                    let query = state.fittings_search.clone();
-                    let rows = fitting_rows(fittings, resolver);
-                    let filtered: Vec<&FittingRow> = rows
-                        .iter()
-                        .filter(|row| fitting_matches_search(row, &query))
-                        .collect();
-                    if filtered.is_empty() {
-                        ui.label("No fittings match that search.");
-                    } else {
-                        let shown = filtered.len().min(FITTINGS_RENDER_MAX);
-                        ui.label(format!("Showing {shown} of {} fittings.", filtered.len()));
-                        for row in filtered.iter().take(FITTINGS_RENDER_MAX) {
-                            let selected =
-                                Some(row.fitting_id) == state.fittings_selected_fitting_id;
-                            if ui
-                                .selectable_label(selected, row.display_name.clone())
-                                .clicked()
-                            {
-                                tracing::info!(
-                                    "[FITTING] selected fitting name={}",
-                                    row.display_name
-                                );
-                                state.fittings_selected_fitting_id = Some(row.fitting_id);
-                                // Write design section 8.1: an
-                                // explicit user choice always beats
-                                // a pending machine one.
-                                state.fittings_pending_selection = None;
-                            }
-                            ui.label(format!("{} • {} items", row.ship_name, row.item_count));
-                        }
-                    }
-                    // Detail of selected fitting (resolved against full list)
-                    let selected_id = state.fittings_selected_fitting_id;
-                    let Some(selected) =
-                        selected_id.and_then(|sid| fittings.iter().find(|f| f.fitting_id == sid))
-                    else {
-                        return;
-                    };
-                    ui.separator();
-                    let display_name = fitting_display_name(&selected.name);
-                    ui.heading(display_name.clone());
-                    let ship_type_id = selected.ship_type_id;
-                    if ship_type_id > 0 {
-                        ensure_type_icon_requested(state, ship_type_id);
-                        let ship_name = resolver.name(ship_type_id).to_string();
-                        ui.horizontal(|ui| {
-                            show_type_icon(ui, cache, state, ship_type_id, TYPE_ICON_PX);
-                            ui.label(ship_name);
-                        });
-                    } else {
-                        ui.label(resolver.name(ship_type_id));
-                    }
-                    if let Some(desc) = selected.description.as_deref() {
-                        let sanitized = sanitize_single_line(desc);
-                        if !sanitized.is_empty() {
-                            ui.label(sanitized);
-                        }
-                    }
-                    let item_rows = fitting_item_rows(selected, resolver);
-                    if item_rows.is_empty() {
-                        ui.label("This fitting has no items to show.");
-                    } else {
-                        render_fitting_items(ui, &item_rows, Some((state, cache)));
-                    }
-                    let levels = state
-                        .skills
-                        .as_ready()
-                        .map(|data| resource_skill_levels(&data.skills));
-                    render_fitting_resources(ui, selected, fitting_types, levels, sde);
-                    render_rig_calibration(ui, selected, fitting_types);
-                    render_bay_usage(ui, selected, fitting_types);
-                    render_fitting_dps(ui, selected, None, fitting_types);
-                    render_fitting_cap_stability(ui, selected, fitting_types);
-                    render_fitting_cap_stability_with_module_bonuses(ui, selected, fitting_types);
-                    render_fitting_active_repair(ui, selected, fitting_types);
-                    render_slot_layout(ui, selected, fitting_types);
-                    render_ship_base_stats(ui, selected, fitting_types);
-                    render_ship_shield_peak_recharge_with_module_bonuses(
-                        ui,
-                        selected,
-                        fitting_types,
-                    );
-                    render_ship_resistances(ui, selected, fitting_types);
-                    render_ship_resistances_with_module_bonuses(ui, selected, fitting_types);
-                    render_ship_base_ehp(ui, selected, fitting_types);
-                    render_ship_ehp_with_module_bonuses(ui, selected, fitting_types);
-                    render_ship_nav_targeting(ui, selected, fitting_types);
-                    render_ship_nav_targeting_with_module_bonuses(ui, selected, fitting_types);
-                    if ui.button("Copy as EFT").clicked() {
-                        tracing::info!(
-                            "[FITTING] copy as EFT requested for fitting name={}",
-                            display_name
-                        );
-                        match fitting_to_eft(selected, resolver) {
-                            None => {
-                                tracing::warn!(
-                                    "[FITTING] copy as EFT blocked ship not resolved fitting name={}",
-                                    display_name
-                                );
-                                state.status_message = "That fitting cannot be copied yet: its ship name has not loaded. Refresh and try again.".to_string();
-                            }
-                            Some(export) => {
-                                ui.ctx().copy_text(export.text.clone());
-                                let skipped =
-                                    export.skipped_unknown.saturating_add(export.skipped_empty);
-                                let line_count = export.text.lines().count();
-                                if skipped == 0 {
-                                    state.status_message =
-                                        format!("Copied \"{}\" as EFT", display_name);
-                                } else {
-                                    state.status_message = format!(
-                                        "Copied \"{}\" as EFT ({} items left out: names not loaded yet)",
-                                        display_name, skipped
-                                    );
-                                }
-                                tracing::info!(
-                                    "[FITTING] copied fitting name={} lines={} skipped_unknown={} skipped_empty={}",
-                                    display_name,
-                                    line_count,
-                                    export.skipped_unknown,
-                                    export.skipped_empty
-                                );
-                            }
-                        }
-                    }
-                    if ui.button("Copy as DNA").clicked() {
-                        match fitting_to_dna(selected) {
-                            None => {
-                                tracing::warn!(
-                                    "[FITTING] copy as DNA blocked fitting name={}",
-                                    display_name
-                                );
-                                state.status_message = "That fitting cannot be copied: it has no ship. Refresh and try again.".to_string();
-                            }
-                            Some(export) => {
-                                ui.ctx().copy_text(export.text.clone());
-                                let skipped = export
-                                    .skipped_unsupported
-                                    .saturating_add(export.skipped_empty)
-                                    .saturating_add(export.skipped_capped);
-                                if skipped == 0 {
-                                    state.status_message =
-                                        format!("Copied \"{}\" as a DNA link", display_name);
-                                } else {
-                                    state.status_message = format!(
-                                        "Copied \"{}\" as a DNA link ({} items left out: DNA links hold fitted modules only)",
-                                        display_name, skipped
-                                    );
-                                }
-                                tracing::info!(
-                                    "[FITTING] copied fitting as DNA name={} skipped_unsupported={} skipped_empty={} skipped_capped={}",
-                                    display_name,
-                                    export.skipped_unsupported,
-                                    export.skipped_empty,
-                                    export.skipped_capped
-                                );
-                            }
-                        }
-                    }
-                    // Edit-a-copy (edit-saved-copy design section
-                    // 2.1): visible exactly when a detail is
-                    // visible, gated on the catalogue and an
-                    // active character only — not a write
-                    // affordance, so no write_enabled gate, no
-                    // demo hide, and no in-flight replacement.
-                    if fitting_types.is_some() && state.active_character_id.is_some() {
-                        if ui.button("Edit a copy in Mimir").clicked() {
-                            let outcome = convert_saved_fitting(selected, resolver);
-                            match outcome {
-                                SavedCopyOutcome::Converted(draft) => {
-                                    install_copied_fitting(state, draft)
-                                }
-                                SavedCopyOutcome::Refused(reason) => {
-                                    apply_copied_refusal(state, reason)
-                                }
-                            }
-                        }
-                        ui.label("Editing a copy changes only the copy in Mimir and replaces the fitting above, if there is one. The saved fitting in EVE stays as it is, and saving the copy adds a new fitting.");
-                    }
-                    // Write affordances (write design sections
-                    // 6.2/6.3): save-a-copy and delete. The arm
-                    // buttons and a single armed block never
-                    // coexist for the same target.
-                    if render_write_in_flight(ui, state) {
-                        // In-flight row replaces the write buttons.
-                    } else if state.demo {
-                        ui.label(DEMO_FIT_WRITE_LABEL);
-                    } else if let Some(active_id) = state.active_character_id {
-                        let selected_fitting_id = selected.fitting_id;
-                        let mapping = build_save_request(selected);
-                        let armed_copy = matches!(
-                            state.fittings_write_confirm,
-                            Some(FittingWriteConfirm::SaveCopy {
-                                character_id,
-                                fitting_id,
-                            }) if character_id == active_id
-                                && fitting_id == selected_fitting_id
-                        );
-                        let armed_delete = matches!(
-                            state.fittings_write_confirm,
-                            Some(FittingWriteConfirm::Delete {
-                                character_id,
-                                fitting_id,
-                            }) if character_id == active_id
-                                && fitting_id == selected_fitting_id
-                        );
-                        if armed_copy {
-                            // A copy source cannot drift
-                            // un-saveable, but the guard keeps the
-                            // confirmation honest if it ever did.
-                            if let Some(label) = unsaveable_label(&mapping) {
-                                state.fittings_write_confirm = None;
-                                ui.label(label);
-                            } else {
-                                let enabled = write_enabled(state);
-                                let ship_name = resolver.name(selected.ship_type_id);
-                                match render_save_confirm(
-                                    ui,
-                                    enabled,
-                                    &mapping,
-                                    &ship_name,
-                                    SaveConfirmSummary::SavedCopy,
-                                    None,
-                                    resolver,
-                                ) {
-                                    Some(SaveConfirmAction::Confirmed) => {
-                                        queue_save_request(state, active_id, mapping);
-                                    }
-                                    Some(SaveConfirmAction::Cancelled) => {
-                                        state.fittings_write_confirm = None;
-                                    }
-                                    None => {}
-                                }
-                            }
-                        } else if armed_delete {
-                            let enabled = write_enabled(state);
-                            let name = mapping.request.name.clone();
-                            let ship_name = resolver.name(selected.ship_type_id);
-                            let item_count = selected.items.len();
-                            match render_delete_confirm(ui, enabled, &name, &ship_name, item_count)
-                            {
-                                Some(DeleteConfirmAction::Confirmed) => {
-                                    tracing::info!(
-                                        "[FITTING] delete confirmed character_id={} fitting_id={}",
-                                        active_id,
-                                        selected_fitting_id
-                                    );
-                                    state.fittings_write_requested =
-                                        Some(FittingWriteRequest::Delete {
-                                            character_id: active_id,
-                                            fitting_id: selected_fitting_id,
-                                        });
-                                    state.fittings_write_confirm = None;
-                                }
-                                Some(DeleteConfirmAction::Cancelled) => {
-                                    state.fittings_write_confirm = None;
-                                }
-                                None => {}
-                            }
-                        } else {
-                            if let Some(label) = unsaveable_label(&mapping) {
-                                ui.label(label);
-                            } else if ui
-                                .add_enabled(
-                                    write_enabled(state),
-                                    egui::Button::new("Save a copy to EVE..."),
-                                )
-                                .clicked()
-                            {
-                                tracing::info!(
-                                    "[FITTING] save confirmation armed character_id={} kind=save_copy kept={} dropped={}",
-                                    active_id,
-                                    mapping.request.items.len(),
-                                    mapping.dropped.len()
-                                );
-                                state.fittings_write_confirm =
-                                    Some(FittingWriteConfirm::SaveCopy {
-                                        character_id: active_id,
-                                        fitting_id: selected_fitting_id,
-                                    });
-                            }
-                            // Only server-issued ids are delete
-                            // targets (write design section 5.2).
-                            if selected_fitting_id > 0
-                                && ui
-                                    .add_enabled(
-                                        write_enabled(state),
-                                        egui::Button::new("Delete fitting from EVE..."),
-                                    )
-                                    .clicked()
-                            {
-                                tracing::info!(
-                                    "[FITTING] delete confirmation armed character_id={} fitting_id={}",
-                                    active_id,
-                                    selected_fitting_id
-                                );
-                                state.fittings_write_confirm = Some(FittingWriteConfirm::Delete {
-                                    character_id: active_id,
-                                    fitting_id: selected_fitting_id,
-                                });
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
+
+    // 1. Active in-memory draft editor first when a draft exists.
+    fittings_draft_editor_panel(ui, state, fitting_types, sde);
+    // 2. Saved fittings workspace (two-pane list + stats detail).
+    show_saved_fittings_section(ui, state, resolver, fitting_types, sde, cache);
+    // 3. Import EFT/DNA and collapsed "Start a new fitting" ship chooser.
+    fittings_import_controls_panel(ui, state, fitting_types);
 }
 
 #[cfg(test)]

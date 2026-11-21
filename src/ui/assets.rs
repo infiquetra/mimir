@@ -303,24 +303,45 @@ pub fn show(
                 if remaining == 0 {
                     break;
                 }
-                ui.heading(format!(
-                    "{} — {} item types, {} total items",
-                    group.location_name, group.type_count, group.item_count
-                ));
-                let to_render = remaining.min(group.rows.len());
-                for row in group.rows.iter().take(to_render) {
-                    ensure_type_icon_requested(state, row.type_id);
-                    let label = if row.has_custom_name {
-                        format!("{} x{} ({})", row.display_name, row.quantity, row.type_name)
-                    } else {
-                        format!("{} x{}", row.display_name, row.quantity)
-                    };
-                    ui.horizontal(|ui| {
-                        show_type_icon(ui, cache, state, row.type_id, TYPE_ICON_PX);
-                        ui.label(label);
-                    });
-                }
-                remaining -= to_render;
+                let type_noun = if group.type_count == 1 {
+                    "item type"
+                } else {
+                    "item types"
+                };
+                let item_noun = if group.item_count == 1 {
+                    "total item"
+                } else {
+                    "total items"
+                };
+                widgets::card(ui, |ui| {
+                    widgets::section_title(
+                        ui,
+                        &format!(
+                            "{} — {} {}, {} {}",
+                            group.location_name,
+                            widgets::format_count(group.type_count as i64),
+                            type_noun,
+                            widgets::format_count(group.item_count),
+                            item_noun
+                        ),
+                    );
+                    ui.add_space(4.0);
+                    let to_render = remaining.min(group.rows.len());
+                    for row in group.rows.iter().take(to_render) {
+                        ensure_type_icon_requested(state, row.type_id);
+                        let qty = widgets::format_count(row.quantity);
+                        let label = if row.has_custom_name {
+                            format!("{} x{} ({})", row.display_name, qty, row.type_name)
+                        } else {
+                            format!("{} x{}", row.display_name, qty)
+                        };
+                        ui.horizontal(|ui| {
+                            show_type_icon(ui, cache, state, row.type_id, TYPE_ICON_PX);
+                            ui.label(label);
+                        });
+                    }
+                    remaining -= to_render;
+                });
             }
             if total_filtered > ASSETS_RENDER_MAX {
                 ui.label(format!(

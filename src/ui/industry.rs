@@ -497,20 +497,25 @@ fn show_blueprints_section(
             }
             let shown = filtered.len().min(BLUEPRINT_RENDER_MAX);
             ui.label(format!("Showing {shown} of {} blueprints.", filtered.len()));
-            for row in filtered.into_iter().take(BLUEPRINT_RENDER_MAX) {
-                ui.separator();
-                ui.label(format!("{} \u{2014} {}", row.type_name, row.kind_label));
-                ui.label(format!(
-                    "Quantity: {} \u{00b7} {}",
-                    row.quantity_label, row.runs_label
-                ));
-                ui.label(format!(
-                    "{} \u{00b7} {}",
-                    efficiency_label("ME", row.material_efficiency),
-                    efficiency_label("TE", row.time_efficiency)
-                ));
-                ui.label(format!("At: {}", row.location_name));
-            }
+            egui::ScrollArea::vertical()
+                .id_salt("industry_blueprints_scroll")
+                .max_height(300.0)
+                .show(ui, |ui| {
+                    for row in filtered.into_iter().take(BLUEPRINT_RENDER_MAX) {
+                        ui.separator();
+                        ui.label(format!("{} \u{2014} {}", row.type_name, row.kind_label));
+                        ui.label(format!(
+                            "Quantity: {} \u{00b7} {}",
+                            row.quantity_label, row.runs_label
+                        ));
+                        ui.label(format!(
+                            "{} \u{00b7} {}",
+                            efficiency_label("ME", row.material_efficiency),
+                            efficiency_label("TE", row.time_efficiency)
+                        ));
+                        ui.label(format!("At: {}", row.location_name));
+                    }
+                });
         }
     }
 }
@@ -555,28 +560,37 @@ fn invention_calculator_lines(state: &AppState) -> Vec<String> {
 }
 
 fn show_invention_calculator(ui: &mut egui::Ui, state: &mut AppState) {
-    ui.heading(INVENTION_CALCULATOR_HEADING);
     let mut changed = false;
-    ui.label(INVENTION_CALCULATOR_INPUT_LABELS[0]);
-    let response = ui.text_edit_singleline(&mut state.industry_invention_base_probability);
-    state.text_input_focused |= response.has_focus();
-    changed |= response.changed();
-    ui.label(INVENTION_CALCULATOR_INPUT_LABELS[1]);
-    let response = ui.text_edit_singleline(&mut state.industry_invention_encryption_skill);
-    state.text_input_focused |= response.has_focus();
-    changed |= response.changed();
-    ui.label(INVENTION_CALCULATOR_INPUT_LABELS[2]);
-    let response = ui.text_edit_singleline(&mut state.industry_invention_datacore_skill1);
-    state.text_input_focused |= response.has_focus();
-    changed |= response.changed();
-    ui.label(INVENTION_CALCULATOR_INPUT_LABELS[3]);
-    let response = ui.text_edit_singleline(&mut state.industry_invention_datacore_skill2);
-    state.text_input_focused |= response.has_focus();
-    changed |= response.changed();
-    ui.label(INVENTION_CALCULATOR_INPUT_LABELS[4]);
-    let response = ui.text_edit_singleline(&mut state.industry_invention_decryptor_multiplier);
-    state.text_input_focused |= response.has_focus();
-    changed |= response.changed();
+    egui::Grid::new("invention_calc_inputs")
+        .spacing([12.0, 6.0])
+        .show(ui, |ui| {
+            ui.label(INVENTION_CALCULATOR_INPUT_LABELS[0]);
+            let response = ui.text_edit_singleline(&mut state.industry_invention_base_probability);
+            state.text_input_focused |= response.has_focus();
+            changed |= response.changed();
+            ui.end_row();
+            ui.label(INVENTION_CALCULATOR_INPUT_LABELS[1]);
+            let response = ui.text_edit_singleline(&mut state.industry_invention_encryption_skill);
+            state.text_input_focused |= response.has_focus();
+            changed |= response.changed();
+            ui.end_row();
+            ui.label(INVENTION_CALCULATOR_INPUT_LABELS[2]);
+            let response = ui.text_edit_singleline(&mut state.industry_invention_datacore_skill1);
+            state.text_input_focused |= response.has_focus();
+            changed |= response.changed();
+            ui.end_row();
+            ui.label(INVENTION_CALCULATOR_INPUT_LABELS[3]);
+            let response = ui.text_edit_singleline(&mut state.industry_invention_datacore_skill2);
+            state.text_input_focused |= response.has_focus();
+            changed |= response.changed();
+            ui.end_row();
+            ui.label(INVENTION_CALCULATOR_INPUT_LABELS[4]);
+            let response =
+                ui.text_edit_singleline(&mut state.industry_invention_decryptor_multiplier);
+            state.text_input_focused |= response.has_focus();
+            changed |= response.changed();
+            ui.end_row();
+        });
     if changed {
         tracing::debug!("[INDUSTRY] invention calculator input changed");
     }
@@ -902,7 +916,6 @@ fn show_reaction_calculator(
     industry_data: Option<&IndustryRef>,
     fitting_types: Option<&FittingTypes>,
 ) {
-    ui.heading(REACTION_CALCULATOR_HEADING);
     let (industry_data, fitting_types) = match (industry_data, fitting_types) {
         (None, _) => {
             ui.label(REACTION_CALCULATOR_NO_INDUSTRY_DATA);
@@ -928,22 +941,34 @@ fn show_reaction_calculator(
         if rows.len() > REACTION_CHOICE_RENDER_MAX {
             ui.label(format!("Showing {shown} of {} reactions.", rows.len()));
         }
-        for row in rows.iter().take(REACTION_CHOICE_RENDER_MAX) {
-            let selected = state.industry_reaction_selected_type_id == Some(row.type_id);
-            if ui.selectable_label(selected, &row.name).clicked() {
-                tracing::debug!("[INDUSTRY] reaction calculator reaction chosen");
-                state.industry_reaction_selected_type_id = Some(row.type_id);
-            }
-        }
+        egui::ScrollArea::vertical()
+            .id_salt("industry_reaction_picker")
+            .max_height(180.0)
+            .show(ui, |ui| {
+                for row in rows.iter().take(REACTION_CHOICE_RENDER_MAX) {
+                    let selected = state.industry_reaction_selected_type_id == Some(row.type_id);
+                    if ui.selectable_label(selected, &row.name).clicked() {
+                        tracing::debug!("[INDUSTRY] reaction calculator reaction chosen");
+                        state.industry_reaction_selected_type_id = Some(row.type_id);
+                    }
+                }
+            });
     }
-    ui.label(REACTION_CALCULATOR_INPUT_LABELS[1]);
-    let response = ui.text_edit_singleline(&mut state.industry_reaction_runs);
-    state.text_input_focused |= response.has_focus();
-    changed |= response.changed();
-    ui.label(REACTION_CALCULATOR_INPUT_LABELS[2]);
-    let response = ui.text_edit_singleline(&mut state.industry_reaction_facility_bonus_percent);
-    state.text_input_focused |= response.has_focus();
-    changed |= response.changed();
+    egui::Grid::new("reaction_calc_inputs")
+        .spacing([12.0, 6.0])
+        .show(ui, |ui| {
+            ui.label(REACTION_CALCULATOR_INPUT_LABELS[1]);
+            let response = ui.text_edit_singleline(&mut state.industry_reaction_runs);
+            state.text_input_focused |= response.has_focus();
+            changed |= response.changed();
+            ui.end_row();
+            ui.label(REACTION_CALCULATOR_INPUT_LABELS[2]);
+            let response =
+                ui.text_edit_singleline(&mut state.industry_reaction_facility_bonus_percent);
+            state.text_input_focused |= response.has_focus();
+            changed |= response.changed();
+            ui.end_row();
+        });
     if changed {
         tracing::debug!("[INDUSTRY] reaction calculator input changed");
     }
@@ -960,7 +985,6 @@ fn show_production_chain_calculator(
     industry_data: Option<&IndustryRef>,
     fitting_types: Option<&FittingTypes>,
 ) {
-    ui.heading(PRODUCTION_CHAIN_HEADING);
     let (industry_data, fitting_types) = match (industry_data, fitting_types) {
         (None, _) => {
             ui.label(PRODUCTION_CHAIN_NO_INDUSTRY_DATA);
@@ -986,18 +1010,25 @@ fn show_production_chain_calculator(
         if rows.len() > PRODUCTION_CHAIN_CHOICE_RENDER_MAX {
             ui.label(format!("Showing {shown} of {} items.", rows.len()));
         }
-        for row in rows.iter().take(PRODUCTION_CHAIN_CHOICE_RENDER_MAX) {
-            let selected = state.industry_chain_selected_type_id == Some(row.type_id);
-            if ui.selectable_label(selected, &row.name).clicked() {
-                tracing::debug!("[INDUSTRY] production chain calculator item chosen");
-                state.industry_chain_selected_type_id = Some(row.type_id);
-            }
-        }
+        egui::ScrollArea::vertical()
+            .id_salt("industry_chain_picker")
+            .max_height(180.0)
+            .show(ui, |ui| {
+                for row in rows.iter().take(PRODUCTION_CHAIN_CHOICE_RENDER_MAX) {
+                    let selected = state.industry_chain_selected_type_id == Some(row.type_id);
+                    if ui.selectable_label(selected, &row.name).clicked() {
+                        tracing::debug!("[INDUSTRY] production chain calculator item chosen");
+                        state.industry_chain_selected_type_id = Some(row.type_id);
+                    }
+                }
+            });
     }
-    ui.label(PRODUCTION_CHAIN_INPUT_LABELS[1]);
-    let response = ui.text_edit_singleline(&mut state.industry_chain_quantity);
-    state.text_input_focused |= response.has_focus();
-    changed |= response.changed();
+    ui.horizontal(|ui| {
+        ui.label(PRODUCTION_CHAIN_INPUT_LABELS[1]);
+        let response = ui.text_edit_singleline(&mut state.industry_chain_quantity);
+        state.text_input_focused |= response.has_focus();
+        changed |= response.changed();
+    });
     if changed {
         tracing::debug!("[INDUSTRY] production chain calculator input changed");
     }
@@ -1017,39 +1048,71 @@ pub fn show(
 ) {
     ui.heading("Industry");
     widgets::mode_notice(ui, state.demo, state.offline);
-    show_invention_calculator(ui, state);
-    show_reaction_calculator(ui, state, resolver, industry_data, fitting_types);
-    show_production_chain_calculator(ui, state, resolver, industry_data, fitting_types);
+
+    // --- Active character Jobs & Blueprints first (above offline calculators) ---
     if state.active_character().is_none() {
-        widgets::no_character_panel(ui);
-        return;
-    }
-    // Clone the snapshot so the step-up button and search box can
-    // borrow `state` mutably.
-    let snapshot: LoadState<IndustryData> = state.industry.clone();
-    match snapshot {
-        LoadState::Loading => widgets::loading_panel(ui, "Loading industry data..."),
-        LoadState::Empty => widgets::empty_panel(ui, "No industry data yet."),
-        LoadState::Error(e) => {
-            if widgets::error_panel_with_retry(ui, &e) {
-                tracing::warn!("[INDUSTRY] retry requested after load error");
-                state.retry_requested = true;
+        widgets::card(ui, widgets::no_character_panel);
+    } else {
+        let snapshot: LoadState<IndustryData> = state.industry.clone();
+        match snapshot {
+            LoadState::Loading => widgets::card(ui, |ui| {
+                widgets::loading_panel(ui, "Loading industry data...");
+            }),
+            LoadState::Empty => widgets::card(ui, |ui| {
+                widgets::empty_panel(ui, "No industry data yet.");
+            }),
+            LoadState::Error(e) => widgets::card(ui, |ui| {
+                if widgets::error_panel_with_retry(ui, &e) {
+                    tracing::warn!("[INDUSTRY] retry requested after load error");
+                    state.retry_requested = true;
+                }
+            }),
+            LoadState::Ready(bundle) => {
+                let panel_shown = !state.demo
+                    && state.active_character_id.is_some()
+                    && bundle.needs_industry_stepup();
+                if panel_shown {
+                    widgets::card(ui, |ui| {
+                        tracing::debug!(
+                            "[INDUSTRY] showing industry re-authorize guidance (missing scopes)"
+                        );
+                        industry_reauthorize_panel(ui, state);
+                    });
+                }
+                widgets::card(ui, |ui| {
+                    show_jobs_section(ui, &bundle.jobs, resolver, panel_shown);
+                });
+                widgets::card(ui, |ui| {
+                    show_blueprints_section(ui, state, &bundle.blueprints, resolver, panel_shown);
+                });
             }
         }
-        LoadState::Ready(bundle) => {
-            let panel_shown = !state.demo
-                && state.active_character_id.is_some()
-                && bundle.needs_industry_stepup();
-            if panel_shown {
-                tracing::debug!(
-                    "[INDUSTRY] showing industry re-authorize guidance (missing scopes)"
-                );
-                industry_reauthorize_panel(ui, state);
-            }
-            show_jobs_section(ui, &bundle.jobs, resolver, panel_shown);
-            show_blueprints_section(ui, state, &bundle.blueprints, resolver, panel_shown);
-        }
     }
+
+    // --- Offline Calculators below ---
+    ui.add_space(4.0);
+    widgets::section_title(ui, "Industry Calculators");
+    widgets::card(ui, |ui| {
+        egui::CollapsingHeader::new(INVENTION_CALCULATOR_HEADING)
+            .default_open(false)
+            .show(ui, |ui| {
+                show_invention_calculator(ui, state);
+            });
+    });
+    widgets::card(ui, |ui| {
+        egui::CollapsingHeader::new(REACTION_CALCULATOR_HEADING)
+            .default_open(false)
+            .show(ui, |ui| {
+                show_reaction_calculator(ui, state, resolver, industry_data, fitting_types);
+            });
+    });
+    widgets::card(ui, |ui| {
+        egui::CollapsingHeader::new(PRODUCTION_CHAIN_HEADING)
+            .default_open(false)
+            .show(ui, |ui| {
+                show_production_chain_calculator(ui, state, resolver, industry_data, fitting_types);
+            });
+    });
 }
 
 #[cfg(test)]

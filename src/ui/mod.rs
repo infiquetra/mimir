@@ -9,5 +9,6 @@ pub mod planets;
 pub mod portraits;
 pub mod settings;
 pub mod skills;
+pub mod theme;
 pub mod wallet;
 pub mod widgets;
