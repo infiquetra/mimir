@@ -1275,6 +1275,28 @@ pub fn seed_demo_state(state: &mut AppState) {
     tracing::info!("[DEMO] seed_demo_state entry");
     state.demo = true;
     state.offline = false;
+    state.auth = crate::app::state::AuthState::Idle;
+    state.portraits.clear();
+    state.portrait_requests.clear();
+    state.confirm_delete_id = None;
+    state.refresh_requested = false;
+    state.retry_requested = false;
+    state.login_requested = false;
+    state.stepup_requested = None;
+    state.logout_requested_id = None;
+    state.delete_requested_id = None;
+    state.market_fetch_requested = false;
+    state.market_lookup_requested = None;
+    state.planetary_detail_fetch_requested = false;
+    state.fittings_write_confirm = None;
+    state.fittings_write_requested = None;
+    state.fittings_write_in_flight = None;
+    state.fittings_pending_selection = None;
+    state.skill_plan_confirm = None;
+    state.skill_plan_action = None;
+    state.assets_needs_reauthorize = false;
+    state.structures_needs_reauthorize = false;
+    state.fittings_write_needs_reauthorize = false;
     match load_demo_bundle() {
         Ok(bundle) => {
             state.characters = bundle
@@ -2425,5 +2447,51 @@ mod tests {
             resolver.location_name(1_030_000_000_001),
             "Demo Astrahus - Voss Logistics Hub"
         );
+    }
+
+    #[test]
+    fn seed_demo_state_clears_live_portraits_and_pending_flags() {
+        let mut state = AppState::new(false);
+        state.auth = crate::app::state::AuthState::AwaitingCallback;
+        state.portraits.insert(
+            (crate::portraits::ImageKind::Type, 34),
+            crate::app::state::PortraitState::Loading,
+        );
+        state
+            .portrait_requests
+            .push((crate::portraits::ImageKind::Type, 34));
+        state.confirm_delete_id = Some(123);
+        state.refresh_requested = true;
+        state.retry_requested = true;
+        state.login_requested = true;
+        state.stepup_requested = Some(crate::app::state::StepUpRequest::new(123, &["scope"]));
+        state.logout_requested_id = Some(123);
+        state.delete_requested_id = Some(123);
+        state.market_fetch_requested = true;
+        state.market_lookup_requested = Some("Tritanium".to_string());
+        state.planetary_detail_fetch_requested = true;
+        state.assets_needs_reauthorize = true;
+        state.structures_needs_reauthorize = true;
+        state.fittings_write_needs_reauthorize = true;
+
+        seed_demo_state(&mut state);
+
+        assert!(state.demo);
+        assert_eq!(state.auth, crate::app::state::AuthState::Idle);
+        assert!(state.portraits.is_empty());
+        assert!(state.portrait_requests.is_empty());
+        assert_eq!(state.confirm_delete_id, None);
+        assert!(!state.refresh_requested);
+        assert!(!state.retry_requested);
+        assert!(!state.login_requested);
+        assert_eq!(state.stepup_requested, None);
+        assert_eq!(state.logout_requested_id, None);
+        assert_eq!(state.delete_requested_id, None);
+        assert!(!state.market_fetch_requested);
+        assert_eq!(state.market_lookup_requested, None);
+        assert!(!state.planetary_detail_fetch_requested);
+        assert!(!state.assets_needs_reauthorize);
+        assert!(!state.structures_needs_reauthorize);
+        assert!(!state.fittings_write_needs_reauthorize);
     }
 }

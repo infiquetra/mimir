@@ -83,7 +83,10 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
         super::widgets::section_title(ui, "Behavior");
         let mut demo = state.demo;
         if ui
-            .checkbox(&mut demo, "Demo mode (offline sample data)")
+            .add_enabled(
+                !state.auth.is_busy(),
+                egui::Checkbox::new(&mut demo, "Demo mode (offline sample data)"),
+            )
             .changed()
         {
             tracing::info!("[UI] demo toggle changed to {}", demo);

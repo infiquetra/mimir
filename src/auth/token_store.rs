@@ -144,7 +144,7 @@ impl TokenPayload {
 pub struct TokenStore {
     pub fallback_path: PathBuf,
     use_keyring: bool,
-    file_lock: Mutex<()>,
+    store_lock: Mutex<()>,
 }
 
 impl TokenStore {
@@ -157,7 +157,7 @@ impl TokenStore {
         Self {
             fallback_path,
             use_keyring: true,
-            file_lock: Mutex::new(()),
+            store_lock: Mutex::new(()),
         }
     }
 
@@ -170,7 +170,7 @@ impl TokenStore {
         Self {
             fallback_path,
             use_keyring: false,
-            file_lock: Mutex::new(()),
+            store_lock: Mutex::new(()),
         }
     }
 
@@ -187,6 +187,10 @@ impl TokenStore {
             "[AUTH] TokenStore::save character_id={}",
             tokens.character_id
         );
+        let _guard = self
+            .store_lock
+            .lock()
+            .unwrap_or_else(|poison| poison.into_inner());
         let payload = TokenPayload::from(tokens);
         let text = serde_json::to_string(&payload)?;
         if self.use_keyring {
@@ -202,7 +206,7 @@ impl TokenStore {
                         );
                         // Remove any older fallback entry so plaintext tokens never
                         // linger or shadow newer rotations if keyring later fails.
-                        let _ = self.remove_from_file(tokens.character_id);
+                        let _ = self.remove_from_file_locked(tokens.character_id);
                         return Ok(());
                     }
                     Err(e) => {
@@ -214,7 +218,7 @@ impl TokenStore {
                 }
             }
         }
-        self.save_to_file(tokens.character_id, &payload)?;
+        self.save_to_file_locked(tokens.character_id, &payload)?;
         if self.use_keyring {
             if let Ok(entry) = keyring::Entry::new(
                 Self::keyring_service(),
@@ -230,6 +234,10 @@ impl TokenStore {
 
     pub fn load(&self, character_id: i64) -> AppResult<Option<StoredTokens>> {
         tracing::debug!("[AUTH] TokenStore::load character_id={}", character_id);
+        let _guard = self
+            .store_lock
+            .lock()
+            .unwrap_or_else(|poison| poison.into_inner());
         let mut keyring_tokens = None;
         if self.use_keyring {
             if let Ok(entry) =
@@ -257,23 +265,31 @@ impl TokenStore {
                 }
             }
         }
-        let file_tokens = if keyring_tokens.is_some() {
-            self.load_from_file(character_id).unwrap_or_else(|e| {
+        let file_tokens = match self.load_from_file_locked(character_id) {
+            Ok(tokens) => tokens,
+            Err(AppError::Json(e)) => {
+                tracing::warn!(
+                    "[AUTH] ignoring corrupt fallback token file on load character_id={} error={}",
+                    character_id,
+                    e
+                );
+                None
+            }
+            Err(e) if keyring_tokens.is_some() => {
                 tracing::warn!(
                     "[AUTH] ignoring unreadable fallback file while keyring succeeded: {}",
                     e
                 );
                 None
-            })
-        } else {
-            self.load_from_file(character_id)?
+            }
+            Err(e) => return Err(e),
         };
         let had_keyring = keyring_tokens.is_some();
         let had_file = file_tokens.is_some();
         match select_fresher_tokens(keyring_tokens, file_tokens) {
             Some((winner, true)) => {
                 if had_file {
-                    let _ = self.remove_from_file(character_id);
+                    let _ = self.remove_from_file_locked(character_id);
                 }
                 Ok(Some(winner))
             }
@@ -294,6 +310,10 @@ impl TokenStore {
 
     pub fn delete(&self, character_id: i64) -> AppResult<()> {
         tracing::debug!("[AUTH] TokenStore::delete character_id={}", character_id);
+        let _guard = self
+            .store_lock
+            .lock()
+            .unwrap_or_else(|poison| poison.into_inner());
         if self.use_keyring {
             if let Ok(entry) =
                 keyring::Entry::new(Self::keyring_service(), &Self::keyring_user(character_id))
@@ -308,10 +328,6 @@ impl TokenStore {
                 }
             }
         }
-        let _guard = self
-            .file_lock
-            .lock()
-            .unwrap_or_else(|poison| poison.into_inner());
         match self.read_file_map() {
             Ok(mut map) => {
                 if map.remove(&character_id.to_string()).is_some() {
@@ -322,7 +338,7 @@ impl TokenStore {
                     );
                 }
             }
-            Err(e) => {
+            Err(AppError::Json(e)) => {
                 tracing::warn!(
                     "[AUTH] clearing corrupt fallback token file during delete character_id={} error={}",
                     character_id,
@@ -330,6 +346,7 @@ impl TokenStore {
                 );
                 self.write_file_map(&BTreeMap::new())?;
             }
+            Err(e) => return Err(e),
         }
         Ok(())
     }
@@ -339,7 +356,7 @@ impl TokenStore {
     pub fn file_character_ids(&self) -> AppResult<Vec<i64>> {
         tracing::debug!("[AUTH] TokenStore::file_character_ids");
         let _guard = self
-            .file_lock
+            .store_lock
             .lock()
             .unwrap_or_else(|poison| poison.into_inner());
         let map = self.read_file_map()?;
@@ -348,11 +365,7 @@ impl TokenStore {
         Ok(ids)
     }
 
-    fn save_to_file(&self, character_id: i64, payload: &TokenPayload) -> AppResult<()> {
-        let _guard = self
-            .file_lock
-            .lock()
-            .unwrap_or_else(|poison| poison.into_inner());
+    fn save_to_file_locked(&self, character_id: i64, payload: &TokenPayload) -> AppResult<()> {
         let mut map = self.read_file_map_lossy()?;
         map.insert(character_id.to_string(), payload.clone());
         self.write_file_map(&map)?;
@@ -363,11 +376,7 @@ impl TokenStore {
         Ok(())
     }
 
-    fn remove_from_file(&self, character_id: i64) -> AppResult<()> {
-        let _guard = self
-            .file_lock
-            .lock()
-            .unwrap_or_else(|poison| poison.into_inner());
+    fn remove_from_file_locked(&self, character_id: i64) -> AppResult<()> {
         if !self.fallback_path.exists() {
             return Ok(());
         }
@@ -378,11 +387,7 @@ impl TokenStore {
         Ok(())
     }
 
-    fn load_from_file(&self, character_id: i64) -> AppResult<Option<StoredTokens>> {
-        let _guard = self
-            .file_lock
-            .lock()
-            .unwrap_or_else(|poison| poison.into_inner());
+    fn load_from_file_locked(&self, character_id: i64) -> AppResult<Option<StoredTokens>> {
         let map = self.read_file_map()?;
         Ok(map
             .get(&character_id.to_string())
@@ -640,5 +645,30 @@ mod tests {
         std::fs::write(&path, "{corrupt again").expect("re-corrupt");
         store.delete(9).expect("delete resets corrupt file");
         assert!(store.load(9).expect("load after delete").is_none());
+    }
+
+    #[test]
+    fn corrupt_fallback_file_returns_none_on_load_for_reauth() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join("tokens.json");
+        let store = TokenStore::file_only(path.clone());
+
+        std::fs::write(&path, "{corrupt json").expect("seed corrupt");
+        assert!(store.load(42).expect("load corrupt returns None").is_none());
+    }
+
+    #[test]
+    fn delete_preserves_non_json_io_error_without_wiping_file() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        // Point fallback_path at an existing directory so read_to_string fails
+        // with an I/O error rather than AppError::Json.
+        let store = TokenStore::file_only(dir.path().to_path_buf());
+        let err = store
+            .delete(1)
+            .expect_err("non-JSON I/O error must propagate");
+        assert!(
+            matches!(err, AppError::Io(_)),
+            "expected AppError::Io, got {err}"
+        );
     }
 }
