@@ -10,10 +10,52 @@ use super::skills;
 use super::theme;
 use super::wallet::compute_analytics;
 use super::widgets;
-use crate::app::state::{AppState, CharacterSummary, LoadState, View};
+use crate::app::state::{AppState, CharacterSummary, LoadState, SkillsData, View};
 use crate::names::resolver::NameResolver;
 use crate::names::sde::Sde;
 use crate::storage::repositories::CharacterRow;
+
+/// Derive the `(training_text, training_muted, finishes_text, finishes_muted)`
+/// cells for the Dashboard character table, distinguishing unloaded skill state
+/// (`"not loaded"`) from a loaded empty queue (`"idle"` / `"paused"`).
+pub fn character_training_cells(
+    summary: Option<&CharacterSummary>,
+    active_skills: Option<&SkillsData>,
+    sde: &Sde,
+    now: chrono::DateTime<Utc>,
+) -> (String, bool, String, bool) {
+    let skills_loaded = summary.and_then(|s| s.queue_len).is_some()
+        || summary
+            .and_then(|s| s.training_skill_name.as_ref())
+            .is_some()
+        || active_skills.is_some();
+    if !skills_loaded {
+        return (
+            "not loaded".to_string(),
+            true,
+            "not loaded".to_string(),
+            true,
+        );
+    }
+    let active_training =
+        active_skills.and_then(|d| skills::active_or_first_queue_item(&d.queue, now));
+    let training = summary
+        .and_then(|s| s.training_skill_name.clone())
+        .or_else(|| active_training.map(|q| sde.skill_name(q.skill_id)));
+    let finish = summary
+        .and_then(|s| s.training_finish_date.as_deref())
+        .or_else(|| active_training.and_then(|q| q.finish_date.as_deref()));
+    let (training_text, training_muted) = match training {
+        Some(name) => (name, false),
+        None => ("idle".to_string(), true),
+    };
+    (
+        training_text,
+        training_muted,
+        widgets::countdown_label(finish, now),
+        false,
+    )
+}
 
 /// Sum wallet balances across the current character roster, falling back to the
 /// active character's live wallet balance if its summary is absent.
@@ -72,7 +114,10 @@ pub fn show(
                 state.login_requested = true;
                 state.switch_view(View::Characters);
             }
-            if ui.button("Try demo").clicked() {
+            if ui
+                .add_enabled(!state.auth.is_busy(), egui::Button::new("Try demo"))
+                .clicked()
+            {
                 tracing::info!("[DEMO] demo requested from dashboard");
                 state.demo = true;
                 crate::demo::data::seed_demo_state(state);
@@ -226,25 +271,22 @@ pub fn show(
                                 }
                                 None => ui.colored_label(theme::TEXT_MUTED, "not loaded"),
                             };
-                            let active_training = if *is_active {
-                                state
-                                    .skills
-                                    .as_ready()
-                                    .and_then(|d| skills::active_or_first_queue_item(&d.queue, now))
+                            let active_skills = if *is_active {
+                                state.skills.as_ready()
                             } else {
                                 None
                             };
-                            let training = summary
-                                .and_then(|s| s.training_skill_name.clone())
-                                .or_else(|| active_training.map(|q| sde.skill_name(q.skill_id)));
-                            ui.label(training.unwrap_or_else(|| "not loaded".to_string()));
-                            let finish = summary
-                                .and_then(|s| s.training_finish_date.as_deref())
-                                .or_else(|| active_training.and_then(|q| q.finish_date.as_deref()));
-                            if summary.is_none() && (!*is_active || !state.skills.is_ready()) {
-                                ui.colored_label(theme::TEXT_MUTED, "not loaded");
+                            let (training_text, training_muted, finishes_text, finishes_muted) =
+                                character_training_cells(summary, active_skills, sde, now);
+                            if training_muted {
+                                ui.colored_label(theme::TEXT_MUTED, training_text);
                             } else {
-                                ui.label(widgets::countdown_label(finish, now));
+                                ui.label(training_text);
+                            }
+                            if finishes_muted {
+                                ui.colored_label(theme::TEXT_MUTED, finishes_text);
+                            } else {
+                                ui.label(finishes_text);
                             }
                             let queue_len = summary.and_then(|s| s.queue_len).or_else(|| {
                                 if *is_active {
@@ -455,5 +497,41 @@ mod tests {
         // If no summary or active balance exists, result is None.
         let empty = combined_wallet_balance(&chars, &HashMap::new(), Some(2), None);
         assert_eq!(empty, None);
+    }
+
+    #[test]
+    fn character_training_cells_distinguishes_unloaded_empty_queue_and_active_training() {
+        let sde = Sde::load_bundled().expect("bundled SDE loads");
+        let now = Utc::now();
+
+        let (tr, tr_m, fin, fin_m) = character_training_cells(None, None, &sde, now);
+        assert_eq!(
+            (tr.as_str(), tr_m, fin.as_str(), fin_m),
+            ("not loaded", true, "not loaded", true)
+        );
+
+        let empty_summary = CharacterSummary {
+            queue_len: Some(0),
+            ..Default::default()
+        };
+        let (tr, tr_m, fin, fin_m) =
+            character_training_cells(Some(&empty_summary), None, &sde, now);
+        assert_eq!(
+            (tr.as_str(), tr_m, fin.as_str(), fin_m),
+            ("idle", true, "paused", false)
+        );
+
+        let active_summary = CharacterSummary {
+            queue_len: Some(1),
+            training_skill_name: Some("Gunnery".to_string()),
+            training_finish_date: Some((now + chrono::Duration::hours(2)).to_rfc3339()),
+            ..Default::default()
+        };
+        let (tr, tr_m, fin, fin_m) =
+            character_training_cells(Some(&active_summary), None, &sde, now);
+        assert_eq!(tr, "Gunnery");
+        assert!(!tr_m);
+        assert!(!fin_m);
+        assert!(fin.contains('h') || fin.contains('m'));
     }
 }

@@ -242,6 +242,9 @@ pub struct MimirApp {
     rx: Receiver<BackendMsg>,
     demo_names_loaded: bool,
     persisted_startup_view: Option<String>,
+    /// Handle to an in-flight EVE SSO login or step-up callback task so demo
+    /// entry can abort it promptly and release `127.0.0.1:54321`.
+    auth_task: Option<tokio::task::JoinHandle<()>>,
     /// Uploaded portrait textures, one per character with a Ready
     /// portrait. A `TextureHandle` must outlive the frame that
     /// created it, so this cache lives on the app (the view layer)
@@ -1071,10 +1074,27 @@ impl MimirApp {
                         }
                     }
                     match repositories::list_characters(&conn) {
-                        Ok(rows) => {
+                        Ok(mut rows) => {
                             tracing::info!("[CHAR] loaded {} stored characters", rows.len());
-                            state.active_character_id =
-                                rows.iter().find(|r| r.is_active).map(|r| r.character_id);
+                            let had_explicit_active = rows.iter().any(|r| r.is_active);
+                            let active = rows
+                                .iter()
+                                .find(|r| r.is_active)
+                                .or_else(|| rows.first())
+                                .map(|r| r.character_id);
+                            for c in &mut rows {
+                                c.is_active = Some(c.character_id) == active;
+                            }
+                            if let Some(active_id) = active {
+                                if !had_explicit_active {
+                                    tracing::info!(
+                                        "[CHAR] defaulting active character on live startup character_id={}",
+                                        active_id
+                                    );
+                                    let _ = repositories::set_active_character(&conn, active_id);
+                                }
+                            }
+                            state.active_character_id = active;
                             state.characters = rows;
                         }
                         Err(e) => tracing::warn!("[CHAR] list_characters failed: {}", e),
@@ -1124,6 +1144,7 @@ impl MimirApp {
             rx,
             demo_names_loaded: false,
             persisted_startup_view,
+            auth_task: None,
             portrait_textures: ui::portraits::PortraitImageCache::new(),
         };
         app.ensure_demo_names();
@@ -1202,6 +1223,10 @@ impl MimirApp {
         for c in &state.characters {
             ids.push(c.corporation_id);
             ids.extend(c.alliance_id);
+        }
+        if let LoadState::Ready(info) = &state.character_detail {
+            ids.push(info.corporation_id);
+            ids.extend(info.alliance_id);
         }
         if let LoadState::Ready(wallet) = &state.wallet {
             for entry in &wallet.journal {
@@ -1338,7 +1363,9 @@ impl MimirApp {
             if let Ok(blueprints_data) = &bundle.blueprints {
                 for blueprint in &blueprints_data.blueprints {
                     ids.push(blueprint.type_id);
-                    if asset_item_ids.contains(&blueprint.location_id) {
+                    if asset_item_ids.contains(&blueprint.location_id)
+                        || Self::is_ship_internal_flag(&blueprint.location_flag)
+                    {
                         continue;
                     }
                     if is_structure_id(blueprint.location_id) {
@@ -1622,17 +1649,36 @@ impl MimirApp {
                         continue;
                     }
                     tracing::info!("[ESI] refresh complete character_id={}", character_id);
+                    // Update the roster row's public corp/alliance first so
+                    // Dashboard, Characters, and schedule_name_resolution see
+                    // real IDs immediately (not just after an app restart).
+                    let was_in_roster = if let Some(existing) = self
+                        .state
+                        .characters
+                        .iter_mut()
+                        .find(|c| c.character_id == character_id)
+                    {
+                        if !info.name.is_empty() {
+                            existing.name = info.name.clone();
+                        }
+                        existing.corporation_id = info.corporation_id;
+                        existing.alliance_id = info.alliance_id;
+                        tracing::debug!(
+                            "[CHAR] updated roster corp/alliance character_id={} corp_id={} has_alliance={}",
+                            character_id,
+                            info.corporation_id,
+                            info.alliance_id.is_some()
+                        );
+                        true
+                    } else {
+                        false
+                    };
                     // A refresh landing after its character was removed
                     // must not resurrect that character's summary (the
                     // dashboard combined total sums every summary value).
                     // Summaries for still-present inactive characters are
                     // keyed and safe to keep.
-                    if self
-                        .state
-                        .characters
-                        .iter()
-                        .any(|c| c.character_id == character_id)
-                    {
+                    if was_in_roster {
                         let training = crate::ui::skills::active_or_first_queue_item(
                             &skills.queue,
                             chrono::Utc::now(),
@@ -1666,6 +1712,9 @@ impl MimirApp {
                             "[ESI] ignoring per-view refresh for inactive character_id={}",
                             character_id
                         );
+                        if was_in_roster {
+                            self.schedule_name_resolution();
+                        }
                     } else {
                         self.state.dashboard = LoadState::Ready((*info).clone());
                         self.state.character_detail = LoadState::Ready(*info);
@@ -1773,6 +1822,10 @@ impl MimirApp {
                     }
                 }
                 BackendMsg::NamesResolved { names, rejected } => {
+                    if self.state.demo {
+                        tracing::warn!("[ESI] dropping live resolved names in demo mode");
+                        continue;
+                    }
                     if !rejected.is_empty() {
                         tracing::info!(
                             "[ESI] marking {} unresolvable universe ids",
@@ -1788,6 +1841,13 @@ impl MimirApp {
                     names,
                     denied,
                 } => {
+                    if self.state.demo {
+                        tracing::warn!(
+                            "[ESI] dropping live structure names in demo mode character_id={}",
+                            character_id
+                        );
+                        continue;
+                    }
                     // Identity guard (design section 10.3): a late
                     // result for a switched-away character drops
                     // whole — neither the cache nor the pin set may
@@ -1875,6 +1935,7 @@ impl MimirApp {
                     }
                 }
                 BackendMsg::LoggedIn { row } => {
+                    self.auth_task = None;
                     if self.state.demo {
                         tracing::warn!(
                             "[AUTH] ignoring live login completion in demo mode character_id={}",
@@ -1886,7 +1947,22 @@ impl MimirApp {
                     tracing::info!("[AUTH] login complete character_id={}", row.character_id);
                     self.state.auth = AuthState::Success;
                     let id = row.character_id;
-                    if !self.state.characters.iter().any(|c| c.character_id == id) {
+                    if let Some(existing) = self
+                        .state
+                        .characters
+                        .iter_mut()
+                        .find(|c| c.character_id == id)
+                    {
+                        if !row.name.is_empty() && row.name != "Unknown Item" {
+                            existing.name = row.name;
+                        }
+                        if row.corporation_id > 0 {
+                            existing.corporation_id = row.corporation_id;
+                        }
+                        if row.alliance_id.is_some() {
+                            existing.alliance_id = row.alliance_id;
+                        }
+                    } else {
                         self.state.characters.push(row);
                     }
                     self.state.set_active_character(id);
@@ -1894,6 +1970,7 @@ impl MimirApp {
                     self.state.request_refresh("post-login");
                 }
                 BackendMsg::StepUpLoggedIn { character_id } => {
+                    self.auth_task = None;
                     if self.state.demo {
                         tracing::warn!(
                             "[AUTH] ignoring live step-up completion in demo mode character_id={}",
@@ -1954,6 +2031,10 @@ impl MimirApp {
                     }
                 }
                 BackendMsg::MarketFetched { generation, data } => {
+                    if self.state.demo {
+                        tracing::warn!("[MARKET] dropping live market result in demo mode");
+                        continue;
+                    }
                     // Design section 8.2: apply only on a full identity
                     // match — generation, selected type, region, and
                     // active character. Any mismatch is a stale result
@@ -1974,6 +2055,10 @@ impl MimirApp {
                     selection,
                     result,
                 } => {
+                    if self.state.demo {
+                        tracing::warn!("[PI] dropping live colony detail result in demo mode");
+                        continue;
+                    }
                     // PI design section 7.3: the Err travels inside
                     // the message, so a stale failure drops by the
                     // same identity check as a stale success.
@@ -1984,6 +2069,10 @@ impl MimirApp {
                     query,
                     result,
                 } => {
+                    if self.state.demo {
+                        tracing::warn!("[MARKET] dropping live item-name lookup in demo mode");
+                        continue;
+                    }
                     // Design section 8.3: a lookup whose generation was
                     // superseded, or whose text the user already edited
                     // away from, is stale even if it arrived intact.
@@ -2010,6 +2099,14 @@ impl MimirApp {
                     // Write design section 8, in order: the
                     // flight is over whatever the ids say.
                     self.state.fittings_write_in_flight = None;
+                    if self.state.demo {
+                        tracing::warn!(
+                            "[FITTING] dropping live fitting write result in demo mode character_id={} kind={}",
+                            character_id,
+                            kind.label()
+                        );
+                        continue;
+                    }
                     let landing =
                         decide_fitting_write_landing(&self.state, character_id, kind, &outcome);
                     if landing.stale {
@@ -2053,6 +2150,7 @@ impl MimirApp {
                     }
                 }
                 BackendMsg::LoginFailed { message } => {
+                    self.auth_task = None;
                     if self.state.demo {
                         tracing::warn!("[AUTH] ignoring live login failure in demo mode");
                         self.state.auth = AuthState::Idle;
@@ -2063,6 +2161,14 @@ impl MimirApp {
                     self.state.status_message = format!("Sign-in failed: {message}");
                 }
                 BackendMsg::PortraitFetched { kind, id, image } => {
+                    if self.state.demo {
+                        tracing::warn!(
+                            "[PORTRAIT] dropping live image fetch in demo mode kind={} id={}",
+                            kind.as_str(),
+                            id
+                        );
+                        continue;
+                    }
                     if apply_portrait_landing(&mut self.state, kind, id, image) {
                         tracing::info!("[PORTRAIT] image landed kind={} id={}", kind.as_str(), id);
                     } else {
@@ -2112,6 +2218,11 @@ impl MimirApp {
         let mut demo_mode_changed = false;
         if self.state.demo != self.last_demo_mode {
             demo_mode_changed = true;
+            if let Some(handle) = self.auth_task.take() {
+                tracing::info!("[AUTH] aborting in-flight sign-in task on demo mode change");
+                handle.abort();
+                self.state.auth = AuthState::Idle;
+            }
             let exiting_demo = self.last_demo_mode && !self.state.demo;
             self.last_demo_mode = self.state.demo;
             if exiting_demo {
@@ -2176,6 +2287,9 @@ impl MimirApp {
                 self.last_active_id = self.state.active_character_id;
                 self.load_skill_plans_into_state();
             } else {
+                self.resolver = NameResolver::new();
+                self.demo_names_loaded = false;
+                self.ensure_demo_names();
                 self.load_skill_plans_into_state();
             }
         }
@@ -3415,7 +3529,7 @@ impl MimirApp {
         let token_store = backends.token_store.clone();
         let db = backends.db.clone();
         let tx = self.tx.clone();
-        runtime.spawn(async move {
+        self.auth_task = Some(runtime.spawn(async move {
             let outcome = async {
                 let params = callback_server.wait_for_callback().await?;
                 let code = params.into_result(&request.state)?;
@@ -3428,7 +3542,7 @@ impl MimirApp {
                     .ok_or(crate::AuthError::MalformedToken)?;
                 let stored = StoredTokens::from_token_response(character_id, &tokens, &claims);
                 token_store.save(&stored)?;
-                let row = CharacterRow {
+                let mut row = CharacterRow {
                     character_id,
                     name: if claims.name.is_empty() {
                         "Unknown Item".to_string()
@@ -3440,6 +3554,10 @@ impl MimirApp {
                     is_active: true,
                 };
                 if let Ok(conn) = db.lock() {
+                    if let Ok(Some(existing)) = repositories::get_character(&conn, character_id) {
+                        row.corporation_id = existing.corporation_id;
+                        row.alliance_id = existing.alliance_id;
+                    }
                     let _ = repositories::set_token_meta(
                         &conn,
                         &TokenMetaRow {
@@ -3464,7 +3582,7 @@ impl MimirApp {
                     });
                 }
             }
-        });
+        }));
     }
 
     fn start_stepup_login(&mut self, request: StepUpRequest) {
@@ -3647,7 +3765,7 @@ impl MimirApp {
         // previously granted scope plus the requested ones, not just
         // the newly requested delta.
         let expected_scopes = union;
-        runtime.spawn(async move {
+        self.auth_task = Some(runtime.spawn(async move {
             let outcome = async {
                 let params = callback_server.wait_for_callback().await?;
                 let code = params.into_result(&auth_request.state)?;
@@ -3717,7 +3835,7 @@ impl MimirApp {
                     });
                 }
             }
-        });
+        }));
     }
 
     /// Start one confirmed fitting write (write design
@@ -4074,6 +4192,44 @@ impl MimirApp {
         }
         false
     }
+
+    fn has_pending_work(&self) -> bool {
+        !self.state.portrait_requests.is_empty()
+            || self.state.refresh_requested
+            || self.state.retry_requested
+            || self.state.login_requested
+            || self.state.stepup_requested.is_some()
+            || self.state.logout_requested_id.is_some()
+            || self.state.delete_requested_id.is_some()
+            || self.state.market_fetch_requested
+            || self.state.market_lookup_requested.is_some()
+            || self.state.planetary_detail_fetch_requested
+            || self.state.fittings_write_requested.is_some()
+            || self.state.skill_plan_action.is_some()
+            || self.state.demo != self.last_demo_mode
+            || self.state.active_character_id != self.last_active_id
+    }
+
+    fn persist_startup_view_if_changed(&mut self) {
+        if !self.state.demo
+            && self.persisted_startup_view.as_deref() != Some(self.state.startup_view.label())
+        {
+            if let Some(backends) = self.backends.as_ref() {
+                if let Ok(conn) = backends.db.lock() {
+                    if repositories::set_setting(
+                        &conn,
+                        "startup_view",
+                        self.state.startup_view.label(),
+                    )
+                    .is_ok()
+                    {
+                        self.persisted_startup_view =
+                            Some(self.state.startup_view.label().to_string());
+                    }
+                }
+            }
+        }
+    }
 }
 
 fn queue_has_unfinished_skill(
@@ -4094,24 +4250,7 @@ impl eframe::App for MimirApp {
         self.drain_requests();
         // Persist startup-view choice only when it actually changed since
         // the last write (settings view edits it); no per-frame DB reads.
-        if !self.state.demo
-            && self.persisted_startup_view.as_deref() != Some(self.state.startup_view.label())
-        {
-            if let Some(backends) = self.backends.as_ref() {
-                if let Ok(conn) = backends.db.lock() {
-                    if repositories::set_setting(
-                        &conn,
-                        "startup_view",
-                        self.state.startup_view.label(),
-                    )
-                    .is_ok()
-                    {
-                        self.persisted_startup_view =
-                            Some(self.state.startup_view.label().to_string());
-                    }
-                }
-            }
-        }
+        self.persist_startup_view_if_changed();
         let actions = self.collect_keys(ctx);
         self.apply_keys(actions);
         // Reset after key handling; views re-set it while rendering so the
@@ -4202,7 +4341,10 @@ impl eframe::App for MimirApp {
                         self.state.login_requested = true;
                         self.state.switch_view(View::Characters);
                     }
-                    if ui.button("Try demo").clicked() {
+                    if ui
+                        .add_enabled(!self.state.auth.is_busy(), egui::Button::new("Try demo"))
+                        .clicked()
+                    {
                         tracing::info!("[DEMO] demo requested from rail");
                         self.state.demo = true;
                         crate::demo::data::seed_demo_state(&mut self.state);
@@ -4362,6 +4504,13 @@ impl eframe::App for MimirApp {
                     View::Exploration => ui::exploration::show(ui, &mut self.state),
                 });
             });
+        // Persist startup-view edits made inside Settings during this frame and
+        // wake egui immediately whenever view rendering or apply_keys queued work
+        // after the top-of-frame drain_requests() pass.
+        self.persist_startup_view_if_changed();
+        if self.has_pending_work() {
+            ctx.request_repaint();
+        }
     }
 }
 
@@ -5683,5 +5832,241 @@ mod tests {
         let (ids, structures) = MimirApp::collect_live_name_ids(&state, None);
         assert!(ids.contains(&1_000_000_042));
         assert_eq!(structures, vec![real_structure_id]);
+    }
+
+    #[test]
+    fn collect_live_name_ids_skips_blueprint_ship_internal_flags() {
+        use crate::esi::models::CharacterBlueprint;
+
+        let mut state = AppState::new(false);
+        let ship_item_id = 1_040_000_000_777;
+        let real_structure_id = 1_030_000_000_888;
+        state.industry = LoadState::Ready(IndustryData {
+            jobs: Ok(IndustryJobsData::default()),
+            blueprints: Ok(BlueprintsData {
+                blueprints: vec![
+                    CharacterBlueprint {
+                        item_id: 1_040_000_000_778,
+                        type_id: 681,
+                        location_id: ship_item_id,
+                        location_flag: "Cargo".to_string(),
+                        quantity: -1,
+                        time_efficiency: 0,
+                        material_efficiency: 0,
+                        runs: -1,
+                    },
+                    CharacterBlueprint {
+                        item_id: 1_040_000_000_779,
+                        type_id: 682,
+                        location_id: real_structure_id,
+                        location_flag: "Hangar".to_string(),
+                        quantity: -1,
+                        time_efficiency: 0,
+                        material_efficiency: 0,
+                        runs: -1,
+                    },
+                ],
+                truncated: false,
+            }),
+        });
+
+        let (ids, structures) = MimirApp::collect_live_name_ids(&state, None);
+        assert!(ids.contains(&681));
+        assert!(ids.contains(&682));
+        assert_eq!(structures, vec![real_structure_id]);
+    }
+
+    #[test]
+    fn refreshed_updates_character_corp_and_alliance_in_roster() {
+        let mut app = MimirApp::new(false, Arc::new(Mutex::new(Vec::new())), None, None);
+        app.state.characters = vec![
+            CharacterRow {
+                character_id: 101,
+                name: "Alpha".to_string(),
+                corporation_id: 0,
+                alliance_id: None,
+                is_active: true,
+            },
+            CharacterRow {
+                character_id: 202,
+                name: "Beta".to_string(),
+                corporation_id: 0,
+                alliance_id: None,
+                is_active: false,
+            },
+        ];
+        app.state.set_active_character(101);
+        app.refresh_generation.insert(101, 1);
+        app.refresh_generation.insert(202, 1);
+
+        let send_refresh = |id: i64, corp_id: i64, alliance_id: Option<i64>, name: &str| {
+            app.tx.send(BackendMsg::Refreshed {
+                generation: 1,
+                character_id: id,
+                info: Box::new(CharacterPublicInfo {
+                    name: name.to_string(),
+                    corporation_id: corp_id,
+                    alliance_id,
+                    ..Default::default()
+                }),
+                skills: Box::new(SkillsData::default()),
+                wallet: Box::new(WalletData::default()),
+                assets: Ok(Box::new(AssetsData::default())),
+                assets_needs_reauthorize: false,
+                detail: Box::new(CharacterDetailData {
+                    attributes: Ok(Default::default()),
+                    implants: Ok(Vec::new()),
+                    clones: Ok(Default::default()),
+                    standings: Ok(Vec::new()),
+                    location: Ok(Default::default()),
+                    ship: Ok(Default::default()),
+                    online: Ok(Default::default()),
+                }),
+                industry: Box::new(IndustryData {
+                    jobs: Ok(IndustryJobsData::default()),
+                    blueprints: Ok(BlueprintsData::default()),
+                }),
+                planetary_colonies: Ok(Vec::new()),
+                fittings_list: Ok(Vec::new()),
+            });
+        };
+
+        send_refresh(101, 98_000_001, Some(99_000_001), "Alpha Renamed");
+        send_refresh(202, 98_000_002, None, "Beta");
+        app.drain_requests();
+
+        assert_eq!(app.state.characters[0].name, "Alpha Renamed");
+        assert_eq!(app.state.characters[0].corporation_id, 98_000_001);
+        assert_eq!(app.state.characters[0].alliance_id, Some(99_000_001));
+        assert_eq!(app.state.characters[1].corporation_id, 98_000_002);
+        let (ids, _) = MimirApp::collect_live_name_ids(&app.state, None);
+        assert!(ids.contains(&98_000_001));
+        assert!(ids.contains(&99_000_001));
+        assert!(ids.contains(&98_000_002));
+    }
+
+    #[test]
+    fn has_pending_work_detects_queued_portraits_and_clears_after_drain() {
+        let mut app = MimirApp::new(false, Arc::new(Mutex::new(Vec::new())), None, None);
+        app.state.characters = vec![CharacterRow {
+            character_id: 42,
+            name: "Pilot".to_string(),
+            corporation_id: 1000166,
+            alliance_id: None,
+            is_active: true,
+        }];
+        app.state.active_character_id = Some(42);
+        app.last_active_id = Some(42);
+        assert!(!app.has_pending_work());
+
+        crate::ui::portraits::ensure_portrait_requested(&mut app.state, 42);
+        assert!(app.has_pending_work());
+        app.drain_requests();
+        assert!(!app.has_pending_work());
+
+        app.state.demo = true;
+        assert!(app.has_pending_work());
+        app.drain_requests();
+        assert!(!app.has_pending_work());
+    }
+
+    #[test]
+    fn demo_mode_drops_late_live_names_portraits_structures_and_fitting_writes() {
+        let mut app = MimirApp::new(true, Arc::new(Mutex::new(Vec::new())), None, None);
+        let active_id = app
+            .state
+            .active_character_id
+            .expect("demo active character");
+        app.state.fittings_write_in_flight = Some(FittingWriteInFlight {
+            character_id: active_id,
+            kind: FittingWriteKind::Save,
+            fitting_id: None,
+        });
+        let status_before = app.state.status_message.clone();
+
+        app.tx.send(BackendMsg::NamesResolved {
+            names: vec![UniverseName {
+                id: 98_111_111,
+                name: "Live Leak Corp".to_string(),
+                category: "corporation".to_string(),
+            }],
+            rejected: vec![30000142],
+        });
+        app.tx.send(BackendMsg::StructuresResolved {
+            character_id: active_id,
+            names: vec![UniverseName {
+                id: 1_030_000_000_999,
+                name: "Live Leak Keepstar".to_string(),
+                category: "structure".to_string(),
+            }],
+            denied: vec![],
+        });
+        app.tx.send(BackendMsg::PortraitFetched {
+            kind: ImageKind::Type,
+            id: 34,
+            image: Ok(test_image(8, 8)),
+        });
+        app.tx.send(BackendMsg::FittingWriteDone {
+            character_id: active_id,
+            kind: FittingWriteKind::Save,
+            outcome: FittingWriteOutcome::Saved { fitting_id: 777 },
+        });
+        app.drain_requests();
+
+        assert_eq!(app.resolver.cached(98_111_111), None);
+        assert_eq!(app.resolver.cached(1_030_000_000_999), None);
+        assert!(matches!(
+            app.state.portrait_state(ImageKind::Type, 34),
+            PortraitState::NotRequested
+        ));
+        assert!(app.state.fittings_write_in_flight.is_none());
+        assert!(app.state.fittings_pending_selection.is_none());
+        assert_eq!(app.state.status_message, status_before);
+    }
+
+    #[test]
+    fn live_startup_activates_first_character_when_none_flagged_active() {
+        let conn = db::open_in_memory().expect("in-memory db");
+        repositories::upsert_character(
+            &conn,
+            &CharacterRow {
+                character_id: 11,
+                name: "Alice".to_string(),
+                corporation_id: 1000166,
+                alliance_id: None,
+                is_active: false,
+            },
+        )
+        .expect("insert 11");
+        repositories::upsert_character(
+            &conn,
+            &CharacterRow {
+                character_id: 22,
+                name: "Bob".to_string(),
+                corporation_id: 1000166,
+                alliance_id: None,
+                is_active: false,
+            },
+        )
+        .expect("insert 22");
+
+        let dir = tempfile::tempdir().expect("tempdir");
+        let backends = Backends {
+            esi: Arc::new(EsiClient::default()),
+            token_store: Arc::new(TokenStore::file_only(dir.path().join("tokens.json"))),
+            db: Arc::new(Mutex::new(conn)),
+            jwt_verifier: None,
+            portraits: Arc::new(PortraitService::new(dir.path().to_path_buf())),
+        };
+        let app = MimirApp::new(
+            false,
+            Arc::new(Mutex::new(Vec::new())),
+            None,
+            Some(backends),
+        );
+        assert_eq!(app.state.characters.len(), 2);
+        assert_eq!(app.state.active_character_id, Some(11));
+        assert!(app.state.characters[0].is_active);
+        assert!(!app.state.characters[1].is_active);
     }
 }

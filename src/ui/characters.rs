@@ -52,7 +52,11 @@ pub fn show(
             state.status_message =
                 "EVE SSO requested: your browser should open to login.eveonline.com.".to_string();
         }
-        if state.characters.is_empty() && ui.button("Try demo").clicked() {
+        if state.characters.is_empty()
+            && ui
+                .add_enabled(!state.auth.is_busy(), egui::Button::new("Try demo"))
+                .clicked()
+        {
             tracing::info!("[DEMO] demo requested from Characters view");
             state.demo = true;
             crate::demo::data::seed_demo_state(state);

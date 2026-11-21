@@ -31,6 +31,17 @@
 
 ## 2026-11-21
 
+### `TokenStore` full-transaction locking, egui post-render repaints, and immediate roster corp/alliance updates
+
+**Author.** Mimir Pass-4 audit and reliability pass
+**Context.** Adversarial auditing after Pass 3 exposed three subtle concurrency and frame-lifecycle gaps: cross-store time-of-check-to-time-of-use races in `TokenStore`, missed repaints when views queue portrait/key work after top-of-frame `drain_requests`, and stale `corporation_id = 0` placeholders after live EVE SSO sign-in.
+**Evidence.** (1) `src/auth/token_store.rs`: locking only individual file helpers allowed a concurrent `load()` picking a stale comparison snapshot to delete a newer keyring token written concurrently by `save()`; meanwhile `delete()` wiped `tokens.json` on non-JSON I/O errors and `load()` propagated `AppError::Json` when keyring had no entry. (2) `src/app/shell.rs`: `MimirApp::update` drained requests at the top of the frame while `needs_tick()` stayed false with finished queues, stranding post-render `portrait_requests` and `apply_keys` edits until input arrived. (3) `src/app/shell.rs`: `BackendMsg::Refreshed` updated `dashboard` and `character_detail` without updating `state.characters`, leaving `collect_live_name_ids` and Dashboard/Characters rows stuck on `corporation_id = 0` (`"Unknown Item"`) until restart, and `start_login` clobbered persisted corp/alliance on re-login.
+**Mechanism.** Locking per sub-operation protects single files, not dual-backend arbitration invariants; in an immediate-mode UI shell, work queued during key handling or widget rendering runs after top-of-frame `drain_requests()` and needs a trailing `ctx.request_repaint()` check; and roster display projections must be updated synchronously when authoritative public info lands.
+**Fix.** Serialized `TokenStore::{save,load,delete,file_character_ids}` under one `store_lock`, distinguished `AppError::Json` from `AppError::Io`, added trailing `has_pending_work()` repaint + `startup_view` persistence in `MimirApp::update`, updated `state.characters` in `BackendMsg::Refreshed`, aborted in-flight `auth_task` on demo entry with live `BackendMsg` demo guards, added blueprint ship-internal flag filtering, defaulted live startup active character when none is marked active, and separated `"idle"` from `"not loaded"` in Dashboard's Training column.
+**Validation.** Regression unit tests across `src/app/shell.rs`, `src/auth/token_store.rs`, `src/demo/data.rs`, and `src/ui/dashboard.rs`, plus `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `cargo test`, `cargo build`, and headless Xvfb demo verification.
+**Generalizable rule.** Hold one mutex across the entire multi-store read/arbitrate/cleanup transaction, gate error recovery specifically on `AppError::Json` (never generic `Err`), pair top-of-frame request draining with a post-render `has_pending_work()` repaint check, and update roster projections synchronously when refresh data lands.
+**Refs.** `src/auth/token_store.rs`, `src/app/shell.rs`, `src/demo/data.rs`, `src/ui/{dashboard,characters,settings}.rs`.
+
 ### Upwell assets carry `location_type: "item"` in live ESI, and `drain_requests` phase order governs mode/logout transitions
 
 **Author.** Mimir Pass-3 reliability pass
