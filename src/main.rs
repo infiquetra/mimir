@@ -84,6 +84,26 @@ fn init_tracing(log_buffer: Arc<Mutex<Vec<String>>>) {
         .try_init();
 }
 
+const APP_ICON_PNG: &[u8] = include_bytes!("../assets/macos/AppIcon.png");
+
+fn load_app_icon() -> Option<Arc<egui::IconData>> {
+    match image::load_from_memory(APP_ICON_PNG) {
+        Ok(img) => {
+            let rgba = img.to_rgba8();
+            let (width, height) = rgba.dimensions();
+            Some(Arc::new(egui::IconData {
+                rgba: rgba.into_raw(),
+                width,
+                height,
+            }))
+        }
+        Err(e) => {
+            tracing::warn!("[STARTUP] failed to decode embedded app icon: {}", e);
+            None
+        }
+    }
+}
+
 fn main() -> eframe::Result<()> {
     let args: Vec<String> = std::env::args().collect();
     let demo =
@@ -141,10 +161,14 @@ fn main() -> eframe::Result<()> {
         Backends::open_live()
     };
 
+    let mut viewport = egui::ViewportBuilder::default()
+        .with_inner_size([1280.0, 800.0])
+        .with_title("Mimir — EVE Online Companion");
+    if let Some(icon) = load_app_icon() {
+        viewport = viewport.with_icon(icon);
+    }
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default()
-            .with_inner_size([1280.0, 800.0])
-            .with_title("Mimir — EVE Online Companion"),
+        viewport,
         ..Default::default()
     };
 
@@ -186,5 +210,23 @@ mod tests {
         assert_eq!(parse_view_arg(&s(&["mimir", "--view", "unknown"])), None);
         assert_eq!(parse_view_arg(&s(&["mimir", "--view"])), None);
         assert_eq!(parse_view_arg(&s(&["mimir"])), None);
+    }
+
+    #[test]
+    fn embedded_app_icon_decodes_to_1024_rgba() {
+        let icon = load_app_icon().expect("embedded app icon decodes");
+        assert_eq!(icon.width, 1024);
+        assert_eq!(icon.height, 1024);
+        assert_eq!(icon.rgba.len(), 1024 * 1024 * 4);
+    }
+
+    #[test]
+    fn parse_view_arg_ignores_macos_finder_psn_argument() {
+        let s = |v: &[&str]| v.iter().map(|x| (*x).to_string()).collect::<Vec<_>>();
+        assert_eq!(parse_view_arg(&s(&["mimir", "-psn_0_123456"])), None);
+        assert_eq!(
+            parse_view_arg(&s(&["mimir", "-psn_0_123456", "--view", "market"])),
+            Some(View::Market)
+        );
     }
 }

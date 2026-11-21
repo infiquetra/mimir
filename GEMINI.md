@@ -17,6 +17,7 @@ cargo test                           # unit + integration tests
 cargo clippy --all-targets -- -D warnings
 cargo fmt --check
 cargo build
+./scripts/bundle-macos.sh --install --open   # macOS only: package Mimir.app, install, launch
 ```
 
 All PRs run `CI/Analyze`, `CI/Test`, and `CI/Build (macOS)`.
