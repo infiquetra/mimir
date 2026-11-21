@@ -71,3 +71,6 @@ jobs:
 
       - name: Build (macOS)
         run: cargo build
+
+      - name: Package macOS .app bundle
+        run: ./scripts/bundle-macos.sh --profile debug --skip-build --zip

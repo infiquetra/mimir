@@ -26,6 +26,15 @@
 
 ## 2026-11-21
 
+### Self-contained macOS `.app` bundling via `scripts/bundle-macos.sh` and `macos/Info.plist.template` (`feat/macos-app-bundle`)
+
+**Author.** Mimir macOS packaging pass
+**Decision.** Package the Rust `eframe` binary as a native `Mimir.app` bundle using a zero-dependency script (`scripts/bundle-macos.sh`) driving Apple's built-in `sips`, `iconutil`, `plutil`, `codesign`, and `ditto`, paired with `macos/Info.plist.template`, the canonical 1024×1024 icon at `assets/macos/AppIcon.png` (also embedded via `include_bytes!` in `src/main.rs` for runtime window icons), and verification in `CI/Build (macOS)`.
+**Rejected alternatives.** Adopting `cargo-bundle` or `cargo-packager` (external Rust CLI tools requiring separate installation, fragile iconset tooling, and unnecessary abstraction around a single binary and `Info.plist`) or recreating Xcode `Runner.xcodeproj` targets left behind when Flutter was retired.
+**Rationale.** Every tool needed to generate a Retina `.icns`, stamp `Cargo.toml` version / Git build number into `Info.plist`, ad-hoc (or Developer ID) codesign with `--deep --strict` verification, zip via `ditto`, and atomically install into `/Applications` (or `~/Applications`) ships out of the box with Xcode Command Line Tools on macOS and runs cleanly inside `macos-latest` CI.
+**Revisit when.** Mimir adds Apple Developer ID notarization in CI or macOS-specific native menu/extension targets requiring an `.xcodeproj`.
+**Refs.** `scripts/bundle-macos.sh`, `macos/Info.plist.template`, `assets/macos/AppIcon.png`, `src/main.rs`, `.github/workflows/ci.yml`.
+
 ### Decouple `market_lookup_generation` from `market_generation` and cancel pending lookup state on edits/region changes (`fix/rust-market-lookup-lifecycle`)
 
 **Author.** Mimir Pass-7 market lifecycle fix

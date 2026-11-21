@@ -93,6 +93,13 @@ cargo fmt --check
 cargo build --release   # binary at target/release/mimir
 ```
 
+### Installing on macOS
+
+```bash
+./scripts/bundle-macos.sh --install --open          # build release Mimir.app, install, and launch
+./scripts/bundle-macos.sh --install --open --demo   # install and launch in offline demo mode
+```
+
 ## Contributing
 
 Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
