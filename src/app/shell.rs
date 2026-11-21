@@ -547,6 +547,28 @@ fn skill_plan_success_status(action: &SkillPlanAction) -> &'static str {
     }
 }
 
+/// Return `true` when `(kind, id)` is still authorized by `image_id_known`.
+/// Otherwise drop any stale `PortraitState::Loading` marker (preserving any
+/// already-`Ready` image) so re-selecting the entity later can fetch again
+/// instead of sticking on `Loading`.
+fn clear_loading_if_unknown(state: &mut AppState, kind: ImageKind, id: i64) -> bool {
+    if state.image_id_known(kind, id) {
+        return true;
+    }
+    if matches!(
+        state.portraits.get(&(kind, id)),
+        Some(PortraitState::Loading)
+    ) {
+        tracing::debug!(
+            "[PORTRAIT] clearing stale Loading state for unknown kind={} id={}",
+            kind.as_str(),
+            id
+        );
+        state.portraits.remove(&(kind, id));
+    }
+    false
+}
+
 /// Image landing (portrait design section 5): insert the result
 /// under its own `(kind, id)` only when that entity is still known
 /// per `AppState::image_id_known`, returning whether it applied.
@@ -562,7 +584,7 @@ fn apply_portrait_landing(
     id: i64,
     image: Result<Arc<image::DynamicImage>, PortraitError>,
 ) -> bool {
-    if !state.image_id_known(kind, id) {
+    if !clear_loading_if_unknown(state, kind, id) {
         return false;
     }
     match image {
@@ -2740,9 +2762,11 @@ impl MimirApp {
             Some(PortraitStartRefusal::BackendsMissing) => {
                 tracing::warn!("[PORTRAIT] portrait fetches unavailable: live backends not wired");
                 for (kind, id) in requests {
-                    self.state
-                        .portraits
-                        .insert((kind, id), PortraitState::Failed);
+                    if clear_loading_if_unknown(&mut self.state, kind, id) {
+                        self.state
+                            .portraits
+                            .insert((kind, id), PortraitState::Failed);
+                    }
                 }
             }
             None => {
@@ -2757,12 +2781,12 @@ impl MimirApp {
                     .as_ref()
                     .expect("decide_portrait_start checked wiring");
                 for (kind, id) in requests {
-                    // Re-check the guard at drain time: the queue
-                    // may hold a request whose entity stopped being
-                    // known (character removed/switched) after it
-                    // queued. Skip the fetch; the state entry was
-                    // already dropped with its character.
-                    if !self.state.image_id_known(kind, id) {
+                    // Re-check at drain time: a queued entity can stop being
+                    // known before spawn (for example a character removal whose
+                    // retain snapshot ran before resetting `character_details`,
+                    // or a market selection change earlier in the same frame).
+                    // Skip the fetch and clear any stale `Loading` state.
+                    if !clear_loading_if_unknown(&mut self.state, kind, id) {
                         tracing::debug!(
                             "[PORTRAIT] image fetch skipped, no longer known kind={} id={}",
                             kind.as_str(),
@@ -6652,5 +6676,90 @@ mod tests {
         assert!(!app.state.refresh_requested);
         assert!(!app.state.market_fetch_requested);
         assert!(!app.state.planetary_detail_fetch_requested);
+    }
+
+    #[test]
+    fn stale_portrait_landing_clears_loading_so_reselection_can_refetch() {
+        let mut state = AppState::new(false);
+        state.set_market_selection(34, "Tritanium".to_string());
+        crate::ui::portraits::ensure_type_icon_requested(&mut state, 34);
+        assert_eq!(state.take_portrait_requests(), vec![(ImageKind::Type, 34)]);
+        assert!(matches!(
+            state.portrait_state(ImageKind::Type, 34),
+            PortraitState::Loading
+        ));
+
+        // Switching away drops authorization for type 34 while the fetch is in flight.
+        state.set_market_selection(35, "Pyerite".to_string());
+        assert!(!apply_portrait_landing(
+            &mut state,
+            ImageKind::Type,
+            34,
+            Ok(test_image(8, 8))
+        ));
+        assert!(matches!(
+            state.portrait_state(ImageKind::Type, 34),
+            PortraitState::NotRequested
+        ));
+
+        // Re-selecting Tritanium can now queue a fresh fetch instead of sticking on Loading.
+        state.set_market_selection(34, "Tritanium".to_string());
+        crate::ui::portraits::ensure_type_icon_requested(&mut state, 34);
+        assert_eq!(state.take_portrait_requests(), vec![(ImageKind::Type, 34)]);
+        assert!(matches!(
+            state.portrait_state(ImageKind::Type, 34),
+            PortraitState::Loading
+        ));
+    }
+
+    #[test]
+    fn start_portrait_fetches_clears_loading_when_entity_becomes_unknown_before_spawn() {
+        let conn = db::open_in_memory().expect("in-memory db");
+        let dir = tempfile::tempdir().expect("tempdir");
+        let backends = Backends {
+            esi: Arc::new(EsiClient::default()),
+            token_store: Arc::new(TokenStore::file_only(dir.path().join("tokens.json"))),
+            db: Arc::new(Mutex::new(conn)),
+            jwt_verifier: None,
+            portraits: Arc::new(PortraitService::new(dir.path().to_path_buf())),
+        };
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("rt");
+        let mut app = MimirApp::new(
+            false,
+            Arc::new(Mutex::new(Vec::new())),
+            Some(rt),
+            Some(backends),
+        );
+
+        app.state = standings_state();
+        crate::ui::portraits::ensure_logo_requested(&mut app.state, ImageKind::Faction, 500001);
+        assert!(matches!(
+            app.state.portrait_state(ImageKind::Faction, 500001),
+            PortraitState::Loading
+        ));
+        assert_eq!(
+            app.state.portrait_requests,
+            vec![(ImageKind::Faction, 500001)]
+        );
+
+        // Removing active character 1 clears character_details after retaining the queued request.
+        app.state.remove_character(1);
+        app.start_portrait_fetches();
+        assert!(matches!(
+            app.state.portrait_state(ImageKind::Faction, 500001),
+            PortraitState::NotRequested
+        ));
+        assert!(app.state.portrait_requests.is_empty());
+
+        // When character 2 later loads the same standing, the logo can be requested cleanly.
+        app.state.character_details = standings_state().character_details;
+        crate::ui::portraits::ensure_logo_requested(&mut app.state, ImageKind::Faction, 500001);
+        assert_eq!(
+            app.state.portrait_requests,
+            vec![(ImageKind::Faction, 500001)]
+        );
     }
 }
