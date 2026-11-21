@@ -50,12 +50,20 @@ impl std::fmt::Debug for RefreshToken {
     }
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, PartialEq, Eq)]
 pub struct StoredTokens {
     pub character_id: i64,
     pub access: AccessToken,
     pub refresh: RefreshToken,
     pub expires_at_unix: i64,
+}
+
+/// Outcome of an atomic compare-and-save after an async OAuth token refresh.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RefreshSaveResult {
+    Saved,
+    Deleted,
+    Superseded(StoredTokens),
 }
 
 impl std::fmt::Debug for StoredTokens {
@@ -191,6 +199,10 @@ impl TokenStore {
             .store_lock
             .lock()
             .unwrap_or_else(|poison| poison.into_inner());
+        self.save_locked(tokens)
+    }
+
+    fn save_locked(&self, tokens: &StoredTokens) -> AppResult<()> {
         let payload = TokenPayload::from(tokens);
         let text = serde_json::to_string(&payload)?;
         if self.use_keyring {
@@ -238,6 +250,39 @@ impl TokenStore {
             .store_lock
             .lock()
             .unwrap_or_else(|poison| poison.into_inner());
+        self.load_locked(character_id)
+    }
+
+    /// Persist a rotated token only if the character still holds the exact
+    /// pre-refresh access and refresh tokens observed when refresh started.
+    pub fn save_refreshed(
+        &self,
+        tokens: &StoredTokens,
+        expected_access: &str,
+        expected_refresh: &str,
+    ) -> AppResult<RefreshSaveResult> {
+        tracing::debug!(
+            "[AUTH] TokenStore::save_refreshed character_id={}",
+            tokens.character_id
+        );
+        let _guard = self
+            .store_lock
+            .lock()
+            .unwrap_or_else(|poison| poison.into_inner());
+        match self.load_locked(tokens.character_id)? {
+            None => Ok(RefreshSaveResult::Deleted),
+            Some(current)
+                if current.access.as_str() == expected_access
+                    && current.refresh.as_str() == expected_refresh =>
+            {
+                self.save_locked(tokens)?;
+                Ok(RefreshSaveResult::Saved)
+            }
+            Some(current) => Ok(RefreshSaveResult::Superseded(current)),
+        }
+    }
+
+    fn load_locked(&self, character_id: i64) -> AppResult<Option<StoredTokens>> {
         let mut keyring_tokens = None;
         if self.use_keyring {
             if let Ok(entry) =
@@ -669,6 +714,65 @@ mod tests {
         assert!(
             matches!(err, AppError::Io(_)),
             "expected AppError::Io, got {err}"
+        );
+    }
+
+    #[test]
+    fn save_refreshed_distinguishes_saved_deleted_and_superseded() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let store = TokenStore::file_only(dir.path().join("tokens.json"));
+        let mut rotated = sample(42);
+        rotated.access = AccessToken("rotated-access".to_string());
+        rotated.refresh = RefreshToken("rotated-refresh".to_string());
+        rotated.expires_at_unix = 4_000_001_000;
+
+        // 1. Character missing -> Deleted without writing anything.
+        assert_eq!(
+            store
+                .save_refreshed(&rotated, "secret-access-value", "secret-refresh-value")
+                .expect("save_refreshed missing"),
+            RefreshSaveResult::Deleted
+        );
+        assert!(store.load(42).expect("load empty").is_none());
+
+        // 2. Snapshot matches -> Saved and persisted.
+        store.save(&sample(42)).expect("seed initial");
+        assert_eq!(
+            store
+                .save_refreshed(&rotated, "secret-access-value", "secret-refresh-value")
+                .expect("save_refreshed matching"),
+            RefreshSaveResult::Saved
+        );
+        let persisted = store.load(42).expect("load persisted").expect("present");
+        assert_eq!(persisted, rotated);
+
+        // 3. Re-authenticated with newer tokens while stale refresh ran -> Superseded.
+        let mut relogin = sample(42);
+        relogin.access = AccessToken("relogin-access".to_string());
+        relogin.refresh = RefreshToken("relogin-refresh".to_string());
+        relogin.expires_at_unix = 4_000_002_000;
+        store.save(&relogin).expect("seed relogin");
+
+        let mut stale_rotated = sample(42);
+        stale_rotated.access = AccessToken("stale-access".to_string());
+        stale_rotated.refresh = RefreshToken("stale-refresh".to_string());
+        stale_rotated.expires_at_unix = 4_000_001_500;
+        assert_eq!(
+            store
+                .save_refreshed(
+                    &stale_rotated,
+                    "secret-access-value",
+                    "secret-refresh-value"
+                )
+                .expect("save_refreshed superseded"),
+            RefreshSaveResult::Superseded(relogin.clone())
+        );
+        assert_eq!(
+            store
+                .load(42)
+                .expect("load after superseded")
+                .expect("present"),
+            relogin
         );
     }
 }

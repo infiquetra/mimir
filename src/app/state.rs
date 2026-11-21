@@ -251,6 +251,7 @@ pub struct FittingWriteInFlight {
     pub character_id: i64,
     pub kind: FittingWriteKind,
     pub fitting_id: Option<i64>,
+    pub generation: u64,
 }
 
 /// How one fitting write ended (design section 8). `Saved`
@@ -918,6 +919,7 @@ pub struct AppState {
     pub fittings_write_confirm: Option<FittingWriteConfirm>,
     pub fittings_write_requested: Option<FittingWriteRequest>,
     pub fittings_write_in_flight: Option<FittingWriteInFlight>,
+    pub fittings_write_generation: u64,
     pub fittings_pending_selection: Option<(i64, i64)>,
     // View-local skill-plan state (design section 7). The loaded
     // plans are storage-confirmed truth (or the demo applier's);
@@ -1118,6 +1120,7 @@ impl AppState {
         }
         if let Some(previous_id) = previous {
             if previous_id != character_id {
+                self.confirm_delete_id = None;
                 // Assets are fetched tolerantly (a failed sub-fetch keeps
                 // Ready rows), so ownership must reset at the switch
                 // boundary or the previous character's rows would render
@@ -1478,6 +1481,20 @@ impl AppState {
                 self.set_active_character(first);
             }
         }
+        if self
+            .fittings_write_in_flight
+            .as_ref()
+            .is_some_and(|flight| flight.character_id == character_id)
+        {
+            self.fittings_write_generation = self.fittings_write_generation.wrapping_add(1);
+        }
+        if self.confirm_delete_id == Some(character_id) {
+            tracing::debug!(
+                "[CHAR] clearing pending delete confirmation for removed character_id={}",
+                character_id
+            );
+            self.confirm_delete_id = None;
+        }
         if self.stepup_requested.as_ref().map(|r| r.character_id) == Some(character_id) {
             tracing::debug!(
                 "[AUTH] clearing pending step-up request for removed character_id={}",
@@ -1486,6 +1503,7 @@ impl AppState {
             self.stepup_requested = None;
         }
         if self.characters.is_empty() {
+            self.confirm_delete_id = None;
             self.assets_needs_reauthorize = false;
             self.structures_needs_reauthorize = false;
             tracing::debug!("[PORTRAIT] clearing portraits when no characters remain");
@@ -1602,7 +1620,11 @@ impl AppState {
         self.fittings_write_needs_reauthorize = false;
         self.fittings_write_confirm = None;
         self.fittings_write_requested = None;
-        self.fittings_write_in_flight = None;
+        // Preserve `fittings_write_in_flight` across mode switches so the global
+        // single-flight guard stays intact until the live HTTP task finishes
+        // (matching `set_active_character` and `remove_character`), while bumping
+        // the generation drops its stale landing and Demo hides any UI spinner.
+        self.fittings_write_generation = self.fittings_write_generation.wrapping_add(1);
         self.fittings_pending_selection = None;
         self.skill_plans = LoadState::Empty;
         self.skill_plans_owner = None;
@@ -4458,5 +4480,45 @@ mod tests {
         assert_eq!(state.market_lookup_requested, None);
         assert_eq!(state.market_lookup_message, None);
         assert!(state.market_candidates.is_empty());
+    }
+
+    #[test]
+    fn remove_character_and_switch_clear_confirm_delete_id_while_preserving_in_flight_lock() {
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "One"), row(2, "Two")];
+        state.set_active_character(1);
+        state.confirm_delete_id = Some(1);
+        state.fittings_write_generation = 5;
+        state.fittings_write_in_flight = Some(FittingWriteInFlight {
+            character_id: 1,
+            kind: FittingWriteKind::Save,
+            fitting_id: None,
+            generation: 5,
+        });
+
+        // Removing an unrelated character leaves confirm_delete_id and flight lock untouched.
+        state.remove_character(2);
+        assert_eq!(state.confirm_delete_id, Some(1));
+        assert_eq!(state.fittings_write_generation, 5);
+        assert!(state.fittings_write_in_flight.is_some());
+
+        // Switching active character clears confirm_delete_id.
+        state.characters.push(row(2, "Two"));
+        state.set_active_character(2);
+        assert_eq!(state.confirm_delete_id, None);
+        assert!(state.fittings_write_in_flight.is_some());
+
+        // Removing the armed character clears confirm_delete_id and bumps the flight generation
+        // without releasing the global single-flight lock while HTTP is in progress.
+        state.confirm_delete_id = Some(1);
+        state.remove_character(1);
+        assert_eq!(state.confirm_delete_id, None);
+        assert!(state.fittings_write_in_flight.is_some());
+        assert_eq!(state.fittings_write_generation, 6);
+
+        // Mode switch preserves the in-flight lock and advances the generation.
+        state.reset_for_mode_switch();
+        assert!(state.fittings_write_in_flight.is_some());
+        assert_eq!(state.fittings_write_generation, 7);
     }
 }
