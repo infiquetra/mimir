@@ -31,6 +31,17 @@
 
 ## 2026-11-21
 
+### Per-frame pure UI helpers must use `tracing::trace!`, not `tracing::debug!`, to protect the in-app log buffer
+
+**Author.** Mimir Wave 6 dashboard & log hygiene pass
+**Context.** Inspecting a multi-hour headless demo log (`dashboard.log` grew to ~21 MB) showed `combined_wallet_balance` and the `skills::active_queue_index` / `active_or_first_queue_item` / `upcoming_queue_items` helpers emitting 5 `DEBUG` lines per 1 Hz countdown tick while the app sat idle on Dashboard.
+**Evidence.** `src/ui/dashboard.rs` (`combined_wallet_balance`), `src/ui/skills.rs` (`active_queue_index`, `active_or_first_queue_item`, `upcoming_queue_items`), and the captured tracing subscriber feeding `state.log_lines` shown in Settings.
+**Mechanism.** Mimir subscribes the Settings log ring buffer at `DEBUG`/`INFO` level and triggers a 1 Hz repaint (`needs_tick()`) whenever a skill or extractor countdown is running; any `tracing::debug!` inside an immediate-mode render path fires every tick and evicts meaningful `[STARTUP]`, `[AUTH]`, and `[ESI]` lifecycle entries.
+**Fix.** Downgraded those four per-frame pure UI helpers to `tracing::trace!`, and kept `[UI]` `tracing::info!` on discrete user actions such as button clicks.
+**Validation.** Headless Xvfb demo run on `--view dashboard` confirming zero repeated `combined_wallet_balance` / `upcoming_queue_items` lines in the captured log alongside `cargo test` passing.
+**Generalizable rule.** Reserve `tracing::debug!` and `tracing::info!` in `src/ui/` for state transitions and user actions; any diagnostic log inside an immediate-mode render helper must use `tracing::trace!`.
+**Refs.** `src/ui/dashboard.rs`, `src/ui/skills.rs`, `src/app/shell.rs`.
+
 ### `TokenStore` full-transaction locking, egui post-render repaints, and immediate roster corp/alliance updates
 
 **Author.** Mimir Pass-4 audit and reliability pass

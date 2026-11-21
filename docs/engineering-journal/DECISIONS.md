@@ -26,6 +26,15 @@
 
 ## 2026-11-21
 
+### Surface active-character Operations summary on Dashboard from loaded state (`feat/rust-dashboard-operations`)
+
+**Author.** Mimir Wave 6 UX enhancement pass
+**Decision.** Added an `"Operations at a glance (active character)"` card to the Dashboard (`src/ui/dashboard.rs`) backed by a pure `operations_snapshot` helper that summarizes already-loaded `state.industry`, `state.planetary`, `state.assets`, and `state.fittings` bundles with quick-open view buttons (`Open Industry (key 7)`, `Open Planets (key 8)`, `Open Assets (key 5)`, `Open Fittings (key 9)`).
+**Rejected alternatives.** Triggering extra background ESI fetches (e.g. N+1 planetary colony detail requests) from the Dashboard or duplicating table widgets already present on dedicated views: both increase rate-limit pressure and duplicate logic.
+**Rationale.** Keeps zero extra network traffic and zero duplicated view models while elevating high-frequency pilot status (ready/active jobs, extractor state, asset stacks/locations, saved fitting count, and scope-reauth warnings) onto the landing view.
+**Revisit when.** Mimir adds multi-character background summaries for Industry or Planetary colonies alongside Wallet and Skill Queue.
+**Refs.** `src/ui/dashboard.rs`, `src/app/state.rs`.
+
 ### Live Upwell `location_type == "item"` asset routing, `TokenStore` freshness arbitration, and drain ordering (`fix/rust-pass3-audit-fixes`)
 
 **Author.** Mimir Pass-3 reliability pass
