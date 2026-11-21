@@ -443,8 +443,8 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState, sde: &Sde, cache: &mut Port
                             widgets::countdown_label(last.finish_date.as_deref(), now)
                         ));
                     }
-                    // Arrow-key row movement (skipped while typing in search).
-                    if !state.text_input_focused {
+                    // Arrow-key row movement (skipped while typing in search or notes).
+                    if !state.text_input_focused && !ui.ctx().wants_keyboard_input() {
                         let (down, up) = ui.ctx().input(|i| {
                             (
                                 i.key_pressed(egui::Key::ArrowDown),

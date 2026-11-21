@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS wallet_balances (
     updated_at TEXT NOT NULL DEFAULT ''
 );
 CREATE TABLE IF NOT EXISTS wallet_journal (
-    id INTEGER PRIMARY KEY,
+    id INTEGER NOT NULL,
     character_id INTEGER NOT NULL DEFAULT 0,
     amount REAL NOT NULL DEFAULT 0,
     balance REAL NOT NULL DEFAULT 0,
@@ -44,10 +44,11 @@ CREATE TABLE IF NOT EXISTS wallet_journal (
     description TEXT NOT NULL DEFAULT '',
     ref_type TEXT NOT NULL DEFAULT '',
     first_party_id INTEGER,
-    second_party_id INTEGER
+    second_party_id INTEGER,
+    PRIMARY KEY (character_id, id)
 );
 CREATE TABLE IF NOT EXISTS wallet_transactions (
-    transaction_id INTEGER PRIMARY KEY,
+    transaction_id INTEGER NOT NULL,
     character_id INTEGER NOT NULL DEFAULT 0,
     journal_ref_id INTEGER NOT NULL DEFAULT 0,
     date TEXT NOT NULL DEFAULT '',
@@ -57,7 +58,8 @@ CREATE TABLE IF NOT EXISTS wallet_transactions (
     is_buy INTEGER NOT NULL DEFAULT 0,
     is_personal INTEGER NOT NULL DEFAULT 0,
     client_id INTEGER NOT NULL DEFAULT 0,
-    location_id INTEGER NOT NULL DEFAULT 0
+    location_id INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (character_id, transaction_id)
 );
 CREATE TABLE IF NOT EXISTS loyalty_points (
     character_id INTEGER NOT NULL,

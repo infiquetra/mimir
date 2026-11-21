@@ -260,26 +260,47 @@ fn run_simulator(capacity: f64, recharge_ms: f64, drains: &[CapDrain]) -> CapSim
     let mut queue: Vec<CapEvent> = Vec::new();
     let mut period: Option<f64> = Some(1.0);
     for drain in &active {
-        let duration = if drain.count > 1 {
-            (drain.duration_ms / drain.count as f64).floor()
+        let (duration, cap_need) = if drain.count > 1 {
+            let staggered = drain.duration_ms / drain.count as f64;
+            if staggered >= 1.0 {
+                (staggered.floor(), drain.cap_need)
+            } else if staggered > 0.0 {
+                (1.0, drain.cap_need / staggered)
+            } else {
+                continue;
+            }
         } else {
-            drain.duration_ms
+            (drain.duration_ms, drain.cap_need)
         };
+        if !duration.is_finite() || duration <= 0.0 || !cap_need.is_finite() || cap_need <= 0.0 {
+            continue;
+        }
         queue.push(CapEvent {
             t: 0.0,
             duration,
-            cap_need: drain.cap_need,
+            cap_need,
         });
         period = period.and_then(|p| lcm(p, duration));
     }
 
+    const MAX_SIM_ITERATIONS: usize = 200_000;
     let mut cap = capacity;
     let mut cap_lowest = capacity;
     let mut cap_lowest_pre = capacity;
     let mut cap_wrap = capacity;
     let mut t_last = 0.0;
     let mut t_wrap = period;
+    let mut iterations = 0usize;
     while !queue.is_empty() {
+        iterations += 1;
+        if iterations > MAX_SIM_ITERATIONS {
+            tracing::warn!("[FITTING] cap simulator reached iteration bound");
+            return CapSimResult {
+                is_stable: true,
+                stable_percent: stable_percent(cap_lowest, cap_lowest_pre, capacity),
+                seconds_to_empty: 0.0,
+            };
+        }
         // Earliest event wins; ties break by insertion order
         // (Flutter sorts the queue by time each iteration, so
         // the stable-sort tie order is insertion order).
@@ -345,8 +366,13 @@ fn run_simulator(capacity: f64, recharge_ms: f64, drains: &[CapDrain]) -> CapSim
         // Reschedule (lines 170–174): no reload time beyond
         // the event's own duration — the cycle already
         // carries any present 1795.
+        let t_next = t_now + event.duration;
+        if !t_next.is_finite() || t_next <= t_now {
+            tracing::warn!("[FITTING] cap simulator aborted on non-advancing event time");
+            break;
+        }
         queue.push(CapEvent {
-            t: t_now + event.duration,
+            t: t_next,
             duration: event.duration,
             cap_need: event.cap_need,
         });
@@ -2075,5 +2101,41 @@ mod tests {
             // helper None exactly on ship gate
             assert!(bonused_capacitor(&fitting(ship, vec![]), &catalogue).is_none());
         }
+    }
+
+    #[test]
+    fn high_count_staggered_and_tiny_cap_need_drains_terminate_cleanly() {
+        // When count > duration_ms (e.g. 2500 units at 2000ms), flooring
+        // duration/count used to produce 0.0ms and spin in place (Bug #9).
+        let heavy = run_simulator(
+            100_000.0,
+            125_000.0,
+            &[CapDrain {
+                cap_need: 0.5243,
+                duration_ms: 2000.0,
+                count: 2500,
+            }],
+        );
+        assert!(heavy.seconds_to_empty.is_finite());
+        if !heavy.is_stable {
+            assert!(
+                heavy.seconds_to_empty > 0.0,
+                "depletion time must advance past 0s, got {}",
+                heavy.seconds_to_empty
+            );
+        }
+
+        // Sub-ULP cap_need must not spin forever at t = 0.0 even with count > duration_ms.
+        let sub_ulp = run_simulator(
+            1_000_000.0,
+            100_000.0,
+            &[CapDrain {
+                cap_need: 1e-18,
+                duration_ms: 1500.0,
+                count: 2000,
+            }],
+        );
+        assert!(sub_ulp.is_stable);
+        assert!(sub_ulp.stable_percent.is_finite());
     }
 }

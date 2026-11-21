@@ -31,6 +31,17 @@
 
 ## 2026-11-21
 
+### Non-paginated ESI arrays, 404-all-or-nothing `/universe/names/`, Upwell `1e12` floor, and `run_simulator` zero-duration spin
+
+**Author.** Mimir Wave 3 reliability and correctness pass
+**Context.** A full audit of all 8 Rust subsystems against live ESI OpenAPI metadata (`https://esi.evetech.net/meta/openapi.json`), `POST /universe/names/`, SQLite schema, and fitting calculators uncovered four classes of silent production failures.
+**Evidence.** (1) `GET /characters/{id}/orders/` and `GET /characters/{id}/industry/jobs/` ignore `page=` and emit no `X-Pages` header; looping `page=1..=10` returned the full array 10 times. (2) `POST /universe/names/` returns HTTP 404 for an entire 1,000-ID batch if even one ID (such as `1` EVE System in wallet journals) is invalid. (3) Modern EVE character IDs exceed `2.1e9`, while Upwell structures start at `1e12`, and container/fitted assets carry `location_type == "item"` referencing parent `item_id >= 1e12`; using `1e9` misrouted character IDs and asset containers into `/universe/structures/{id}/`. (4) In `src/fitting/ship_cap_stability.rs`, `(duration_ms / count as f64).floor()` evaluated to `0.0` when `count > duration_ms`, freezing `t_now = 0.0`.
+**Mechanism.** Guessing ESI endpoint pagination instead of checking OpenAPI specs, assuming partial-success batch semantics on `/universe/names/`, conflating legacy entity IDs with container `item_id`s, and integer-flooring sub-millisecond staggered intervals below 1 ms.
+**Fix.** Switched orders/jobs to unpaginated calls, added 404 bisection (`resolve_names_resilient`), raised `STRUCTURE_ID_MIN` to `1_000_000_000_000`, skipped `location_type == "item"` and known asset/blueprint `item_id`s, upgraded wallet tables to composite PKs (schema v3), added per-character refresh locks/generation guards/repaint wakeups, and clamped sub-1ms cap intervals with a hard iteration bound.
+**Validation.** `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `cargo test` with regression tests covering all 16 fixes, and `cargo build`.
+**Generalizable rule.** Verify ESI endpoint pagination headers against the OpenAPI spec, bisect batch endpoints that fail-whole on invalid IDs, distinguish asset container `item_id`s from Upwell structures (`>= 1e12`), and guard iterative simulators against sub-unit floored time steps.
+**Refs.** DECISIONS 2026-11-21 Wave 3 entry; `src/esi/{client,endpoints}.rs`, `src/names/resolver.rs`, `src/app/shell.rs`, `src/storage/db.rs`, `src/fitting/ship_cap_stability.rs`.
+
 ### Headless screenshot inspection caught clipped tag rows, buried primary workflows, and a 1 Hz idle-queue repaint loop
 
 **Author.** Mimir UI/UX overhaul pass

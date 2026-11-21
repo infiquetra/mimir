@@ -252,7 +252,8 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState, resolver: &NameResolver) {
             visible.sort_by(|a, b| b.date.cmp(&a.date));
 
             // Arrow-key row movement (skipped while typing in search).
-            if !state.text_input_focused && !visible.is_empty() {
+            if !state.text_input_focused && !ui.ctx().wants_keyboard_input() && !visible.is_empty()
+            {
                 let (down, up) = ui.ctx().input(|i| {
                     (
                         i.key_pressed(egui::Key::ArrowDown),

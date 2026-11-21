@@ -1454,12 +1454,12 @@ impl AppState {
             self.skill_plan_action = None;
             self.skill_plan_picker_open = false;
             self.skill_plan_picker_search.clear();
+            self.assets_needs_reauthorize = false;
+            self.structures_needs_reauthorize = false;
             if let Some(first) = self.characters.first().map(|c| c.character_id) {
                 self.set_active_character(first);
             }
         }
-        self.assets_needs_reauthorize = false;
-        self.structures_needs_reauthorize = false;
         if self.stepup_requested.as_ref().map(|r| r.character_id) == Some(character_id) {
             tracing::debug!(
                 "[AUTH] clearing pending step-up request for removed character_id={}",
@@ -1468,6 +1468,8 @@ impl AppState {
             self.stepup_requested = None;
         }
         if self.characters.is_empty() {
+            self.assets_needs_reauthorize = false;
+            self.structures_needs_reauthorize = false;
             tracing::debug!("[PORTRAIT] clearing portraits when no characters remain");
             self.portraits.clear();
             self.portrait_requests.clear();
@@ -1915,13 +1917,18 @@ mod tests {
         // fact is per character.
         state.set_active_character(2);
         assert!(!state.structures_needs_reauthorize);
-        // Removing a character clears it too, mirroring the assets
-        // flag.
+        // Removing an inactive character preserves the active character's banner;
+        // removing the active character itself clears it.
         state.structures_needs_reauthorize = true;
         state.remove_character(3);
         assert!(
+            state.structures_needs_reauthorize,
+            "removing inactive character must preserve active banner"
+        );
+        state.remove_character(2);
+        assert!(
             !state.structures_needs_reauthorize,
-            "flag clears on removal"
+            "flag clears on active removal"
         );
     }
 
@@ -4347,5 +4354,24 @@ mod tests {
         assert!(matches!(state.character_detail, LoadState::Empty));
         assert!(matches!(state.exploration, LoadState::Ready(_)));
         assert!(!state.skill_catalogue_type_ids.is_empty());
+    }
+
+    #[test]
+    fn removing_inactive_character_preserves_active_reauthorize_flags() {
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "Active"), row(2, "Inactive")];
+        state.set_active_character(1);
+        state.assets_needs_reauthorize = true;
+        state.structures_needs_reauthorize = true;
+
+        state.remove_character(2);
+        assert_eq!(state.active_character_id, Some(1));
+        assert!(state.assets_needs_reauthorize);
+        assert!(state.structures_needs_reauthorize);
+
+        // Removing the active character itself clears its flags.
+        state.remove_character(1);
+        assert!(!state.assets_needs_reauthorize);
+        assert!(!state.structures_needs_reauthorize);
     }
 }

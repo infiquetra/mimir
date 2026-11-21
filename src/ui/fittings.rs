@@ -1757,6 +1757,7 @@ fn clear_editor_state(state: &mut AppState) {
     state.fittings_ship_change_search.clear();
     state.fittings_ship_rows.clear();
     state.fittings_ship_rows_built = false;
+    state.fittings_write_confirm = None;
 }
 
 /// Install a created draft exactly as a successful import
@@ -12696,5 +12697,16 @@ mod tests {
             SlotLayoutOutcome::Unavailable => panic!("Demo Brawler must have slot layout"),
         };
         assert!(echelon_layout.subsystem.is_none());
+    }
+
+    #[test]
+    fn clear_editor_state_disarms_pending_write_confirmation() {
+        let mut state = AppState::new(false);
+        state.fittings_write_confirm = Some(crate::app::state::FittingWriteConfirm::Delete {
+            character_id: 7,
+            fitting_id: 42,
+        });
+        clear_editor_state(&mut state);
+        assert!(state.fittings_write_confirm.is_none());
     }
 }

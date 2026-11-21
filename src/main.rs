@@ -6,7 +6,6 @@ use std::sync::{Arc, Mutex};
 
 use mimir::app::shell::{Backends, MimirApp};
 use mimir::app::state::View;
-use mimir::auth::jwt_verify::JwtVerifier;
 use mimir::auth::token_store::TokenStore;
 use mimir::portraits::PortraitService;
 use mimir::storage::db;
@@ -110,70 +109,34 @@ fn main() -> eframe::Result<()> {
     // hand the shared connection plus token store and ESI client to the app.
     // Demo mode uses an isolated in-memory database so live storage is untouched.
     // Token values are never logged.
-    let db_result = if demo {
+    let backends = if demo {
         tracing::info!("[DEMO] using in-memory database; live database path untouched");
-        db::open_in_memory()
-    } else {
-        db::open_db(&db::db_path())
-    };
-    let backends = match db_result {
-        Ok(conn) => {
-            if !demo {
-                tracing::info!(
-                    "[DB] startup database open ok path={}",
-                    db::db_path().display()
-                );
-            }
-            let token_store = Arc::new(TokenStore::new(db::app_data_dir()));
-            // One shared verifier so login, step-up, and refresh see a
-            // single JWKS cache. Construction makes no network call;
-            // demo mode skips it entirely (zero verification calls).
-            let jwt_verifier = if demo {
-                tracing::debug!("[AUTH] JWT verifier skipped in demo mode");
-                None
-            } else {
-                match JwtVerifier::new() {
-                    Ok(verifier) => Some(Arc::new(verifier)),
+        match db::open_in_memory() {
+            Ok(conn) => {
+                let token_store = Arc::new(TokenStore::new(db::app_data_dir()));
+                let portraits = Arc::new(PortraitService::new(db::app_cache_dir()));
+                let esi = match EsiClient::new() {
+                    Ok(client) => client.with_token_store(token_store.clone()),
                     Err(e) => {
-                        tracing::warn!("[AUTH] JWT verifier construction failed: {}", e);
-                        None
+                        tracing::warn!("[ESI] client construction failed: {}", e);
+                        EsiClient::default().with_token_store(token_store.clone())
                     }
-                }
-            };
-            let attach_verifier = |client: EsiClient| match &jwt_verifier {
-                Some(verifier) => client.with_jwt_verifier(verifier.clone()),
-                None => client,
-            };
-            // Portrait service construction performs no network or
-            // disk I/O, so it runs in demo mode too; the shell
-            // drain guarantees demo mode never spawns a fetch.
-            let portraits = Arc::new(PortraitService::new(db::app_cache_dir()));
-            match EsiClient::new() {
-                Ok(client) => Some(Backends {
-                    esi: Arc::new(attach_verifier(
-                        client.with_token_store(token_store.clone()),
-                    )),
+                };
+                Some(Backends {
+                    esi: Arc::new(esi),
                     token_store,
                     db: Arc::new(Mutex::new(conn)),
-                    jwt_verifier,
+                    jwt_verifier: None,
                     portraits,
-                }),
-                Err(e) => {
-                    tracing::warn!("[ESI] client construction failed: {}", e);
-                    Some(Backends {
-                        esi: Arc::new(attach_verifier(EsiClient::default())),
-                        token_store,
-                        db: Arc::new(Mutex::new(conn)),
-                        jwt_verifier,
-                        portraits,
-                    })
-                }
+                })
+            }
+            Err(e) => {
+                tracing::warn!("[DB] in-memory demo database open failed: {}", e);
+                None
             }
         }
-        Err(e) => {
-            tracing::warn!("[DB] startup database open failed: {}", e);
-            None
-        }
+    } else {
+        Backends::open_live()
     };
 
     let options = eframe::NativeOptions {
@@ -190,6 +153,7 @@ fn main() -> eframe::Result<()> {
             tracing::info!("[STARTUP] egui frame created");
             mimir::ui::theme::apply(&cc.egui_ctx);
             let mut app = MimirApp::new(demo, log_buffer, runtime, backends);
+            app.attach_egui_ctx(cc.egui_ctx.clone());
             if let Some(view) = initial_view {
                 app.apply_initial_view(view);
             }

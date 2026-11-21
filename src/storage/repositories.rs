@@ -710,8 +710,8 @@ pub fn upsert_journal(conn: &rusqlite::Connection, rows: &[WalletJournalRow]) ->
              (id, character_id, amount, balance, date, description, ref_type, \
               first_party_id, second_party_id) \
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9) \
-             ON CONFLICT(id) DO UPDATE SET \
-               character_id=excluded.character_id, amount=excluded.amount, \
+             ON CONFLICT(character_id, id) DO UPDATE SET \
+               amount=excluded.amount, \
                balance=excluded.balance, date=excluded.date, \
                description=excluded.description, ref_type=excluded.ref_type, \
                first_party_id=excluded.first_party_id, \
@@ -886,8 +886,7 @@ pub fn upsert_transactions(
              (transaction_id, character_id, journal_ref_id, date, type_id, quantity, \
               unit_price, is_buy, is_personal, client_id, location_id) \
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11) \
-             ON CONFLICT(transaction_id) DO UPDATE SET \
-               character_id=excluded.character_id, \
+             ON CONFLICT(character_id, transaction_id) DO UPDATE SET \
                journal_ref_id=excluded.journal_ref_id, date=excluded.date, \
                type_id=excluded.type_id, quantity=excluded.quantity, \
                unit_price=excluded.unit_price, is_buy=excluded.is_buy, \
@@ -1827,5 +1826,79 @@ mod tests {
         assert_eq!(listed2.len(), 2);
         assert_eq!(listed2[0].plan_id, second);
         assert_eq!(listed2[1].plan_id, first);
+    }
+
+    #[test]
+    fn shared_journal_and_transaction_ids_do_not_collide_across_characters() {
+        let conn = db::open_in_memory().expect("db opens");
+        upsert_journal(
+            &conn,
+            &[WalletJournalRow {
+                id: 777,
+                character_id: 1,
+                amount: -50.0,
+                balance: 950.0,
+                date: "2026-11-15T00:00:00Z".to_string(),
+                description: "Transfer".to_string(),
+                ref_type: "player_donation".to_string(),
+                first_party_id: Some(1),
+                second_party_id: Some(2),
+            }],
+        )
+        .expect("j1");
+        upsert_journal(
+            &conn,
+            &[WalletJournalRow {
+                id: 777,
+                character_id: 2,
+                amount: 50.0,
+                balance: 250.0,
+                date: "2026-11-15T00:00:00Z".to_string(),
+                description: "Transfer".to_string(),
+                ref_type: "player_donation".to_string(),
+                first_party_id: Some(1),
+                second_party_id: Some(2),
+            }],
+        )
+        .expect("j2");
+        assert_eq!(list_journal(&conn, 1).expect("read j1")[0].amount, -50.0);
+        assert_eq!(list_journal(&conn, 2).expect("read j2")[0].amount, 50.0);
+
+        upsert_transactions(
+            &conn,
+            &[WalletTransactionRow {
+                transaction_id: 888,
+                character_id: 1,
+                journal_ref_id: 777,
+                date: "2026-11-15T00:00:00Z".to_string(),
+                type_id: 34,
+                quantity: 100,
+                unit_price: 5.0,
+                is_buy: true,
+                is_personal: true,
+                client_id: 2,
+                location_id: 60003760,
+            }],
+        )
+        .expect("t1");
+        upsert_transactions(
+            &conn,
+            &[WalletTransactionRow {
+                transaction_id: 888,
+                character_id: 2,
+                journal_ref_id: 777,
+                date: "2026-11-15T00:00:00Z".to_string(),
+                type_id: 34,
+                quantity: 100,
+                unit_price: 5.0,
+                is_buy: false,
+                is_personal: true,
+                client_id: 1,
+                location_id: 60003760,
+            }],
+        )
+        .expect("t2");
+        assert!(list_transactions(&conn, 1).expect("read t1")[0].is_buy);
+        assert!(!list_transactions(&conn, 2).expect("read t2")[0].is_buy);
     }
 }

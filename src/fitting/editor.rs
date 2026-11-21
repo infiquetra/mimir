@@ -186,7 +186,9 @@ fn add_stacked(
     };
     let mut index: HashMap<i64, usize> = HashMap::new();
     for (position, item) in fitting.items.iter().enumerate() {
-        index.entry(item.type_id).or_insert(position);
+        if item.section == section {
+            index.entry(item.type_id).or_insert(position);
+        }
     }
     if absorb_stack(
         &mut fitting.items,
@@ -2043,5 +2045,41 @@ mod tests {
             }
             EftImportOutcome::Failed(fatal) => panic!("copy must re-import: {fatal:?}"),
         }
+    }
+
+    #[test]
+    fn add_stacked_does_not_merge_drone_into_existing_cargo_row() {
+        let types = bundled_types();
+        let drone = types
+            .types
+            .iter()
+            .find(|row| row.category_id == CATEGORY_DRONE)
+            .expect("bundled catalogue carries drones");
+        let mut fitting = ImportedFitting {
+            name: "Mixed Bay".to_string(),
+            ship_type_id: 587,
+            ship_name: "Rifter".to_string(),
+            format: ImportFormat::Eft,
+            items: vec![ImportedItem {
+                type_id: drone.type_id,
+                name: drone.name.clone(),
+                section: ImportSection::Cargo,
+                quantity: 2,
+                charge: None,
+            }],
+            report: ImportReport {
+                imported_lines: 1,
+                placeholder_lines: 0,
+                charges_noted: 0,
+                issues: Vec::new(),
+            },
+        };
+
+        add_item(&mut fitting, &types, &drone.name, Some("3")).expect("drone adds to Drones");
+        assert_eq!(fitting.items.len(), 2);
+        assert_eq!(fitting.items[0].section, ImportSection::Cargo);
+        assert_eq!(fitting.items[0].quantity, 2);
+        assert_eq!(fitting.items[1].section, ImportSection::Drones);
+        assert_eq!(fitting.items[1].quantity, 3);
     }
 }
