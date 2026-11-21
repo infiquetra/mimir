@@ -193,39 +193,66 @@ impl CallbackServer {
             };
             tracing::debug!("[AUTH] callback connection peer={}", peer);
             let mut buffer = [0u8; 8192];
+            let mut total = 0usize;
             let read_deadline = deadline.min(tokio::time::Instant::now() + Duration::from_secs(5));
-            let read = tokio::time::timeout_at(read_deadline, socket.read(&mut buffer)).await;
-            let count = match read {
-                Ok(Ok(0)) => continue,
-                Ok(Ok(n)) => n,
-                Ok(Err(e)) => {
-                    tracing::debug!(
-                        "[AUTH] ignoring transient callback peer read error peer={} error={}",
-                        peer,
-                        e
-                    );
-                    continue;
-                }
-                Err(_) => {
-                    if tokio::time::Instant::now() >= deadline {
-                        tracing::warn!("[AUTH] callback wait timed out");
-                        return Err(AuthError::CallbackTimeout);
+            let mut read_failed = false;
+            let mut timed_out_overall = false;
+            loop {
+                let read =
+                    tokio::time::timeout_at(read_deadline, socket.read(&mut buffer[total..])).await;
+                match read {
+                    Ok(Ok(0)) => break,
+                    Ok(Ok(n)) => {
+                        total += n;
+                        if buffer[..total].windows(4).any(|w| w == b"\r\n\r\n")
+                            || total >= buffer.len()
+                        {
+                            break;
+                        }
                     }
-                    tracing::debug!(
-                        "[AUTH] callback peer read timed out before overall deadline peer={}",
-                        peer
-                    );
-                    continue;
+                    Ok(Err(e)) => {
+                        tracing::debug!(
+                            "[AUTH] ignoring transient callback peer read error peer={} error={}",
+                            peer,
+                            e
+                        );
+                        read_failed = true;
+                        break;
+                    }
+                    Err(_) => {
+                        if tokio::time::Instant::now() >= deadline {
+                            timed_out_overall = true;
+                        } else {
+                            tracing::debug!(
+                                "[AUTH] callback peer read timed out before overall deadline peer={}",
+                                peer
+                            );
+                        }
+                        read_failed = true;
+                        break;
+                    }
                 }
-            };
-            let request = String::from_utf8_lossy(&buffer[..count]);
+            }
+            if timed_out_overall {
+                tracing::warn!("[AUTH] callback wait timed out");
+                return Err(AuthError::CallbackTimeout);
+            }
+            if read_failed || total == 0 {
+                continue;
+            }
+            let request = String::from_utf8_lossy(&buffer[..total]);
             let target = request
                 .lines()
                 .next()
                 .and_then(|line| line.split_whitespace().nth(1))
                 .unwrap_or("");
-            if let Some(query) = target.strip_prefix("/callback") {
-                let params = CallbackParams::from_query(query.strip_prefix('?').unwrap_or(""));
+            let callback_query = if target == "/callback" {
+                Some("")
+            } else {
+                target.strip_prefix("/callback?")
+            };
+            if let Some(query) = callback_query {
+                let params = CallbackParams::from_query(query);
                 let (status, body) = if params.error.is_some() {
                     (200, Self::failure_html())
                 } else {
@@ -343,5 +370,64 @@ mod tests {
         assert!(body.contains("Authenticated with Mimir"));
         let params = waiting.await.expect("task").expect("callback");
         assert_eq!(params.into_result("s1").expect("code"), "recovered");
+    }
+
+    #[tokio::test]
+    async fn listener_handles_tcp_chunked_request() {
+        let server = std::sync::Arc::new(CallbackServer::with_bind_addr("127.0.0.1:0"));
+        let addr = server
+            .start_sync(&tokio::runtime::Handle::current())
+            .expect("sync bind");
+        let waiting = {
+            let server = server.clone();
+            tokio::spawn(async move {
+                server
+                    .wait_for_callback_timeout(Duration::from_secs(5))
+                    .await
+            })
+        };
+
+        let mut stream = tokio::net::TcpStream::connect(addr).await.expect("connect");
+        stream.write_all(b"GET /call").await.expect("first chunk");
+        tokio::time::sleep(Duration::from_millis(25)).await;
+        stream
+            .write_all(b"back?code=chunked&state=s2 HTTP/1.1\r\nHost: localhost\r\n\r\n")
+            .await
+            .expect("second chunk");
+        let mut resp = Vec::new();
+        let _ = stream.read_to_end(&mut resp).await;
+        assert!(String::from_utf8_lossy(&resp).contains("200 OK"));
+
+        let params = waiting.await.expect("task").expect("callback");
+        assert_eq!(params.into_result("s2").expect("code"), "chunked");
+    }
+
+    #[tokio::test]
+    async fn listener_rejects_callback_prefix_lookalike() {
+        let server = std::sync::Arc::new(CallbackServer::with_bind_addr("127.0.0.1:0"));
+        let addr = server
+            .start_sync(&tokio::runtime::Handle::current())
+            .expect("sync bind");
+        let waiting = {
+            let server = server.clone();
+            tokio::spawn(async move {
+                server
+                    .wait_for_callback_timeout(Duration::from_secs(5))
+                    .await
+            })
+        };
+
+        let lookalike = reqwest::get(format!("http://{addr}/callback.ico"))
+            .await
+            .expect("lookalike request");
+        assert_eq!(lookalike.status(), 404);
+
+        let valid = reqwest::get(format!("http://{addr}/callback?code=real&state=s3"))
+            .await
+            .expect("callback request");
+        assert_eq!(valid.status(), 200);
+
+        let params = waiting.await.expect("task").expect("callback");
+        assert_eq!(params.into_result("s3").expect("code"), "real");
     }
 }

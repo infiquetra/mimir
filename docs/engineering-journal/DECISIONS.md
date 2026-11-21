@@ -26,6 +26,19 @@
 
 ## 2026-11-21
 
+### Live Upwell `location_type == "item"` asset routing, `TokenStore` freshness arbitration, and drain ordering (`fix/rust-pass3-audit-fixes`)
+
+**Author.** Mimir Pass-3 reliability pass
+**Decision.** Resolved 14 additional bugs across asset structure resolution, token persistence, OAuth HTTP framing, demo/logout isolation, and view state synchronization:
+1. Updated `MimirApp::collect_live_name_ids` (`src/app/shell.rs`) to stop skipping all `location_type == "item"` assets (live ESI sets `location_type: "item"` on Upwell structure hangars), instead filtering via `asset_item_ids` (augmented with active `ship_item_id`) and ship-internal `location_flag` prefixes/bays (`is_ship_internal_flag`).
+2. Updated `TokenStore::save`/`load`/`delete` (`src/auth/token_store.rs`) to remove stale cross-store copies after writes, pick the higher `expires_at_unix` via `select_fresher_tokens` when both keyring and fallback file contain entries, and reset corrupted fallback JSON cleanly on save/delete (`read_file_map_lossy`).
+3. Framed `CallbackServer::wait_for_callback_timeout` (`src/auth/callback_server.rs`) across multiple TCP `read()` chunks until `\r\n\r\n` and matched `/callback` / `/callback?*` strictly.
+4. Reordered `MimirApp::drain_requests` to drain `logout_requested_id`/`delete_requested_id` first, demo mode transitions second, and `active_character_id` changes third; guarded `logout()`/`delete_character()` and demo `TokenStore` construction against mutating live credentials/DB; reset `state.auth`, `market_selected_type_*`, and pending flags in `clear_for_demo_exit()`.
+**Rejected alternatives.** Filtering Upwell structures only by whitelisting hangar flags rather than excluding known item IDs and ship-internal flags (could drop future structure storage flags such as corporation folders or specialized deliveries).
+**Rationale.** Verified against live ESI documentation (`location_type: "item"` for docked Upwell assets) and Pass-3 concurrency/state traces.
+**Revisit when.** ESI introduces a dedicated `"structure"` value for `location_type` or Mimir stores token metadata in a unified credential store.
+**Refs.** `src/app/{shell,state}.rs`, `src/auth/{token_store,callback_server}.rs`, `src/main.rs`, `src/ui/{settings,wallet,dashboard,fittings}.rs`, LEARNINGS 2026-11-21 Pass-3 entry.
+
 ### Per-character refresh locks, composite wallet PKs, and resilient ESI name/structure routing (`fix/rust-reliability-and-correctness`)
 
 **Author.** Mimir Wave 3 reliability and correctness pass

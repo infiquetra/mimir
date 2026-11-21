@@ -106,6 +106,9 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState, resolver: &NameResolver) {
                         "No wallet history yet. Press Ctrl+R (or Refresh) after signing in.",
                     );
                 });
+                if !w.loyalty.is_empty() {
+                    show_loyalty_card(ui, &w.loyalty, resolver);
+                }
                 return;
             }
 
@@ -390,16 +393,7 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState, resolver: &NameResolver) {
             });
 
             if !w.loyalty.is_empty() {
-                widgets::card(ui, |ui| {
-                    widgets::section_title(ui, "Loyalty points");
-                    for row in &w.loyalty {
-                        ui.label(format!(
-                            "{}: {} LP",
-                            resolver.name(row.corporation_id),
-                            widgets::format_count(row.loyalty_points)
-                        ));
-                    }
-                });
+                show_loyalty_card(ui, &w.loyalty, resolver);
             }
         }
         LoadState::Loading => widgets::loading_panel(ui, "Loading wallet..."),
@@ -411,6 +405,23 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState, resolver: &NameResolver) {
             }
         }
     }
+}
+
+fn show_loyalty_card(
+    ui: &mut egui::Ui,
+    loyalty: &[crate::esi::models::LoyaltyPointItem],
+    resolver: &NameResolver,
+) {
+    widgets::card(ui, |ui| {
+        widgets::section_title(ui, "Loyalty points");
+        for row in loyalty {
+            ui.label(format!(
+                "{}: {} LP",
+                resolver.name(row.corporation_id),
+                widgets::format_count(row.loyalty_points)
+            ));
+        }
+    });
 }
 
 #[cfg(test)]

@@ -364,7 +364,10 @@ impl PortraitStore {
             cache_filename(kind, id, size),
             rand::random::<u64>()
         ));
-        std::fs::write(&tmp, bytes).map_err(|e| PortraitError::CacheIo(e.to_string()))?;
+        if let Err(e) = std::fs::write(&tmp, bytes) {
+            let _ = std::fs::remove_file(&tmp);
+            return Err(PortraitError::CacheIo(e.to_string()));
+        }
         if let Err(e) = std::fs::rename(&tmp, &path) {
             let _ = std::fs::remove_file(&tmp);
             return Err(PortraitError::CacheIo(e.to_string()));

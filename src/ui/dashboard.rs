@@ -241,7 +241,11 @@ pub fn show(
                             let finish = summary
                                 .and_then(|s| s.training_finish_date.as_deref())
                                 .or_else(|| active_training.and_then(|q| q.finish_date.as_deref()));
-                            ui.label(widgets::countdown_label(finish, now));
+                            if summary.is_none() && (!*is_active || !state.skills.is_ready()) {
+                                ui.colored_label(theme::TEXT_MUTED, "not loaded");
+                            } else {
+                                ui.label(widgets::countdown_label(finish, now));
+                            }
                             let queue_len = summary.and_then(|s| s.queue_len).or_else(|| {
                                 if *is_active {
                                     state.skills.as_ready().map(|d| d.queue.len())
