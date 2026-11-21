@@ -7,6 +7,7 @@ use chrono::Utc;
 
 use super::portraits::{self, PortraitImageCache};
 use super::skills;
+use super::theme;
 use super::wallet::compute_analytics;
 use super::widgets;
 use crate::app::state::{AppState, CharacterSummary, LoadState, View};
@@ -80,14 +81,76 @@ pub fn show(
         return;
     }
 
-    // --- Multi-character overview (improvement over Flutter) ---
-    // Per-character wallet/training cells come from `state.summaries`
-    // (integrator-filled); the active character also falls back to the
-    // loaded skills/wallet bundles. Missing cells say "not loaded".
-    ui.heading("All characters");
+    // --- Top KPI summary row ---
     let now = Utc::now();
     let active_id = state.active_character_id;
     let active_balance = state.wallet.as_ready().map(|w| w.balance);
+    let combined = combined_wallet_balance(
+        &state.characters,
+        &state.summaries,
+        active_id,
+        active_balance,
+    );
+    let wallet_kpi_value = combined
+        .or(active_balance)
+        .map(widgets::format_isk)
+        .unwrap_or_else(|| "Not loaded".to_string());
+    let wallet_kpi_color = if combined.or(active_balance).is_some() {
+        theme::ACCENT_CYAN
+    } else {
+        theme::TEXT_MUTED
+    };
+    let (training_kpi_value, training_kpi_color) = match &state.skills {
+        LoadState::Ready(data) => {
+            if let Some(next) = skills::upcoming_queue_items(&data.queue, now).first() {
+                (
+                    format!(
+                        "{} ({})",
+                        sde.skill_name(next.skill_id),
+                        widgets::countdown_label(next.finish_date.as_deref(), now)
+                    ),
+                    theme::TEXT_PRIMARY,
+                )
+            } else if data.queue.is_empty() {
+                ("Idle (empty queue)".to_string(), theme::TEXT_SECONDARY)
+            } else {
+                (
+                    "All queued skills finished".to_string(),
+                    theme::TEXT_SECONDARY,
+                )
+            }
+        }
+        LoadState::Loading => ("Loading...".to_string(), theme::TEXT_MUTED),
+        _ => ("Not loaded".to_string(), theme::TEXT_MUTED),
+    };
+    let (net_kpi_value, net_kpi_color) = match &state.wallet {
+        LoadState::Ready(w) => {
+            let analytics = compute_analytics(&w.journal, now, Some(30), active_id, resolver);
+            if analytics.counted == 0 {
+                ("0.00 ISK".to_string(), theme::TEXT_SECONDARY)
+            } else {
+                (
+                    widgets::format_isk_signed(analytics.net),
+                    widgets::isk_color(analytics.net),
+                )
+            }
+        }
+        LoadState::Loading => ("Loading...".to_string(), theme::TEXT_MUTED),
+        _ => ("Not loaded".to_string(), theme::TEXT_MUTED),
+    };
+    ui.horizontal_wrapped(|ui| {
+        widgets::metric_tile(ui, "Combined Wallet", &wallet_kpi_value, wallet_kpi_color);
+        widgets::metric_tile(
+            ui,
+            "Active Training",
+            &training_kpi_value,
+            training_kpi_color,
+        );
+        widgets::metric_tile(ui, "30-Day Net (Active)", &net_kpi_value, net_kpi_color);
+    });
+    ui.add_space(4.0);
+
+    // --- Multi-character overview ---
     let rows: Vec<(i64, String, String, bool)> = state
         .characters
         .iter()
@@ -101,183 +164,250 @@ pub fn show(
         })
         .collect();
     let mut switch_to: Option<i64> = None;
-    egui::Grid::new("dashboard_overview")
-        .striped(true)
-        .show(ui, |ui| {
-            ui.label("Portrait");
-            ui.label("Character (click to switch)");
-            ui.label("Corporation");
-            ui.label("Wallet");
-            ui.label("Training");
-            ui.label("Finishes");
-            ui.label("Queue");
-            ui.label("Location / ship");
-            ui.end_row();
-            for (id, name, corp, is_active) in &rows {
-                portraits::show_portrait(ui, cache, state, *id, name, portraits::LIST_PORTRAIT_PX);
-                let summary = state.summaries.get(id);
-                if ui
-                    .selectable_label(
-                        *is_active,
-                        format!("{}{}", name, if *is_active { " (active)" } else { "" }),
-                    )
-                    .clicked()
-                {
-                    switch_to = Some(*id);
-                }
-                ui.label(corp);
-                let balance = summary.and_then(|s| s.balance).or(if *is_active {
-                    active_balance
-                } else {
-                    None
-                });
+    widgets::card(ui, |ui| {
+        widgets::section_title(ui, "All characters");
+        ui.add_space(4.0);
+        egui::ScrollArea::horizontal()
+            .id_salt("dashboard_overview_hscroll")
+            .show(ui, |ui| {
+                egui::Grid::new("dashboard_overview")
+                    .striped(true)
+                    .spacing([12.0, 8.0])
+                    .show(ui, |ui| {
+                        for header in [
+                            "Portrait",
+                            "Character",
+                            "Corporation",
+                            "Wallet",
+                            "Training",
+                            "Finishes",
+                            "Queue",
+                            "Location / ship",
+                        ] {
+                            ui.label(
+                                egui::RichText::new(header)
+                                    .strong()
+                                    .color(theme::TEXT_SECONDARY),
+                            );
+                        }
+                        ui.end_row();
+                        for (id, name, corp, is_active) in &rows {
+                            portraits::show_portrait(
+                                ui,
+                                cache,
+                                state,
+                                *id,
+                                name,
+                                portraits::LIST_PORTRAIT_PX,
+                            );
+                            let summary = state.summaries.get(id);
+                            if ui
+                                .selectable_label(
+                                    *is_active,
+                                    format!(
+                                        "{}{}",
+                                        name,
+                                        if *is_active { " (active)" } else { "" }
+                                    ),
+                                )
+                                .clicked()
+                            {
+                                switch_to = Some(*id);
+                            }
+                            ui.label(corp);
+                            let balance = summary.and_then(|s| s.balance).or(if *is_active {
+                                active_balance
+                            } else {
+                                None
+                            });
+                            match balance {
+                                Some(val) => {
+                                    ui.colored_label(theme::TEXT_PRIMARY, widgets::format_isk(val))
+                                }
+                                None => ui.colored_label(theme::TEXT_MUTED, "not loaded"),
+                            };
+                            let active_training = if *is_active {
+                                state
+                                    .skills
+                                    .as_ready()
+                                    .and_then(|d| skills::active_or_first_queue_item(&d.queue, now))
+                            } else {
+                                None
+                            };
+                            let training = summary
+                                .and_then(|s| s.training_skill_name.clone())
+                                .or_else(|| active_training.map(|q| sde.skill_name(q.skill_id)));
+                            ui.label(training.unwrap_or_else(|| "not loaded".to_string()));
+                            let finish = summary
+                                .and_then(|s| s.training_finish_date.as_deref())
+                                .or_else(|| active_training.and_then(|q| q.finish_date.as_deref()));
+                            ui.label(widgets::countdown_label(finish, now));
+                            let queue_len = summary.and_then(|s| s.queue_len).or_else(|| {
+                                if *is_active {
+                                    state.skills.as_ready().map(|d| d.queue.len())
+                                } else {
+                                    None
+                                }
+                            });
+                            ui.label(
+                                queue_len
+                                    .map(|n| format!("{n}"))
+                                    .unwrap_or_else(|| "not loaded".to_string()),
+                            );
+                            let place = match summary {
+                                Some(s) => {
+                                    match (s.location_name.as_deref(), s.ship_name.as_deref()) {
+                                        (Some(loc), Some(ship)) => format!("{loc} / {ship}"),
+                                        (Some(loc), None) => loc.to_string(),
+                                        (None, Some(ship)) => ship.to_string(),
+                                        (None, None) => "not loaded".to_string(),
+                                    }
+                                }
+                                None => "not loaded".to_string(),
+                            };
+                            ui.label(place);
+                            ui.end_row();
+                        }
+                    });
+            });
+        ui.add_space(4.0);
+        match (combined, active_balance) {
+            (Some(total), _) => {
                 ui.label(
-                    balance
-                        .map(widgets::format_isk)
-                        .unwrap_or_else(|| "not loaded".to_string()),
+                    egui::RichText::new(format!(
+                        "Combined wallet (loaded characters): {}",
+                        widgets::format_isk(total)
+                    ))
+                    .color(theme::TEXT_SECONDARY),
                 );
-                let active_training = if *is_active {
-                    state
-                        .skills
-                        .as_ready()
-                        .and_then(|d| skills::active_or_first_queue_item(&d.queue, now))
-                } else {
-                    None
-                };
-                let training = summary
-                    .and_then(|s| s.training_skill_name.clone())
-                    .or_else(|| active_training.map(|q| sde.skill_name(q.skill_id)));
-                ui.label(training.unwrap_or_else(|| "not loaded".to_string()));
-                let finish = summary
-                    .and_then(|s| s.training_finish_date.as_deref())
-                    .or_else(|| active_training.and_then(|q| q.finish_date.as_deref()));
-                ui.label(widgets::countdown_label(finish, now));
-                let queue_len = summary.and_then(|s| s.queue_len).or_else(|| {
-                    if *is_active {
-                        state.skills.as_ready().map(|d| d.queue.len())
-                    } else {
-                        None
-                    }
-                });
-                ui.label(
-                    queue_len
-                        .map(|n| format!("{n}"))
-                        .unwrap_or_else(|| "not loaded".to_string()),
-                );
-                let place = match summary {
-                    Some(s) => match (s.location_name.as_deref(), s.ship_name.as_deref()) {
-                        (Some(loc), Some(ship)) => format!("{loc} / {ship}"),
-                        (Some(loc), None) => loc.to_string(),
-                        (None, Some(ship)) => ship.to_string(),
-                        (None, None) => "not loaded".to_string(),
-                    },
-                    None => "not loaded".to_string(),
-                };
-                ui.label(place);
-                ui.end_row();
             }
-        });
+            (None, Some(balance)) => {
+                ui.label(format!(
+                    "Active character wallet: {} (switch characters to load the rest)",
+                    widgets::format_isk(balance)
+                ));
+            }
+            (None, None) => match &state.wallet {
+                LoadState::Loading => widgets::loading_panel(ui, "Loading wallet..."),
+                LoadState::Empty => widgets::empty_panel(ui, "No wallet data yet."),
+                LoadState::Error(e) => {
+                    if widgets::error_panel_with_retry(ui, e) {
+                        state.retry_requested = true;
+                    }
+                }
+                LoadState::Ready(_) => {}
+            },
+        }
+    });
     if let Some(id) = switch_to {
         state.set_active_character(id);
     }
 
-    // --- Combined wealth (only loaded balances across active roster are summed) ---
-    let combined = combined_wallet_balance(
-        &state.characters,
-        &state.summaries,
-        active_id,
-        active_balance,
-    );
-    ui.separator();
-    match (combined, active_balance) {
-        (Some(total), _) => {
-            ui.label(format!(
-                "Combined wallet (loaded characters): {}",
-                widgets::format_isk(total)
-            ));
-        }
-        (None, Some(balance)) => {
-            ui.label(format!(
-                "Active character wallet: {} (switch characters to load the rest)",
-                widgets::format_isk(balance)
-            ));
-        }
-        (None, None) => match &state.wallet {
-            LoadState::Loading => widgets::loading_panel(ui, "Loading wallet..."),
-            LoadState::Empty => widgets::empty_panel(ui, "No wallet data yet."),
-            LoadState::Error(e) => {
-                if widgets::error_panel_with_retry(ui, e) {
-                    state.retry_requested = true;
-                }
-            }
-            LoadState::Ready(_) => {}
-        },
-    }
-
-    // --- Training overview + next skills finishing ---
-    ui.separator();
-    ui.heading("Training (active character)");
-    match &state.skills {
-        LoadState::Ready(data) => {
-            ui.label(format!(
-                "Total skill points: {}",
-                widgets::format_sp(data.skills.total_sp)
-            ));
-            let upcoming = skills::upcoming_queue_items(&data.queue, now);
-            if data.queue.is_empty() {
-                ui.label("Skill queue is empty.");
-            } else if upcoming.is_empty() {
-                ui.label("All queued skills have finished.");
-            } else {
-                for next in upcoming.iter().take(3) {
+    // --- Two-column cards: Training + 30-day Wallet summary ---
+    let mut open_skills = false;
+    let mut open_wallet = false;
+    let mut retry = false;
+    let skills_snap = state.skills.clone();
+    let wallet_snap = state.wallet.clone();
+    ui.columns(2, |cols| {
+        widgets::card(&mut cols[0], |ui| {
+            widgets::section_title(ui, "Training (active character)");
+            ui.add_space(4.0);
+            match &skills_snap {
+                LoadState::Ready(data) => {
                     ui.label(format!(
-                        "{} level {} — {}",
-                        sde.skill_name(next.skill_id),
-                        next.finished_level,
-                        widgets::countdown_label(next.finish_date.as_deref(), now)
+                        "Total skill points: {}",
+                        widgets::format_sp(data.skills.total_sp)
                     ));
+                    let upcoming = skills::upcoming_queue_items(&data.queue, now);
+                    if data.queue.is_empty() {
+                        ui.label("Skill queue is empty.");
+                    } else if upcoming.is_empty() {
+                        ui.label("All queued skills have finished.");
+                    } else {
+                        for next in upcoming.iter().take(3) {
+                            ui.label(format!(
+                                "{} level {} — {}",
+                                sde.skill_name(next.skill_id),
+                                next.finished_level,
+                                widgets::countdown_label(next.finish_date.as_deref(), now)
+                            ));
+                        }
+                    }
+                    ui.add_space(4.0);
+                    ui.horizontal(|ui| {
+                        if ui.button("Open Skills (key 3)").clicked() {
+                            open_skills = true;
+                        }
+                    });
+                }
+                LoadState::Loading => widgets::loading_panel(ui, "Loading training..."),
+                LoadState::Empty => widgets::empty_panel(ui, "No skill data yet."),
+                LoadState::Error(e) => {
+                    if widgets::error_panel_with_retry(ui, e) {
+                        retry = true;
+                    }
                 }
             }
-            if ui.button("Open Skills (key 3)").clicked() {
-                state.switch_view(View::Skills);
+        });
+        widgets::card(&mut cols[1], |ui| {
+            widgets::section_title(ui, "Wallet summary (30 days, active character)");
+            ui.add_space(4.0);
+            match &wallet_snap {
+                LoadState::Ready(w) => {
+                    let analytics =
+                        compute_analytics(&w.journal, now, Some(30), active_id, resolver);
+                    if analytics.counted == 0 {
+                        ui.label("No journal activity in the last 30 days.");
+                    } else {
+                        egui::Grid::new("dashboard_wallet_30d")
+                            .spacing([12.0, 4.0])
+                            .show(ui, |ui| {
+                                ui.label("Income");
+                                ui.colored_label(
+                                    theme::POSITIVE,
+                                    widgets::format_isk_signed(analytics.total_in),
+                                );
+                                ui.end_row();
+                                ui.label("Expenses");
+                                ui.colored_label(
+                                    theme::NEGATIVE,
+                                    widgets::format_isk_signed(-analytics.total_out),
+                                );
+                                ui.end_row();
+                                ui.label("Net");
+                                ui.colored_label(
+                                    widgets::isk_color(analytics.net),
+                                    widgets::format_isk_signed(analytics.net),
+                                );
+                                ui.end_row();
+                            });
+                    }
+                    ui.add_space(4.0);
+                    ui.horizontal(|ui| {
+                        if ui.button("Open Wallet (key 4)").clicked() {
+                            open_wallet = true;
+                        }
+                    });
+                }
+                LoadState::Loading => widgets::loading_panel(ui, "Loading wallet..."),
+                LoadState::Empty => widgets::empty_panel(ui, "No wallet data yet."),
+                LoadState::Error(e) => {
+                    if widgets::error_panel_with_retry(ui, e) {
+                        retry = true;
+                    }
+                }
             }
-        }
-        LoadState::Loading => widgets::loading_panel(ui, "Loading training..."),
-        LoadState::Empty => widgets::empty_panel(ui, "No skill data yet."),
-        LoadState::Error(e) => {
-            if widgets::error_panel_with_retry(ui, e) {
-                state.retry_requested = true;
-            }
-        }
+        });
+    });
+    if retry {
+        state.retry_requested = true;
     }
-
-    // --- Wallet trend summary (30-day income/expense/net) ---
-    ui.separator();
-    ui.heading("Wallet summary (30 days, active character)");
-    match &state.wallet {
-        LoadState::Ready(w) => {
-            let analytics = compute_analytics(&w.journal, now, Some(30), active_id, resolver);
-            if analytics.counted == 0 {
-                ui.label("No journal activity in the last 30 days.");
-            } else {
-                ui.label(format!(
-                    "Income {} | Expenses {} | Net {}",
-                    widgets::format_isk_signed(analytics.total_in),
-                    widgets::format_isk_signed(-analytics.total_out),
-                    widgets::format_isk_signed(analytics.net)
-                ));
-            }
-            if ui.button("Open Wallet (key 4)").clicked() {
-                state.switch_view(View::Wallet);
-            }
-        }
-        LoadState::Loading => widgets::loading_panel(ui, "Loading wallet..."),
-        LoadState::Empty => widgets::empty_panel(ui, "No wallet data yet."),
-        LoadState::Error(e) => {
-            if widgets::error_panel_with_retry(ui, e) {
-                state.retry_requested = true;
-            }
-        }
+    if open_skills {
+        state.switch_view(View::Skills);
+    }
+    if open_wallet {
+        state.switch_view(View::Wallet);
     }
 }
 

@@ -39,151 +39,163 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
     ui.heading("Settings");
 
     // --- Auth ---
-    ui.heading("EVE account (auth)");
-    ui.label(format!("Sign-in: {}", state.auth.label()));
-    ui.label(format!(
-        "{} character(s) added{}",
-        state.characters.len(),
-        if state.demo { " (demo data)" } else { "" }
-    ));
-    ui.horizontal(|ui| {
-        let enabled = !state.auth.is_busy();
-        if ui
-            .add_enabled(enabled, egui::Button::new("Add character (EVE SSO)"))
-            .clicked()
-        {
-            tracing::info!("[AUTH] add-character requested from Settings view");
-            state.login_requested = true;
-            state.status_message =
-                "EVE SSO requested: your browser should open to login.eveonline.com.".to_string();
-        }
-        if let Some(active_id) = state.active_character_id {
-            if ui.button("Log out active character").clicked() {
-                tracing::info!("[AUTH] logout requested from Settings view");
-                state.logout_requested_id = Some(active_id);
-            }
-        }
-    });
-    if state.auth == AuthState::Error {
-        ui.colored_label(
-            egui::Color32::LIGHT_RED,
-            "Last sign-in attempt failed; see the log below for details.",
-        );
-    }
-    ui.label("Tokens live in the OS keyring and never appear in logs.");
-    ui.separator();
-
-    // --- Behavior ---
-    ui.heading("Behavior");
-    let mut demo = state.demo;
-    if ui
-        .checkbox(&mut demo, "Demo mode (offline sample data)")
-        .changed()
-    {
-        tracing::info!("[UI] demo toggle changed to {}", demo);
-        state.demo = demo;
-        if demo {
-            crate::demo::data::seed_demo_state(state);
-        } else {
-            state.clear_for_demo_exit();
-        }
-    }
-    ui.horizontal(|ui| {
-        ui.label("Startup view:");
-        for view in View::ALL {
+    super::widgets::card(ui, |ui| {
+        super::widgets::section_title(ui, "EVE account (auth)");
+        ui.label(format!("Sign-in: {}", state.auth.label()));
+        ui.label(format!(
+            "{} character(s) added{}",
+            state.characters.len(),
+            if state.demo { " (demo data)" } else { "" }
+        ));
+        ui.horizontal(|ui| {
+            let enabled = !state.auth.is_busy();
             if ui
-                .selectable_label(state.startup_view == view, view.label())
+                .add_enabled(enabled, egui::Button::new("Add character (EVE SSO)"))
                 .clicked()
             {
-                tracing::info!("[UI] startup view set to {}", view.label());
-                state.startup_view = view;
-                state.status_message = format!(
-                    "Startup view set to {} (saved with the next settings write).",
-                    view.label()
-                );
+                tracing::info!("[AUTH] add-character requested from Settings view");
+                state.login_requested = true;
+                state.status_message =
+                    "EVE SSO requested: your browser should open to login.eveonline.com."
+                        .to_string();
             }
-        }
-    });
-    if state.offline {
-        ui.label("Status: offline (showing cached data).");
-    } else if state.demo {
-        ui.label("Status: demo mode (no network).");
-    } else {
-        ui.label("Status: online mode (live data after sign-in).");
-    }
-    ui.separator();
-
-    // --- Keyboard help ---
-    ui.heading("Keyboard");
-    ui.monospace("1-9, 0, E views | Ctrl/Cmd+R refresh | / focus search | PgUp/PgDn character | Up/Down table rows");
-    ui.separator();
-
-    // --- Structured log / status view ---
-    ui.heading("Logs");
-    ui.label("Structured tracing output (tokens are never logged).");
-    ui.horizontal(|ui| {
-        ui.label("Filter:");
-        let response = ui.text_edit_singleline(&mut state.log_filter);
-        state.text_input_focused |= response.has_focus();
-        if response.has_focus() {
-            state.focus_search = false;
-        }
-        if ui.button("Clear").clicked() {
-            state.log_filter.clear();
-            state.log_tag_filter = None;
-        }
-    });
-    ui.horizontal(|ui| {
-        if ui
-            .selectable_label(state.log_tag_filter.is_none(), "All tags")
-            .clicked()
-        {
-            state.log_tag_filter = None;
-        }
-        for tag in LOG_TAGS {
-            let selected = state.log_tag_filter.as_deref() == Some(tag);
-            if ui.selectable_label(selected, tag).clicked() {
-                tracing::debug!("[UI] log tag filter {}", tag);
-                state.log_tag_filter = if selected {
-                    None
-                } else {
-                    Some(tag.to_string())
-                };
-            }
-        }
-    });
-    let filtered = filter_log_lines(
-        &state.log_lines,
-        &state.log_filter,
-        state.log_tag_filter.as_deref(),
-    );
-    ui.label(format!(
-        "{} of {} log lines",
-        filtered.len(),
-        state.log_lines.len()
-    ));
-    egui::ScrollArea::vertical()
-        .id_salt("settings_log_scroll")
-        .max_height(300.0)
-        .stick_to_bottom(true)
-        .show(ui, |ui| {
-            if filtered.is_empty() {
-                ui.label("No log lines match the current filters.");
-            }
-            for line in &filtered {
-                ui.monospace(*line);
+            if let Some(active_id) = state.active_character_id {
+                if ui.button("Log out active character").clicked() {
+                    tracing::info!("[AUTH] logout requested from Settings view");
+                    state.logout_requested_id = Some(active_id);
+                }
             }
         });
-    if !state.status_message.is_empty() {
-        ui.label(format!("Status: {}", state.status_message));
-    }
-    ui.separator();
+        if state.auth == AuthState::Error {
+            ui.colored_label(
+                egui::Color32::LIGHT_RED,
+                "Last sign-in attempt failed; see the log below for details.",
+            );
+        }
+        ui.label(
+            egui::RichText::new("Tokens live in the OS keyring and never appear in logs.")
+                .color(super::theme::TEXT_SECONDARY),
+        );
+    });
+
+    // --- Behavior ---
+    super::widgets::card(ui, |ui| {
+        super::widgets::section_title(ui, "Behavior");
+        let mut demo = state.demo;
+        if ui
+            .checkbox(&mut demo, "Demo mode (offline sample data)")
+            .changed()
+        {
+            tracing::info!("[UI] demo toggle changed to {}", demo);
+            state.demo = demo;
+            if demo {
+                crate::demo::data::seed_demo_state(state);
+            } else {
+                state.clear_for_demo_exit();
+            }
+        }
+        ui.horizontal_wrapped(|ui| {
+            ui.label("Startup view:");
+            for view in View::ALL {
+                if ui
+                    .selectable_label(state.startup_view == view, view.label())
+                    .clicked()
+                {
+                    tracing::info!("[UI] startup view set to {}", view.label());
+                    state.startup_view = view;
+                    state.status_message = format!(
+                        "Startup view set to {} (saved with the next settings write).",
+                        view.label()
+                    );
+                }
+            }
+        });
+        if state.offline {
+            ui.label("Status: offline (showing cached data).");
+        } else if state.demo {
+            ui.label("Status: demo mode (no network).");
+        } else {
+            ui.label("Status: online mode (live data after sign-in).");
+        }
+    });
+
+    // --- Keyboard help ---
+    super::widgets::card(ui, |ui| {
+        super::widgets::section_title(ui, "Keyboard");
+        ui.monospace("1-9, 0, E views | Ctrl/Cmd+R refresh | / focus search | PgUp/PgDn character | Up/Down table rows");
+    });
+
+    // --- Structured log / status view ---
+    super::widgets::card(ui, |ui| {
+        super::widgets::section_title(ui, "Logs");
+        ui.label("Structured tracing output (tokens are never logged).");
+        ui.horizontal(|ui| {
+            ui.label("Filter:");
+            let response = ui.text_edit_singleline(&mut state.log_filter);
+            state.text_input_focused |= response.has_focus();
+            if response.has_focus() {
+                state.focus_search = false;
+            }
+            if ui.button("Clear").clicked() {
+                state.log_filter.clear();
+                state.log_tag_filter = None;
+            }
+        });
+        ui.horizontal_wrapped(|ui| {
+            if ui
+                .selectable_label(state.log_tag_filter.is_none(), "All tags")
+                .clicked()
+            {
+                state.log_tag_filter = None;
+            }
+            for tag in LOG_TAGS {
+                let selected = state.log_tag_filter.as_deref() == Some(tag);
+                if ui.selectable_label(selected, tag).clicked() {
+                    tracing::debug!("[UI] log tag filter {}", tag);
+                    state.log_tag_filter = if selected {
+                        None
+                    } else {
+                        Some(tag.to_string())
+                    };
+                }
+            }
+        });
+        let filtered = filter_log_lines(
+            &state.log_lines,
+            &state.log_filter,
+            state.log_tag_filter.as_deref(),
+        );
+        ui.label(format!(
+            "{} of {} log lines",
+            filtered.len(),
+            state.log_lines.len()
+        ));
+        egui::ScrollArea::vertical()
+            .id_salt("settings_log_scroll")
+            .max_height(300.0)
+            .stick_to_bottom(true)
+            .show(ui, |ui| {
+                if filtered.is_empty() {
+                    ui.label("No log lines match the current filters.");
+                }
+                for line in &filtered {
+                    ui.monospace(*line);
+                }
+            });
+        if !state.status_message.is_empty() {
+            ui.label(format!("Status: {}", state.status_message));
+        }
+    });
 
     // --- About ---
-    ui.heading("About");
-    ui.label("Mimir — EVE Online companion (Rust/egui).");
-    ui.label(format!("Version {}", env!("CARGO_PKG_VERSION")));
-    ui.label("Data: EVE ESI (esi.evetech.net) after EVE SSO sign-in; demo mode is fully offline.");
+    super::widgets::card(ui, |ui| {
+        super::widgets::section_title(ui, "About");
+        ui.label("Mimir — EVE Online companion (Rust/egui).");
+        ui.label(format!("Version {}", env!("CARGO_PKG_VERSION")));
+        ui.label(
+            "Data: EVE ESI (esi.evetech.net) after EVE SSO sign-in; demo mode is fully offline.",
+        );
+    });
 }
 
 #[cfg(test)]

@@ -3762,7 +3762,7 @@ impl MimirApp {
             return true;
         }
         if let LoadState::Ready(data) = &self.state.skills {
-            if data.queue.iter().any(|item| item.finish_date.is_some()) {
+            if queue_has_unfinished_skill(&data.queue, chrono::Utc::now()) {
                 return true;
             }
         }
@@ -3786,6 +3786,18 @@ impl MimirApp {
         }
         false
     }
+}
+
+fn queue_has_unfinished_skill(
+    queue: &[crate::esi::models::SkillQueueItem],
+    now: chrono::DateTime<chrono::Utc>,
+) -> bool {
+    queue.iter().any(|item| {
+        item.finish_date
+            .as_deref()
+            .and_then(|d| ui::widgets::seconds_until(d, now))
+            .is_some_and(|secs| secs > 0)
+    })
 }
 
 impl eframe::App for MimirApp {
@@ -3826,142 +3838,241 @@ impl eframe::App for MimirApp {
             self.state.log_lines.clone_from(&buf);
         }
 
-        egui::TopBottomPanel::top("top_bar").show(ctx, |ui| {
-            ui.horizontal(|ui| {
-                ui.heading("Mimir");
-                if self.state.demo {
-                    ui.label("[DEMO] Demo mode");
+        let bar_frame = egui::Frame::none()
+            .fill(ui::theme::BG_PANEL)
+            .stroke(egui::Stroke::new(1.0_f32, ui::theme::BORDER_SUBTLE))
+            .inner_margin(egui::Margin::symmetric(14.0, 8.0));
+
+        egui::TopBottomPanel::top("top_bar")
+            .frame(bar_frame)
+            .show(ctx, |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        egui::RichText::new("MIMIR")
+                            .size(17.0)
+                            .strong()
+                            .color(ui::theme::ACCENT_CYAN),
+                    );
+                    if self.state.demo {
+                        ui::widgets::badge(ui, "DEMO", ui::theme::WARNING_BG, ui::theme::WARNING);
+                    }
+                    if self.state.offline {
+                        ui::widgets::badge(
+                            ui,
+                            "OFFLINE",
+                            ui::theme::NEGATIVE_BG,
+                            ui::theme::NEGATIVE,
+                        );
+                    }
+                    if let Some(active) = self.state.active_character() {
+                        ui::widgets::badge(
+                            ui,
+                            &format!("Active: {}", active.name),
+                            ui::theme::BG_CARD_ALT,
+                            ui::theme::TEXT_PRIMARY,
+                        );
+                    }
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("Refresh (Ctrl+R)").clicked() {
+                            self.state.request_refresh("top-bar button");
+                        }
+                        if !self.state.status_message.is_empty() {
+                            ui.label(
+                                egui::RichText::new(&self.state.status_message)
+                                    .size(12.0)
+                                    .color(ui::theme::TEXT_SECONDARY),
+                            );
+                        }
+                    });
+                });
+            });
+
+        let sidebar_frame = egui::Frame::none()
+            .fill(ui::theme::BG_PANEL)
+            .stroke(egui::Stroke::new(1.0_f32, ui::theme::BORDER_SUBTLE))
+            .inner_margin(egui::Margin::symmetric(12.0, 12.0));
+
+        egui::SidePanel::left("character_rail")
+            .default_width(210.0)
+            .resizable(false)
+            .frame(sidebar_frame)
+            .show(ctx, |ui| {
+                ui.label(
+                    egui::RichText::new("CHARACTERS")
+                        .size(11.0)
+                        .strong()
+                        .color(ui::theme::TEXT_MUTED),
+                );
+                ui.add_space(4.0);
+                if self.state.characters.is_empty() {
+                    ui.label(
+                        egui::RichText::new("No characters yet.").color(ui::theme::TEXT_SECONDARY),
+                    );
+                    if ui.button("Add character (EVE SSO)").clicked() {
+                        tracing::info!("[AUTH] add-character requested from rail");
+                        self.state.login_requested = true;
+                        self.state.switch_view(View::Characters);
+                    }
+                    if ui.button("Try demo").clicked() {
+                        tracing::info!("[DEMO] demo requested from rail");
+                        self.state.demo = true;
+                        crate::demo::data::seed_demo_state(&mut self.state);
+                    }
+                } else {
+                    let rows: Vec<(i64, String)> = self
+                        .state
+                        .characters
+                        .iter()
+                        .map(|c| (c.character_id, c.name.clone()))
+                        .collect();
+                    ui.with_layout(egui::Layout::top_down_justified(egui::Align::LEFT), |ui| {
+                        for (id, name) in rows {
+                            let selected = self.state.active_character_id == Some(id);
+                            if ui.selectable_label(selected, &name).clicked() {
+                                self.state.set_active_character(id);
+                            }
+                        }
+                    });
+                    ui.add_space(2.0);
+                    ui.label(
+                        egui::RichText::new("PageUp/PageDown switches character.")
+                            .size(11.5)
+                            .color(ui::theme::TEXT_MUTED),
+                    );
                 }
-                if self.state.offline {
-                    ui.label("Offline: showing cached data");
-                }
-                if let Some(active) = self.state.active_character() {
-                    ui.label(format!("Active: {}", active.name));
-                }
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if ui.button("Refresh (Ctrl+R)").clicked() {
-                        self.state.request_refresh("top-bar button");
+                ui.add_space(6.0);
+                ui.separator();
+                ui.add_space(4.0);
+                ui.label(
+                    egui::RichText::new("VIEWS (KEYS 1-9, 0, E)")
+                        .size(11.0)
+                        .strong()
+                        .color(ui::theme::TEXT_MUTED),
+                );
+                ui.add_space(4.0);
+                ui.with_layout(egui::Layout::top_down_justified(egui::Align::LEFT), |ui| {
+                    for view in View::ALL.iter() {
+                        let selected = self.state.view == *view;
+                        if ui
+                            .selectable_label(
+                                selected,
+                                format!("{}  {}", view_key_hint(*view), view.label()),
+                            )
+                            .clicked()
+                        {
+                            self.state.switch_view(*view);
+                        }
                     }
                 });
             });
-        });
 
-        egui::SidePanel::left("character_rail").show(ctx, |ui| {
-            ui.heading("Characters");
-            if self.state.characters.is_empty() {
-                ui.label("No characters yet.");
-                if ui.button("Add character (EVE SSO)").clicked() {
-                    tracing::info!("[AUTH] add-character requested from rail");
-                    self.state.login_requested = true;
-                    self.state.switch_view(View::Characters);
-                }
-                if ui.button("Try demo").clicked() {
-                    tracing::info!("[DEMO] demo requested from rail");
-                    self.state.demo = true;
-                    crate::demo::data::seed_demo_state(&mut self.state);
-                }
-            } else {
-                let rows: Vec<(i64, String)> = self
-                    .state
-                    .characters
-                    .iter()
-                    .map(|c| (c.character_id, c.name.clone()))
-                    .collect();
-                for (id, name) in rows {
-                    let selected = self.state.active_character_id == Some(id);
-                    if ui.selectable_label(selected, &name).clicked() {
-                        self.state.set_active_character(id);
+        let status_frame = egui::Frame::none()
+            .fill(ui::theme::BG_PANEL)
+            .stroke(egui::Stroke::new(1.0_f32, ui::theme::BORDER_SUBTLE))
+            .inner_margin(egui::Margin::symmetric(14.0, 6.0));
+
+        egui::TopBottomPanel::bottom("status_bar")
+            .frame(status_frame)
+            .show(ctx, |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        egui::RichText::new(format!("View: {}", self.state.view.label()))
+                            .size(12.0)
+                            .color(ui::theme::TEXT_SECONDARY),
+                    );
+                    ui.label(
+                        egui::RichText::new(format!(
+                            "Characters: {}",
+                            self.state.characters.len()
+                        ))
+                        .size(12.0)
+                        .color(ui::theme::TEXT_SECONDARY),
+                    );
+                    if self.state.refresh_requested {
+                        ui::widgets::badge(
+                            ui,
+                            "Refresh pending...",
+                            ui::theme::ACCENT_BLUE_FILL,
+                            ui::theme::ACCENT_CYAN,
+                        );
                     }
-                }
-                ui.label("PageUp/PageDown switches character.");
-            }
-            ui.separator();
-            ui.heading("Views (keys 1-9, 0, E)");
-            for view in View::ALL.iter() {
-                let selected = self.state.view == *view;
-                if ui
-                    .selectable_label(
-                        selected,
-                        format!("{} {}", view_key_hint(*view), view.label()),
-                    )
-                    .clicked()
-                {
-                    self.state.switch_view(*view);
-                }
-            }
-        });
-
-        egui::CentralPanel::default().show(ctx, |ui| {
-            if !self.state.status_message.is_empty() {
-                ui.label(&self.state.status_message);
-                ui.separator();
-            }
-            egui::ScrollArea::vertical().show(ui, |ui| match self.state.view {
-                View::Dashboard => ui::dashboard::show(
-                    ui,
-                    &mut self.state,
-                    &self.sde,
-                    &self.resolver,
-                    &mut self.portrait_textures,
-                ),
-                View::Characters => ui::characters::show(
-                    ui,
-                    &mut self.state,
-                    &self.resolver,
-                    &mut self.portrait_textures,
-                ),
-                View::Skills => {
-                    ui::skills::show(ui, &mut self.state, &self.sde, &mut self.portrait_textures)
-                }
-                View::Wallet => ui::wallet::show(ui, &mut self.state, &self.resolver),
-                View::Assets => ui::assets::show(
-                    ui,
-                    &mut self.state,
-                    &self.resolver,
-                    &mut self.portrait_textures,
-                ),
-                View::Market => ui::market::show(
-                    ui,
-                    &mut self.state,
-                    &self.resolver,
-                    &mut self.portrait_textures,
-                ),
-                View::Industry => ui::industry::show(
-                    ui,
-                    &mut self.state,
-                    &self.resolver,
-                    self.industry_data.as_deref(),
-                    self.fitting_types.as_deref(),
-                ),
-                View::Planets => ui::planets::show(
-                    ui,
-                    &mut self.state,
-                    &self.resolver,
-                    self.planet_schematics.as_deref(),
-                ),
-                View::Fittings => ui::fittings::show(
-                    ui,
-                    &mut self.state,
-                    &self.resolver,
-                    self.fitting_types.as_deref(),
-                    &self.sde,
-                    &mut self.portrait_textures,
-                ),
-                View::Settings => ui::settings::show(ui, &mut self.state),
-                View::Exploration => ui::exploration::show(ui, &mut self.state),
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        ui.label(
+                            egui::RichText::new(
+                                "Keys: 1-9, 0, E views  |  Ctrl+R refresh  |  / search  |  PgUp/PgDn character",
+                            )
+                            .size(11.5)
+                            .color(ui::theme::TEXT_MUTED),
+                        );
+                    });
+                });
             });
-        });
 
-        egui::TopBottomPanel::bottom("status_bar").show(ctx, |ui| {
-            ui.horizontal(|ui| {
-                ui.label(format!("View: {}", self.state.view.label()));
-                ui.label(format!("Characters: {}", self.state.characters.len()));
-                if self.state.refresh_requested {
-                    ui.label("Refresh pending...");
-                }
-                ui.label("Keys: 1-9, 0, E views, Ctrl+R refresh, / search, PgUp/PgDn character");
+        let canvas_frame = egui::Frame::none()
+            .fill(ui::theme::BG_CANVAS)
+            .inner_margin(egui::Margin::same(16.0));
+
+        egui::CentralPanel::default()
+            .frame(canvas_frame)
+            .show(ctx, |ui| {
+                egui::ScrollArea::vertical().show(ui, |ui| match self.state.view {
+                    View::Dashboard => ui::dashboard::show(
+                        ui,
+                        &mut self.state,
+                        &self.sde,
+                        &self.resolver,
+                        &mut self.portrait_textures,
+                    ),
+                    View::Characters => ui::characters::show(
+                        ui,
+                        &mut self.state,
+                        &self.resolver,
+                        &mut self.portrait_textures,
+                    ),
+                    View::Skills => ui::skills::show(
+                        ui,
+                        &mut self.state,
+                        &self.sde,
+                        &mut self.portrait_textures,
+                    ),
+                    View::Wallet => ui::wallet::show(ui, &mut self.state, &self.resolver),
+                    View::Assets => ui::assets::show(
+                        ui,
+                        &mut self.state,
+                        &self.resolver,
+                        &mut self.portrait_textures,
+                    ),
+                    View::Market => ui::market::show(
+                        ui,
+                        &mut self.state,
+                        &self.resolver,
+                        &mut self.portrait_textures,
+                    ),
+                    View::Industry => ui::industry::show(
+                        ui,
+                        &mut self.state,
+                        &self.resolver,
+                        self.industry_data.as_deref(),
+                        self.fitting_types.as_deref(),
+                    ),
+                    View::Planets => ui::planets::show(
+                        ui,
+                        &mut self.state,
+                        &self.resolver,
+                        self.planet_schematics.as_deref(),
+                    ),
+                    View::Fittings => ui::fittings::show(
+                        ui,
+                        &mut self.state,
+                        &self.resolver,
+                        self.fitting_types.as_deref(),
+                        &self.sde,
+                        &mut self.portrait_textures,
+                    ),
+                    View::Settings => ui::settings::show(ui, &mut self.state),
+                    View::Exploration => ui::exploration::show(ui, &mut self.state),
+                });
             });
-        });
     }
 }
 
@@ -5159,5 +5270,30 @@ mod tests {
             state.portrait_state(ImageKind::Corporation, 2048),
             PortraitState::NotRequested
         ));
+    }
+
+    #[test]
+    fn needs_tick_ignores_all_finished_queue() {
+        let now = crate::ui::widgets::parse_esi_date("2026-11-21T00:00:00Z").expect("valid date");
+        let finished = vec![crate::esi::models::SkillQueueItem {
+            skill_id: 3300,
+            finished_level: 5,
+            queue_position: 0,
+            finish_date: Some("2026-11-20T12:00:00Z".to_string()),
+            ..Default::default()
+        }];
+        assert!(!queue_has_unfinished_skill(&finished, now));
+
+        let active = vec![
+            finished[0].clone(),
+            crate::esi::models::SkillQueueItem {
+                skill_id: 3301,
+                finished_level: 4,
+                queue_position: 1,
+                finish_date: Some("2026-11-25T12:00:00Z".to_string()),
+                ..Default::default()
+            },
+        ];
+        assert!(queue_has_unfinished_skill(&active, now));
     }
 }

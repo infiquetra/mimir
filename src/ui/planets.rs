@@ -610,7 +610,19 @@ fn show_detail_section(
                     ui.label("No pins were reported for this colony.");
                 }
                 _ => {
-                    ui.label(format!("Status: {}", summary.status_label));
+                    ui.horizontal(|ui| {
+                        ui.label("Status:");
+                        if summary.status_label == "Extracting" {
+                            widgets::badge(
+                                ui,
+                                summary.status_label,
+                                super::theme::POSITIVE_BG,
+                                super::theme::POSITIVE,
+                            );
+                        } else {
+                            ui.label(summary.status_label);
+                        }
+                    });
                     ui.label(format!("Active Pins: {}", summary.active_pins_label));
                     ui.label(format!(
                         "Next Completion: {}",
@@ -763,11 +775,26 @@ pub fn show(
                 && state.active_character_id.is_some()
                 && bundle.needs_planetary_stepup();
             if panel_shown {
-                tracing::debug!("[PI] showing step-up guidance (missing planetary scope)");
-                planetary_reauthorize_panel(ui, state);
+                widgets::card(ui, |ui| {
+                    tracing::debug!("[PI] showing step-up guidance (missing planetary scope)");
+                    planetary_reauthorize_panel(ui, state);
+                });
             }
-            show_colonies_section(ui, state, &bundle.colonies, resolver, panel_shown);
-            show_detail_section(ui, state, &bundle, resolver, planet_schematics, panel_shown);
+            ui.columns(2, |cols| {
+                widgets::card(&mut cols[0], |ui| {
+                    show_colonies_section(ui, state, &bundle.colonies, resolver, panel_shown);
+                });
+                widgets::card(&mut cols[1], |ui| {
+                    show_detail_section(
+                        ui,
+                        state,
+                        &bundle,
+                        resolver,
+                        planet_schematics,
+                        panel_shown,
+                    );
+                });
+            });
         }
     }
 }

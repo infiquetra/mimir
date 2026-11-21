@@ -89,6 +89,22 @@ pub fn active_or_first_queue_item(
     picked
 }
 
+/// Format a single queue row's finish phrase without saying `"finishes finished"` or `"paused (paused)"`.
+pub fn format_queue_finish_phrase(finish_date: Option<&str>, now: DateTime<Utc>) -> String {
+    match finish_date {
+        None => "paused".to_string(),
+        Some(raw) => {
+            let countdown = widgets::countdown_label(Some(raw), now);
+            let formatted_date = widgets::format_date_short(raw);
+            if countdown == "finished" {
+                format!("finished ({formatted_date})")
+            } else {
+                format!("finishes {countdown} ({formatted_date})")
+            }
+        }
+    }
+}
+
 /// All queue entries in queue-position order that have not yet finished.
 pub fn upcoming_queue_items(queue: &[SkillQueueItem], now: DateTime<Utc>) -> Vec<&SkillQueueItem> {
     let sorted = sorted_queue(queue);
@@ -413,178 +429,174 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState, sde: &Sde, cache: &mut Port
             ));
 
             let queue = sorted_queue(&data.queue);
-            ui.separator();
-            ui.heading(format!("Training queue ({} skills)", queue.len()));
-            if queue.is_empty() {
-                widgets::empty_panel(
-                    ui,
-                    "Queue is empty. Add skills in EVE, then refresh (Ctrl+R).",
-                );
-            } else {
-                if let Some(last) = queue.last() {
-                    ui.label(format!(
-                        "Queue finishes: {}",
-                        widgets::countdown_label(last.finish_date.as_deref(), now)
-                    ));
-                }
-                // Arrow-key row movement (skipped while typing in search).
-                if !state.text_input_focused {
-                    let (down, up) = ui.ctx().input(|i| {
-                        (
-                            i.key_pressed(egui::Key::ArrowDown),
-                            i.key_pressed(egui::Key::ArrowUp),
-                        )
-                    });
-                    if down && state.selected_queue_row + 1 < queue.len() {
-                        state.selected_queue_row += 1;
+            widgets::card(ui, |ui| {
+                widgets::section_title(ui, &format!("Training queue ({} skills)", queue.len()));
+                if queue.is_empty() {
+                    widgets::empty_panel(
+                        ui,
+                        "Queue is empty. Add skills in EVE, then refresh (Ctrl+R).",
+                    );
+                } else {
+                    if let Some(last) = queue.last() {
+                        ui.label(format!(
+                            "Queue finishes: {}",
+                            widgets::countdown_label(last.finish_date.as_deref(), now)
+                        ));
                     }
-                    if up && state.selected_queue_row > 0 {
-                        state.selected_queue_row -= 1;
-                    }
-                }
-                if state.selected_queue_row >= queue.len() {
-                    state.selected_queue_row = queue.len().saturating_sub(1);
-                }
-                let progress_idx = active_queue_index(&queue, now);
-                egui::ScrollArea::vertical()
-                    .id_salt("skill_queue_scroll")
-                    .max_height(240.0)
-                    .show(ui, |ui| {
-                        for (idx, item) in queue.iter().enumerate() {
-                            let name = sde.skill_name(item.skill_id);
-                            let countdown =
-                                widgets::countdown_label(item.finish_date.as_deref(), now);
-                            let marker = if idx == state.selected_queue_row {
-                                ">"
-                            } else {
-                                " "
-                            };
-                            ui.label(format!(
-                                "{} {}. {} level {} — finishes {} ({})",
-                                marker,
-                                item.queue_position + 1,
-                                name,
-                                item.finished_level,
-                                countdown,
-                                item.finish_date
-                                    .as_deref()
-                                    .map(widgets::format_date_short)
-                                    .unwrap_or_else(|| "paused".to_string())
-                            ));
-                            if Some(idx) == progress_idx {
-                                let fraction = widgets::progress_fraction(
-                                    item.start_date.as_deref(),
-                                    item.finish_date.as_deref(),
-                                    now,
-                                );
-                                ui.add(
-                                    egui::ProgressBar::new(fraction)
-                                        .text(format!("{:.0}%", fraction * 100.0)),
-                                );
-                            }
+                    // Arrow-key row movement (skipped while typing in search).
+                    if !state.text_input_focused {
+                        let (down, up) = ui.ctx().input(|i| {
+                            (
+                                i.key_pressed(egui::Key::ArrowDown),
+                                i.key_pressed(egui::Key::ArrowUp),
+                            )
+                        });
+                        if down && state.selected_queue_row + 1 < queue.len() {
+                            state.selected_queue_row += 1;
                         }
-                    });
-            }
+                        if up && state.selected_queue_row > 0 {
+                            state.selected_queue_row -= 1;
+                        }
+                    }
+                    if state.selected_queue_row >= queue.len() {
+                        state.selected_queue_row = queue.len().saturating_sub(1);
+                    }
+                    let progress_idx = active_queue_index(&queue, now);
+                    egui::ScrollArea::vertical()
+                        .id_salt("skill_queue_scroll")
+                        .max_height(240.0)
+                        .show(ui, |ui| {
+                            for (idx, item) in queue.iter().enumerate() {
+                                let name = sde.skill_name(item.skill_id);
+                                let marker = if idx == state.selected_queue_row {
+                                    ">"
+                                } else {
+                                    " "
+                                };
+                                ui.label(format!(
+                                    "{} {}. {} level {} — {}",
+                                    marker,
+                                    item.queue_position + 1,
+                                    name,
+                                    item.finished_level,
+                                    format_queue_finish_phrase(item.finish_date.as_deref(), now)
+                                ));
+                                if Some(idx) == progress_idx {
+                                    let fraction = widgets::progress_fraction(
+                                        item.start_date.as_deref(),
+                                        item.finish_date.as_deref(),
+                                        now,
+                                    );
+                                    ui.add(
+                                        egui::ProgressBar::new(fraction)
+                                            .text(format!("{:.0}%", fraction * 100.0)),
+                                    );
+                                }
+                            }
+                        });
+                }
+            });
 
             // --- Catalogue by SDE group, searchable ---
-            ui.separator();
-            ui.heading("Skill catalogue (by SDE group)");
-            let focus = widgets::search_box(
-                ui,
-                &mut state.skill_search,
-                "Search skills (press / to focus)",
-                state.focus_search,
-            );
-            state.text_input_focused |= focus;
-            if focus {
-                state.focus_search = false;
-            }
-            let query = state.skill_search.clone();
-            let levels: BTreeMap<i64, i32> = data
-                .skills
-                .skills
-                .iter()
-                .map(|s| (s.skill_id, s.trained_skill_level))
-                .collect();
-            if sde.groups.is_empty() {
-                widgets::empty_panel(ui, "Bundled skill catalogue is unavailable.");
-            }
-            egui::ScrollArea::vertical()
-                .id_salt("skill_catalogue_scroll")
-                .max_height(320.0)
-                .show(ui, |ui| {
-                    let mut any_match = false;
-                    let mut total_filtered: usize = 0;
-                    let mut remaining = SKILLS_CATALOGUE_RENDER_MAX;
-                    let mut cap_suppressed = false;
-                    for group in &sde.groups {
-                        let mut rows: Vec<CatalogueRow> = Vec::new();
-                        for skill in sde.types.iter().filter(|t| t.group_id == group.group_id) {
-                            if !widgets::matches_search(&skill.type_name, &query) {
+            widgets::card(ui, |ui| {
+                widgets::section_title(ui, "Skill catalogue (by SDE group)");
+                let focus = widgets::search_box(
+                    ui,
+                    &mut state.skill_search,
+                    "Search skills (press / to focus)",
+                    state.focus_search,
+                );
+                state.text_input_focused |= focus;
+                if focus {
+                    state.focus_search = false;
+                }
+                let query = state.skill_search.clone();
+                let levels: BTreeMap<i64, i32> = data
+                    .skills
+                    .skills
+                    .iter()
+                    .map(|s| (s.skill_id, s.trained_skill_level))
+                    .collect();
+                if sde.groups.is_empty() {
+                    widgets::empty_panel(ui, "Bundled skill catalogue is unavailable.");
+                }
+                egui::ScrollArea::vertical()
+                    .id_salt("skill_catalogue_scroll")
+                    .max_height(320.0)
+                    .show(ui, |ui| {
+                        let mut any_match = false;
+                        let mut total_filtered: usize = 0;
+                        let mut remaining = SKILLS_CATALOGUE_RENDER_MAX;
+                        let mut cap_suppressed = false;
+                        for group in &sde.groups {
+                            let mut rows: Vec<CatalogueRow> = Vec::new();
+                            for skill in sde.types.iter().filter(|t| t.group_id == group.group_id) {
+                                if !widgets::matches_search(&skill.type_name, &query) {
+                                    continue;
+                                }
+                                any_match = true;
+                                total_filtered += 1;
+                                let level = levels.get(&skill.type_id).copied().unwrap_or(0);
+                                rows.push(CatalogueRow {
+                                    skill_type_id: Some(skill.type_id),
+                                    text: format!("{} — trained level {}", skill.type_name, level),
+                                });
+                                if let Some(line) = prerequisite_line(sde, skill) {
+                                    rows.push(CatalogueRow {
+                                        skill_type_id: None,
+                                        text: line,
+                                    });
+                                }
+                            }
+                            if rows.is_empty() {
                                 continue;
                             }
-                            any_match = true;
-                            total_filtered += 1;
-                            let level = levels.get(&skill.type_id).copied().unwrap_or(0);
-                            rows.push(CatalogueRow {
-                                skill_type_id: Some(skill.type_id),
-                                text: format!("{} — trained level {}", skill.type_name, level),
-                            });
-                            if let Some(line) = prerequisite_line(sde, skill) {
-                                rows.push(CatalogueRow {
-                                    skill_type_id: None,
-                                    text: line,
-                                });
-                            }
-                        }
-                        if rows.is_empty() {
-                            continue;
-                        }
-                        egui::CollapsingHeader::new(&group.group_name)
-                            .default_open(!query.is_empty())
-                            .show(ui, |ui| {
-                                let mut skill_rendered = false;
-                                for row in &rows {
-                                    match row.skill_type_id {
-                                        Some(type_id) if remaining > 0 => {
-                                            remaining -= 1;
-                                            skill_rendered = true;
-                                            ensure_type_icon_requested(state, type_id);
-                                            ui.horizontal(|ui| {
-                                                show_type_icon(
-                                                    ui,
-                                                    cache,
-                                                    state,
-                                                    type_id,
-                                                    TYPE_ICON_PX,
-                                                );
-                                                ui.label(&row.text);
-                                            });
-                                        }
-                                        Some(_) => {
-                                            cap_suppressed = true;
-                                            skill_rendered = false;
-                                        }
-                                        None => {
-                                            if skill_rendered {
-                                                ui.label(&row.text);
+                            egui::CollapsingHeader::new(&group.group_name)
+                                .default_open(!query.is_empty())
+                                .show(ui, |ui| {
+                                    let mut skill_rendered = false;
+                                    for row in &rows {
+                                        match row.skill_type_id {
+                                            Some(type_id) if remaining > 0 => {
+                                                remaining -= 1;
+                                                skill_rendered = true;
+                                                ensure_type_icon_requested(state, type_id);
+                                                ui.horizontal(|ui| {
+                                                    show_type_icon(
+                                                        ui,
+                                                        cache,
+                                                        state,
+                                                        type_id,
+                                                        TYPE_ICON_PX,
+                                                    );
+                                                    ui.label(&row.text);
+                                                });
+                                            }
+                                            Some(_) => {
+                                                cap_suppressed = true;
+                                                skill_rendered = false;
+                                            }
+                                            None => {
+                                                if skill_rendered {
+                                                    ui.label(&row.text);
+                                                }
                                             }
                                         }
                                     }
-                                }
-                            });
-                    }
-                    if cap_suppressed {
-                        ui.label(format!(
-                            "Showing {} of {} skills.",
-                            total_filtered.min(SKILLS_CATALOGUE_RENDER_MAX),
-                            total_filtered
-                        ));
-                    }
-                    if !any_match && !sde.groups.is_empty() {
-                        widgets::empty_panel(ui, "No skills match the search.");
-                    }
-                });
+                                });
+                        }
+                        if cap_suppressed {
+                            ui.label(format!(
+                                "Showing {} of {} skills.",
+                                total_filtered.min(SKILLS_CATALOGUE_RENDER_MAX),
+                                total_filtered
+                            ));
+                        }
+                        if !any_match && !sde.groups.is_empty() {
+                            widgets::empty_panel(ui, "No skills match the search.");
+                        }
+                    });
+            });
         }
         LoadState::Loading => widgets::loading_panel(ui, "Loading skills..."),
         LoadState::Empty => widgets::empty_panel(ui, "No skill data yet."),
@@ -598,7 +610,7 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState, sde: &Sde, cache: &mut Port
     // Skill plans render after the skills match, so they are
     // visible and editable in every skills load state; only
     // their estimates degrade (design section 8.1).
-    show_plans_section(ui, state, sde, cache);
+    widgets::card(ui, |ui| show_plans_section(ui, state, sde, cache));
 }
 
 /// The skill-plans section: list, selected detail, editor.
@@ -2081,6 +2093,20 @@ mod tests {
         assert_eq!(
             active_or_first_queue_item(&finished_queue, now).map(|q| q.skill_id),
             Some(3300)
+        );
+    }
+
+    #[test]
+    fn format_queue_finish_phrase_handles_active_finished_and_paused() {
+        let now = widgets::parse_esi_date("2026-11-21T00:00:00Z").expect("valid date");
+        assert_eq!(format_queue_finish_phrase(None, now), "paused");
+        assert_eq!(
+            format_queue_finish_phrase(Some("2026-11-20T12:00:00Z"), now),
+            "finished (2026-11-20 12:00)"
+        );
+        assert_eq!(
+            format_queue_finish_phrase(Some("2026-11-25T12:00:00Z"), now),
+            "finishes in 4d 12h 0m (2026-11-25 12:00)"
         );
     }
 }

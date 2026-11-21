@@ -26,6 +26,15 @@
 
 ## 2026-11-21
 
+### EVE dark theme, card/two-pane layout, and workspace prioritization across all 11 views (`feat/rust-ui-ux-overhaul`)
+
+**Author.** Mimir UI/UX overhaul pass
+**Decision.** Introduced `src/ui/theme.rs` (`apply` at `:30`) applying a custom space-slate palette (`#0D1117` canvas, `#121822` side/top panels, `#171F2C` card containers, `#38BDF8` cyan accents, semantic positive/negative/warning fills) alongside shared UI primitives in `src/ui/widgets.rs` (`card` `:228`, `metric_tile`, `badge`, `section_title`, `format_count` `:208`, `isk_color`, inline Clear button in `search_box`) and a 210px navigation shell (`src/app/shell.rs`). Reordered high-wall views so primary workflows appear above the fold: Fittings renders active drafts and Saved Fittings side-by-side (`fittings_draft_editor_panel`, `show_saved_fittings_section`) with `"Start a new fitting"` collapsed inside a bounded `ScrollArea` (`fittings_import_controls_panel`); Industry renders Jobs & Blueprints before collapsed offline calculators; Market places Selected Item orders/history ahead of the collapsed Trade Calculator; Exploration and Planets use side-by-side list-and-detail panes; Settings wraps Startup View and `LOG_TAGS` cleanly with `horizontal_wrapped`.
+**Rejected alternatives.** Leaving egui's default visuals or adding heavy custom egui widget crates: built-in `Visuals` + `Frame` helpers keep binary size minimal, compile cleanly on Linux and macOS without native deps, and keep every existing `ctx.run` portrait/icon budget test green by avoiding hidden panels over icon-queued sections.
+**Rationale.** Visual inspection of demo screenshots across all 11 views showed cramped raw text, clipped `[PLANS]` tag overflow in Settings, 100-item vertical walls pushing primary content off-screen in Fittings/Industry/Exploration, and `"finishes finished"` / wasted 1Hz wakeup timer in `skills::show` and `shell::needs_tick`.
+**Revisit when.** Multi-window pop-out workspaces or user-selectable light/high-contrast themes are introduced.
+**Refs.** `src/ui/theme.rs`, `src/ui/widgets.rs`, `src/app/shell.rs`, `src/ui/{dashboard,characters,skills,wallet,assets,market,industry,planets,fittings,exploration,settings}.rs`, LEARNINGS 2026-11-21 UI/UX overhaul entry.
+
 ### Demo DB isolation via in-memory SQLite and strict per-character state boundaries (`fix/rust-audit-and-cleanup`)
 
 **Author.** Mimir audit and cleanup pass

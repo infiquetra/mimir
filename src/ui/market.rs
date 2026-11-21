@@ -298,62 +298,80 @@ fn show_picker(ui: &mut egui::Ui, state: &mut AppState, resolver: &NameResolver)
     let selected_id = state.market_selected_type_id;
     let looking_up = state.market_lookup_message.as_deref() == Some("Looking up that item name…");
 
-    ui.horizontal(|ui| {
-        let response = ui.text_edit_singleline(&mut state.market_search);
-        if state.focus_search {
-            response.request_focus();
-            state.focus_search = false;
-        }
-        state.text_input_focused |= response.has_focus();
-        let enter_submit = response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
-        if looking_up {
-            ui.spinner();
-        }
-        if ui.button("Look up item").clicked() || enter_submit {
-            submit_lookup(state);
-        }
-    });
-    if state.market_search.is_empty() {
-        ui.label("Item name, exactly as in EVE (then Look up)");
-    }
-    ui.label("Name lookup needs the item's exact EVE name.");
-    if let Some(message) = state.market_lookup_message.clone() {
-        ui.label(message);
-    }
-
-    for candidate in &candidates {
-        let word = candidate_word(candidate);
-        if ui.selectable_label(false, &word).clicked() {
-            tracing::debug!("[MARKET] lookup candidate chosen name={}", word);
-            state.set_market_selection(candidate.id, word);
-        }
-    }
-
-    ui.heading("Items you hold");
-    if quick_picks.is_empty() {
+    widgets::card(ui, |ui| {
+        ui.horizontal(|ui| {
+            let response = ui.add(
+                egui::TextEdit::singleline(&mut state.market_search)
+                    .hint_text("Item name, exactly as in EVE (then Look up)")
+                    .desired_width(280.0),
+            );
+            if state.focus_search {
+                response.request_focus();
+                state.focus_search = false;
+            }
+            state.text_input_focused |= response.has_focus();
+            let enter_submit =
+                response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
+            if looking_up {
+                ui.spinner();
+            }
+            if ui.button("Look up item").clicked() || enter_submit {
+                submit_lookup(state);
+            }
+            if !state.market_search.is_empty() && ui.button("Clear").clicked() {
+                state.market_search.clear();
+            }
+        });
         ui.label(
-            "Sign in and load Assets or Wallet to pick from items you hold, \
-             or look an item up by name above.",
+            egui::RichText::new("Name lookup needs the item's exact EVE name.")
+                .color(super::theme::TEXT_SECONDARY),
         );
-    } else {
-        for (type_id, label) in &quick_picks {
-            let selected = selected_id == Some(*type_id);
-            if ui.selectable_label(selected, label).clicked() {
-                tracing::debug!("[MARKET] quick pick chosen name={}", label);
-                state.set_market_selection(*type_id, label.clone());
-            }
+        if let Some(message) = state.market_lookup_message.clone() {
+            ui.label(message);
         }
-    }
 
-    ui.heading("Region");
-    ui.horizontal_wrapped(|ui| {
-        for region in MARKET_REGIONS {
-            let label = region_label(region.id, resolver);
-            let selected = state.market_region_id == region.id;
-            if ui.selectable_label(selected, label).clicked() {
-                state.set_market_region(region.id);
-            }
+        if !candidates.is_empty() {
+            ui.horizontal_wrapped(|ui| {
+                for candidate in &candidates {
+                    let word = candidate_word(candidate);
+                    if ui.selectable_label(false, &word).clicked() {
+                        tracing::debug!("[MARKET] lookup candidate chosen name={}", word);
+                        state.set_market_selection(candidate.id, word);
+                    }
+                }
+            });
         }
+
+        ui.add_space(4.0);
+        widgets::section_title(ui, "Items you hold");
+        if quick_picks.is_empty() {
+            ui.label(
+                "Sign in and load Assets or Wallet to pick from items you hold, \
+                 or look an item up by name above.",
+            );
+        } else {
+            ui.horizontal_wrapped(|ui| {
+                for (type_id, label) in &quick_picks {
+                    let selected = selected_id == Some(*type_id);
+                    if ui.selectable_label(selected, label).clicked() {
+                        tracing::debug!("[MARKET] quick pick chosen name={}", label);
+                        state.set_market_selection(*type_id, label.clone());
+                    }
+                }
+            });
+        }
+
+        ui.add_space(4.0);
+        widgets::section_title(ui, "Region");
+        ui.horizontal_wrapped(|ui| {
+            for region in MARKET_REGIONS {
+                let label = region_label(region.id, resolver);
+                let selected = state.market_region_id == region.id;
+                if ui.selectable_label(selected, label).clicked() {
+                    state.set_market_region(region.id);
+                }
+            }
+        });
     });
 }
 
@@ -420,24 +438,31 @@ fn trade_calculator_lines(state: &AppState) -> Vec<String> {
 }
 
 fn show_trade_calculator(ui: &mut egui::Ui, state: &mut AppState) {
-    ui.heading(TRADE_CALCULATOR_HEADING);
     let mut changed = false;
-    ui.label(TRADE_CALCULATOR_INPUT_LABELS[0]);
-    let response = ui.text_edit_singleline(&mut state.market_trade_buy_price);
-    state.text_input_focused |= response.has_focus();
-    changed |= response.changed();
-    ui.label(TRADE_CALCULATOR_INPUT_LABELS[1]);
-    let response = ui.text_edit_singleline(&mut state.market_trade_sell_price);
-    state.text_input_focused |= response.has_focus();
-    changed |= response.changed();
-    ui.label(TRADE_CALCULATOR_INPUT_LABELS[2]);
-    let response = ui.text_edit_singleline(&mut state.market_trade_broker_fee_percent);
-    state.text_input_focused |= response.has_focus();
-    changed |= response.changed();
-    ui.label(TRADE_CALCULATOR_INPUT_LABELS[3]);
-    let response = ui.text_edit_singleline(&mut state.market_trade_sales_tax_percent);
-    state.text_input_focused |= response.has_focus();
-    changed |= response.changed();
+    egui::Grid::new("market_trade_calc_inputs")
+        .spacing([12.0, 6.0])
+        .show(ui, |ui| {
+            ui.label(TRADE_CALCULATOR_INPUT_LABELS[0]);
+            let response = ui.text_edit_singleline(&mut state.market_trade_buy_price);
+            state.text_input_focused |= response.has_focus();
+            changed |= response.changed();
+            ui.end_row();
+            ui.label(TRADE_CALCULATOR_INPUT_LABELS[1]);
+            let response = ui.text_edit_singleline(&mut state.market_trade_sell_price);
+            state.text_input_focused |= response.has_focus();
+            changed |= response.changed();
+            ui.end_row();
+            ui.label(TRADE_CALCULATOR_INPUT_LABELS[2]);
+            let response = ui.text_edit_singleline(&mut state.market_trade_broker_fee_percent);
+            state.text_input_focused |= response.has_focus();
+            changed |= response.changed();
+            ui.end_row();
+            ui.label(TRADE_CALCULATOR_INPUT_LABELS[3]);
+            let response = ui.text_edit_singleline(&mut state.market_trade_sales_tax_percent);
+            state.text_input_focused |= response.has_focus();
+            changed |= response.changed();
+            ui.end_row();
+        });
     if changed {
         tracing::debug!("[MARKET] trade calculator input changed");
     }
@@ -677,65 +702,81 @@ pub fn show(
     // a character switch or a selection change.
     cache.prune(state);
     show_picker(ui, state, resolver);
-    // The calculator needs no item and no character, so it renders
-    // before the no-selection early return in every Market state.
-    show_trade_calculator(ui, state);
 
-    let Some(type_id) = state.market_selected_type_id else {
-        ui.label(
-            "Choose an item to load public market data. Your own open \
-             orders appear here too once an item is chosen.",
-        );
-        return;
-    };
-
-    // Exactly one ensure per selected type, inside the `Some`
-    // branch: the icon and labels are built every frame (no
-    // virtualization claim), bounded at one.
-    ensure_type_icon_requested(state, type_id);
-    let heading = resolver
-        .cached(type_id)
-        .map(str::to_string)
-        .or_else(|| state.market_selected_type_name.clone())
-        .unwrap_or_else(|| "Unknown Item".to_string());
-    ui.separator();
-    // Detail-header layout per the Flutter market precedent: the
-    // 64pt type icon at the left, then the resolved heading with
-    // the region as its second line. The id itself is never
-    // formatted; the resolved name beside the icon carries the
-    // meaning.
-    ui.horizontal(|ui| {
-        show_type_icon(ui, cache, state, type_id, MARKET_TYPE_ICON_PX);
-        ui.vertical(|ui| {
-            ui.heading(heading);
-            ui.label(format!(
-                "Region: {}",
-                region_label(state.market_region_id, resolver)
-            ));
+    if let Some(type_id) = state.market_selected_type_id {
+        // Exactly one ensure per selected type, inside the `Some`
+        // branch: the icon and labels are built every frame (no
+        // virtualization claim), bounded at one.
+        ensure_type_icon_requested(state, type_id);
+        let heading = resolver
+            .cached(type_id)
+            .map(str::to_string)
+            .or_else(|| state.market_selected_type_name.clone())
+            .unwrap_or_else(|| "Unknown Item".to_string());
+        widgets::card(ui, |ui| {
+            ui.horizontal(|ui| {
+                show_type_icon(ui, cache, state, type_id, MARKET_TYPE_ICON_PX);
+                ui.vertical(|ui| {
+                    ui.heading(heading);
+                    ui.label(format!(
+                        "Region: {}",
+                        region_label(state.market_region_id, resolver)
+                    ));
+                });
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if ui.button("Refresh market data").clicked() {
+                        tracing::info!("[MARKET] refresh requested from Market view");
+                        state.market_fetch_requested = true;
+                    }
+                });
+            });
         });
-    });
-    if ui.button("Refresh market data").clicked() {
-        tracing::info!("[MARKET] refresh requested from Market view");
-        state.market_fetch_requested = true;
-    }
 
-    // Clone the snapshot so the step-up button can borrow `state`.
-    let snapshot = state.market.clone();
-    match snapshot {
-        LoadState::Loading => widgets::loading_panel(ui, "Loading market data..."),
-        LoadState::Empty => widgets::empty_panel(ui, "No market data yet."),
-        LoadState::Error(e) => {
-            if widgets::error_panel_with_retry(ui, &e) {
-                tracing::warn!("[MARKET] retry requested after load error");
-                state.market_fetch_requested = true;
+        let snapshot = state.market.clone();
+        match snapshot {
+            LoadState::Loading => widgets::card(ui, |ui| {
+                widgets::loading_panel(ui, "Loading market data...");
+            }),
+            LoadState::Empty => widgets::card(ui, |ui| {
+                widgets::empty_panel(ui, "No market data yet.");
+            }),
+            LoadState::Error(e) => widgets::card(ui, |ui| {
+                if widgets::error_panel_with_retry(ui, &e) {
+                    tracing::warn!("[MARKET] retry requested after load error");
+                    state.market_fetch_requested = true;
+                }
+            }),
+            LoadState::Ready(bundle) => {
+                ui.columns(2, |cols| {
+                    widgets::card(&mut cols[0], |ui| {
+                        show_public_orders(ui, &bundle, resolver);
+                    });
+                    widgets::card(&mut cols[1], |ui| {
+                        show_history(ui, &bundle);
+                    });
+                });
+                widgets::card(ui, |ui| {
+                    show_character_orders(ui, state, &bundle, resolver);
+                });
             }
         }
-        LoadState::Ready(bundle) => {
-            show_public_orders(ui, &bundle, resolver);
-            show_history(ui, &bundle);
-            show_character_orders(ui, state, &bundle, resolver);
-        }
+    } else {
+        widgets::card(ui, |ui| {
+            ui.label(
+                "Choose an item to load public market data. Your own open \
+                 orders appear here too once an item is chosen.",
+            );
+        });
     }
+
+    // Trade calculator sits cleanly below market orders/history inside its own card.
+    widgets::card(ui, |ui| {
+        egui::CollapsingHeader::new(TRADE_CALCULATOR_HEADING)
+            .default_open(false)
+            .show(ui, |ui| {
+                show_trade_calculator(ui, state);
+            });
+    });
 }
 
 #[cfg(test)]

@@ -71,52 +71,54 @@ pub fn show(
     }
 
     // --- Switcher list (PageUp/PageDown also cycles, see shell) ---
-    ui.separator();
-    ui.heading("Switch character (PageUp/PageDown)");
     let mut switch_to: Option<i64> = None;
-    let rows: Vec<(i64, String, String, Option<String>, bool)> = state
-        .characters
-        .iter()
-        .map(|c| {
-            (
-                c.character_id,
-                c.name.clone(),
-                resolver.name(c.corporation_id),
-                c.alliance_id.map(|id| resolver.name(id)),
-                c.is_active,
-            )
-        })
-        .collect();
-    egui::Grid::new("switcher_portraits").show(ui, |ui| {
-        for (id, name, corp, alliance, is_active) in &rows {
-            portraits::show_portrait(ui, cache, state, *id, name, portraits::LIST_PORTRAIT_PX);
-            let mut label = format!("{} — {}", name, corp);
-            if let Some(alliance) = alliance {
-                label.push_str(&format!(" / {}", alliance));
-            }
-            if *is_active {
-                label.push_str(" (active)");
-            }
-            if ui.selectable_label(*is_active, label).clicked() {
-                switch_to = Some(*id);
-            }
-            ui.end_row();
-        }
+    widgets::card(ui, |ui| {
+        widgets::section_title(ui, "Switch character (PageUp/PageDown)");
+        ui.add_space(4.0);
+        let rows: Vec<(i64, String, String, Option<String>, bool)> = state
+            .characters
+            .iter()
+            .map(|c| {
+                (
+                    c.character_id,
+                    c.name.clone(),
+                    resolver.name(c.corporation_id),
+                    c.alliance_id.map(|id| resolver.name(id)),
+                    c.is_active,
+                )
+            })
+            .collect();
+        egui::Grid::new("switcher_portraits")
+            .spacing([12.0, 6.0])
+            .show(ui, |ui| {
+                for (id, name, corp, alliance, is_active) in &rows {
+                    portraits::show_portrait(
+                        ui,
+                        cache,
+                        state,
+                        *id,
+                        name,
+                        portraits::LIST_PORTRAIT_PX,
+                    );
+                    let mut label = format!("{} — {}", name, corp);
+                    if let Some(alliance) = alliance {
+                        label.push_str(&format!(" / {}", alliance));
+                    }
+                    if *is_active {
+                        label.push_str(" (active)");
+                    }
+                    if ui.selectable_label(*is_active, label).clicked() {
+                        switch_to = Some(*id);
+                    }
+                    ui.end_row();
+                }
+            });
     });
     if let Some(id) = switch_to {
         state.set_active_character(id);
     }
 
     // --- Active character detail ---
-    ui.separator();
-    ui.heading("Active character");
-    // Logo fetches queue only for the loaded detail and the
-    // loaded standings beside it below: the switcher and
-    // dashboard ensure loops stay character-only, so opening
-    // this view never fetches every listed character's
-    // corporation. In demo mode the shell drains without
-    // spawning, so this makes zero network calls and every
-    // logo stays a blank box.
     let detail_logo_ids = state
         .character_detail
         .as_ready()
@@ -131,10 +133,6 @@ pub fn show(
             }
         }
     }
-    // Standings logos queue beside the detail logos, from the
-    // same loaded bundle only: an `Err` standings section queues
-    // nothing, and a row whose `from_type` has no icon kind
-    // queues nothing.
     let standing_logo_ids: Vec<(ImageKind, i64)> = state
         .character_details
         .as_ready()
@@ -151,184 +149,190 @@ pub fn show(
             portraits::ensure_logo_requested(state, kind, id);
         }
     }
-    match &state.character_detail {
-        LoadState::Ready(info) => {
-            let corp = resolver.name(info.corporation_id);
-            let portrait_name = if info.name.is_empty() {
-                state
-                    .active_character()
-                    .map(|c| c.name.clone())
-                    .unwrap_or_else(|| "Unknown Item".to_string())
-            } else {
-                info.name.clone()
-            };
-            let portrait_id = state.active_character_id;
-            // The portrait renders above the detail grid, not as a
-            // grid row: a 96px cell inside `egui::Grid` does not
-            // grow its row, so the image would paint over the rows
-            // below (observed in the demo screenshot).
-            match portrait_id {
-                Some(active_id) => {
-                    ui.horizontal(|ui| {
-                        portraits::show_portrait(
-                            ui,
-                            cache,
-                            state,
-                            active_id,
-                            &portrait_name,
-                            portraits::DETAIL_PORTRAIT_PX,
-                        );
-                        let status = portraits::placeholder_status(
-                            state.demo,
-                            state.portrait_state(ImageKind::Character, active_id),
-                        );
-                        if !status.is_empty() {
-                            ui.label(status);
-                        }
-                    });
-                }
-                None => {
-                    ui.label("No character selected.");
-                }
-            }
-            egui::Grid::new("character_detail")
-                .striped(true)
-                .show(ui, |ui| {
-                    ui.label("Name");
-                    ui.label(&portrait_name);
-                    ui.end_row();
-                    ui.label("Corporation");
-                    if info.corporation_id > 0 {
-                        ui.horizontal(|ui| {
-                            portraits::show_logo(
+    widgets::card(ui, |ui| {
+        widgets::section_title(ui, "Active character");
+        ui.add_space(4.0);
+        let detail_snap = state.character_detail.clone();
+        match &detail_snap {
+            LoadState::Ready(info) => {
+                let corp = resolver.name(info.corporation_id);
+                let portrait_name = if info.name.is_empty() {
+                    state
+                        .active_character()
+                        .map(|c| c.name.clone())
+                        .unwrap_or_else(|| "Unknown Item".to_string())
+                } else {
+                    info.name.clone()
+                };
+                let portrait_id = state.active_character_id;
+                ui.horizontal_top(|ui| {
+                    ui.vertical(|ui| match portrait_id {
+                        Some(active_id) => {
+                            portraits::show_portrait(
                                 ui,
                                 cache,
                                 state,
-                                ImageKind::Corporation,
-                                info.corporation_id,
-                                portraits::DETAIL_LOGO_PX,
+                                active_id,
+                                &portrait_name,
+                                portraits::DETAIL_PORTRAIT_PX,
                             );
-                            ui.label(&corp);
-                        });
-                    } else {
-                        ui.label(&corp);
-                    }
-                    ui.end_row();
-                    if let Some(alliance_id) = info.alliance_id {
-                        let alliance_name = resolver.name(alliance_id);
-                        ui.label("Alliance");
-                        if alliance_id > 0 {
-                            ui.horizontal(|ui| {
-                                portraits::show_logo(
-                                    ui,
-                                    cache,
-                                    state,
-                                    ImageKind::Alliance,
-                                    alliance_id,
-                                    portraits::DETAIL_LOGO_PX,
+                            let status = portraits::placeholder_status(
+                                state.demo,
+                                state.portrait_state(ImageKind::Character, active_id),
+                            );
+                            if !status.is_empty() {
+                                ui.label(
+                                    egui::RichText::new(status)
+                                        .size(11.5)
+                                        .color(super::theme::TEXT_MUTED),
                                 );
-                                ui.label(&alliance_name);
-                            });
-                        } else {
-                            ui.label(&alliance_name);
+                            }
                         }
-                        ui.end_row();
-                    }
-                    ui.label("Security status");
-                    ui.label(format!("{:.2}", info.security_status));
-                    ui.end_row();
-                    if !info.birthday.is_empty() {
-                        ui.label("Born");
-                        ui.label(widgets::format_date_short(&info.birthday));
-                        ui.end_row();
-                    }
+                        None => {
+                            ui.label("No character selected.");
+                        }
+                    });
+                    ui.add_space(12.0);
+                    ui.vertical(|ui| {
+                        egui::Grid::new("character_detail")
+                            .striped(true)
+                            .spacing([14.0, 5.0])
+                            .show(ui, |ui| {
+                                ui.label("Name");
+                                ui.label(egui::RichText::new(&portrait_name).strong());
+                                ui.end_row();
+                                ui.label("Corporation");
+                                if info.corporation_id > 0 {
+                                    ui.horizontal(|ui| {
+                                        portraits::show_logo(
+                                            ui,
+                                            cache,
+                                            state,
+                                            ImageKind::Corporation,
+                                            info.corporation_id,
+                                            portraits::DETAIL_LOGO_PX,
+                                        );
+                                        ui.label(&corp);
+                                    });
+                                } else {
+                                    ui.label(&corp);
+                                }
+                                ui.end_row();
+                                if let Some(alliance_id) = info.alliance_id {
+                                    let alliance_name = resolver.name(alliance_id);
+                                    ui.label("Alliance");
+                                    if alliance_id > 0 {
+                                        ui.horizontal(|ui| {
+                                            portraits::show_logo(
+                                                ui,
+                                                cache,
+                                                state,
+                                                ImageKind::Alliance,
+                                                alliance_id,
+                                                portraits::DETAIL_LOGO_PX,
+                                            );
+                                            ui.label(&alliance_name);
+                                        });
+                                    } else {
+                                        ui.label(&alliance_name);
+                                    }
+                                    ui.end_row();
+                                }
+                                ui.label("Security status");
+                                let sec_color = if info.security_status >= 0.0 {
+                                    super::theme::POSITIVE
+                                } else {
+                                    super::theme::NEGATIVE
+                                };
+                                ui.colored_label(sec_color, format!("{:.2}", info.security_status));
+                                ui.end_row();
+                                if !info.birthday.is_empty() {
+                                    ui.label("Born");
+                                    ui.label(widgets::format_date_short(&info.birthday));
+                                    ui.end_row();
+                                }
+                            });
+                        if let Some(summary) = state
+                            .active_character_id
+                            .and_then(|id| state.summaries.get(&id))
+                        {
+                            ui.add_space(4.0);
+                            if let Some(location) = &summary.location_name {
+                                ui.label(format!("Location: {}", location));
+                            }
+                            if let Some(ship) = &summary.ship_name {
+                                ui.label(format!("Ship: {}", ship));
+                            }
+                            if let Some(sp) = summary.total_sp {
+                                ui.label(format!("Skill points: {}", widgets::format_sp(sp)));
+                            }
+                        }
+                    });
                 });
-            if let Some(summary) = state
-                .active_character_id
-                .and_then(|id| state.summaries.get(&id))
-            {
-                if let Some(location) = &summary.location_name {
-                    ui.label(format!("Location: {}", location));
-                }
-                if let Some(ship) = &summary.ship_name {
-                    ui.label(format!("Ship: {}", ship));
-                }
-                if let Some(sp) = summary.total_sp {
-                    ui.label(format!("Skill points: {}", widgets::format_sp(sp)));
+            }
+            LoadState::Loading => widgets::loading_panel(ui, "Loading character..."),
+            LoadState::Empty => widgets::empty_panel(ui, "Select a character to see details."),
+            LoadState::Error(e) => {
+                if widgets::error_panel_with_retry(ui, e) {
+                    tracing::warn!("[CHAR] retry requested after detail load error");
+                    state.retry_requested = true;
                 }
             }
         }
-        LoadState::Loading => widgets::loading_panel(ui, "Loading character..."),
-        LoadState::Empty => widgets::empty_panel(ui, "Select a character to see details."),
-        LoadState::Error(e) => {
-            if widgets::error_panel_with_retry(ui, e) {
-                tracing::warn!("[CHAR] retry requested after detail load error");
-                state.retry_requested = true;
-            }
-        }
-    }
 
-    // A failed portrait retries only from here, never from the
-    // render path (which would loop at frame rate). Demo mode
-    // never shows the button: no fetch is ever attempted there.
-    if let Some(active_id) = state.active_character_id {
-        if !state.demo
-            && matches!(
-                state.portrait_state(ImageKind::Character, active_id),
-                PortraitState::Failed
-            )
-            && ui.button("Retry portrait").clicked()
-        {
-            tracing::info!(
-                "[PORTRAIT] portrait retry requested from Characters view character_id={}",
-                active_id
-            );
-            state.request_portrait(ImageKind::Character, active_id);
-        }
-    }
-
-    // Failed logos retry only from here, never from the render
-    // path (which would loop at frame rate). Demo mode never
-    // shows the buttons: no fetch is ever attempted there. The
-    // ids come from the loaded detail, so nothing renders when
-    // no detail is ready.
-    if !state.demo {
-        let detail_ids = state
-            .character_detail
-            .as_ready()
-            .map(|info| (info.corporation_id, info.alliance_id));
-        if let Some((corporation_id, alliance_id)) = detail_ids {
-            if matches!(
-                state.portrait_state(ImageKind::Corporation, corporation_id),
-                PortraitState::Failed
-            ) && ui.button("Retry corporation logo").clicked()
+        if let Some(active_id) = state.active_character_id {
+            if !state.demo
+                && matches!(
+                    state.portrait_state(ImageKind::Character, active_id),
+                    PortraitState::Failed
+                )
+                && ui.button("Retry portrait").clicked()
             {
                 tracing::info!(
-                    "[PORTRAIT] logo retry requested from Characters view kind=corporation id={}",
-                    corporation_id
+                    "[PORTRAIT] portrait retry requested from Characters view character_id={}",
+                    active_id
                 );
-                state.request_portrait(ImageKind::Corporation, corporation_id);
+                state.request_portrait(ImageKind::Character, active_id);
             }
-            if let Some(alliance_id) = alliance_id {
-                if alliance_id > 0
-                    && matches!(
-                        state.portrait_state(ImageKind::Alliance, alliance_id),
-                        PortraitState::Failed
-                    )
-                    && ui.button("Retry alliance logo").clicked()
+        }
+
+        if !state.demo {
+            let detail_ids = state
+                .character_detail
+                .as_ready()
+                .map(|info| (info.corporation_id, info.alliance_id));
+            if let Some((corporation_id, alliance_id)) = detail_ids {
+                if matches!(
+                    state.portrait_state(ImageKind::Corporation, corporation_id),
+                    PortraitState::Failed
+                ) && ui.button("Retry corporation logo").clicked()
                 {
                     tracing::info!(
-                        "[PORTRAIT] logo retry requested from Characters view kind=alliance id={}",
-                        alliance_id
+                        "[PORTRAIT] logo retry requested from Characters view kind=corporation id={}",
+                        corporation_id
                     );
-                    state.request_portrait(ImageKind::Alliance, alliance_id);
+                    state.request_portrait(ImageKind::Corporation, corporation_id);
+                }
+                if let Some(alliance_id) = alliance_id {
+                    if alliance_id > 0
+                        && matches!(
+                            state.portrait_state(ImageKind::Alliance, alliance_id),
+                            PortraitState::Failed
+                        )
+                        && ui.button("Retry alliance logo").clicked()
+                    {
+                        tracing::info!(
+                            "[PORTRAIT] logo retry requested from Characters view kind=alliance id={}",
+                            alliance_id
+                        );
+                        state.request_portrait(ImageKind::Alliance, alliance_id);
+                    }
                 }
             }
         }
-    }
+    });
 
-    // --- Character details (status, attributes, implants, clones,
-    // standings), stacked below the public-info block ---
+    // --- Character details (status, attributes, implants, clones, standings) ---
     show_character_details(ui, state, resolver, cache);
 
     // --- Logout / delete (two-step inline confirm, no modal traps) ---
@@ -336,44 +340,43 @@ pub fn show(
         .active_character()
         .map(|c| (c.character_id, c.name.clone()))
     {
-        ui.separator();
-        ui.horizontal(|ui| {
-            // Logout/delete must not race an in-flight browser sign-in:
-            // removing tokens mid-callback would let the completion save
-            // fresh tokens for a character the user just removed.
-            let auth_idle = !state.auth.is_busy();
-            if ui
-                .add_enabled(
-                    auth_idle,
-                    egui::Button::new(format!("Log out {}", active.1)),
-                )
-                .clicked()
-            {
-                tracing::info!("[AUTH] logout requested character selected");
-                state.logout_requested_id = Some(active.0);
-                state.status_message = "Logout requested (token cleanup runs via F1).".to_string();
-            }
-            if state.confirm_delete_id == Some(active.0) {
+        widgets::card(ui, |ui| {
+            ui.horizontal(|ui| {
+                let auth_idle = !state.auth.is_busy();
                 if ui
-                    .add_enabled(auth_idle, egui::Button::new("Confirm delete"))
+                    .add_enabled(
+                        auth_idle,
+                        egui::Button::new(format!("Log out {}", active.1)),
+                    )
                     .clicked()
                 {
-                    tracing::warn!("[CHAR] delete confirmed character selected");
-                    state.delete_requested_id = Some(active.0);
-                    state.confirm_delete_id = None;
-                    state.remove_character(active.0);
-                    state.status_message = "Character removed locally.".to_string();
+                    tracing::info!("[AUTH] logout requested character selected");
+                    state.logout_requested_id = Some(active.0);
+                    state.status_message =
+                        "Logout requested (token cleanup runs via F1).".to_string();
                 }
-                if ui.button("Cancel").clicked() {
-                    state.confirm_delete_id = None;
+                if state.confirm_delete_id == Some(active.0) {
+                    if ui
+                        .add_enabled(auth_idle, egui::Button::new("Confirm delete"))
+                        .clicked()
+                    {
+                        tracing::warn!("[CHAR] delete confirmed character selected");
+                        state.delete_requested_id = Some(active.0);
+                        state.confirm_delete_id = None;
+                        state.remove_character(active.0);
+                        state.status_message = "Character removed locally.".to_string();
+                    }
+                    if ui.button("Cancel").clicked() {
+                        state.confirm_delete_id = None;
+                    }
+                } else if ui
+                    .add_enabled(auth_idle, egui::Button::new("Delete character..."))
+                    .clicked()
+                {
+                    tracing::info!("[CHAR] delete requested, awaiting confirmation");
+                    state.confirm_delete_id = Some(active.0);
                 }
-            } else if ui
-                .add_enabled(auth_idle, egui::Button::new("Delete character..."))
-                .clicked()
-            {
-                tracing::info!("[CHAR] delete requested, awaiting confirmation");
-                state.confirm_delete_id = Some(active.0);
-            }
+            });
         });
     }
 }
@@ -585,28 +588,40 @@ fn show_character_details(
 ) {
     let snapshot = state.character_details.clone();
     match snapshot {
-        LoadState::Loading => widgets::loading_panel(ui, "Loading character details..."),
-        LoadState::Empty => widgets::empty_panel(ui, "No character details yet."),
-        LoadState::Error(e) => {
+        LoadState::Loading => widgets::card(ui, |ui| {
+            widgets::loading_panel(ui, "Loading character details...");
+        }),
+        LoadState::Empty => widgets::card(ui, |ui| {
+            widgets::empty_panel(ui, "No character details yet.");
+        }),
+        LoadState::Error(e) => widgets::card(ui, |ui| {
             if widgets::error_panel_with_retry(ui, &e) {
                 tracing::warn!("[CHAR] retry requested after character detail load error");
                 state.retry_requested = true;
             }
-        }
+        }),
         LoadState::Ready(bundle) => {
             let panel_shown =
                 !state.demo && state.active_character_id.is_some() && bundle.needs_detail_stepup();
             if panel_shown {
-                tracing::debug!(
-                    "[CHAR] showing character detail re-authorize guidance (missing scopes)"
-                );
-                detail_reauthorize_panel(ui, state);
+                widgets::card(ui, |ui| {
+                    tracing::debug!(
+                        "[CHAR] showing character detail re-authorize guidance (missing scopes)"
+                    );
+                    detail_reauthorize_panel(ui, state);
+                });
             }
-            show_status_section(ui, &bundle, resolver, panel_shown);
-            show_attributes_section(ui, &bundle, panel_shown);
-            show_implants_section(ui, &bundle, resolver, panel_shown);
-            show_clones_section(ui, &bundle, resolver, panel_shown);
-            show_standings_section(ui, &bundle, resolver, panel_shown, state, cache);
+            ui.columns(2, |cols| {
+                widgets::card(&mut cols[0], |ui| {
+                    show_status_section(ui, &bundle, resolver, panel_shown);
+                    show_attributes_section(ui, &bundle, panel_shown);
+                    show_implants_section(ui, &bundle, resolver, panel_shown);
+                });
+                widgets::card(&mut cols[1], |ui| {
+                    show_clones_section(ui, &bundle, resolver, panel_shown);
+                    show_standings_section(ui, &bundle, resolver, panel_shown, state, cache);
+                });
+            });
         }
     }
 }
@@ -811,6 +826,13 @@ fn show_standings_section(
             for group in standing_groups(standings, resolver) {
                 ui.strong(group.heading);
                 for row in &group.rows {
+                    let val_color = if !row.standing.is_finite() || row.standing == 0.0 {
+                        super::theme::TEXT_SECONDARY
+                    } else if row.standing > 0.0 {
+                        super::theme::POSITIVE
+                    } else {
+                        super::theme::NEGATIVE
+                    };
                     match standing_icon_kind(&row.from_type) {
                         Some(kind) if row.from_id > 0 => {
                             ui.horizontal(|ui| {
@@ -822,11 +844,15 @@ fn show_standings_section(
                                     row.from_id,
                                     portraits::DETAIL_LOGO_PX,
                                 );
-                                ui.label(format!("{} {}", row.name, row.standing_text));
+                                ui.label(&row.name);
+                                ui.colored_label(val_color, &row.standing_text);
                             });
                         }
                         _ => {
-                            ui.label(format!("{} {}", row.name, row.standing_text));
+                            ui.horizontal(|ui| {
+                                ui.label(&row.name);
+                                ui.colored_label(val_color, &row.standing_text);
+                            });
                         }
                     }
                 }

@@ -186,8 +186,9 @@ fn main() -> eframe::Result<()> {
     eframe::run_native(
         "Mimir",
         options,
-        Box::new(move |_cc| {
+        Box::new(move |cc| {
             tracing::info!("[STARTUP] egui frame created");
+            mimir::ui::theme::apply(&cc.egui_ctx);
             let mut app = MimirApp::new(demo, log_buffer, runtime, backends);
             if let Some(view) = initial_view {
                 app.apply_initial_view(view);

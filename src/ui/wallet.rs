@@ -5,6 +5,7 @@ use std::collections::BTreeMap;
 
 use chrono::{DateTime, Utc};
 
+use super::theme;
 use super::widgets;
 use crate::app::state::{AppState, LoadState, WalletPeriod};
 use crate::esi::models::WalletJournalItem;
@@ -97,40 +98,17 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState, resolver: &NameResolver) {
     match snapshot {
         LoadState::Ready(w) => {
             let now = Utc::now();
-            ui.label(format!("Balance: {}", widgets::format_isk(w.balance)));
             if w.journal.is_empty() && w.transactions.is_empty() {
-                widgets::empty_panel(
-                    ui,
-                    "No wallet history yet. Press Ctrl+R (or Refresh) after signing in.",
-                );
+                widgets::card(ui, |ui| {
+                    ui.label(format!("Balance: {}", widgets::format_isk(w.balance)));
+                    widgets::empty_panel(
+                        ui,
+                        "No wallet history yet. Press Ctrl+R (or Refresh) after signing in.",
+                    );
+                });
                 return;
             }
 
-            ui.horizontal(|ui| {
-                ui.label("Period:");
-                for period in WalletPeriod::ALL {
-                    if ui
-                        .selectable_label(state.wallet_period == period, period.label())
-                        .clicked()
-                    {
-                        tracing::debug!("[WALLET] period filter {}", period.label());
-                        state.wallet_period = period;
-                    }
-                }
-            });
-
-            let focus = widgets::search_box(
-                ui,
-                &mut state.wallet_search,
-                "Filter journal/transactions (press / to focus, arrows move)",
-                state.focus_search,
-            );
-            state.text_input_focused |= focus;
-            if focus {
-                state.focus_search = false;
-            }
-
-            // --- Analytics summary (improvement over Flutter tables) ---
             let analytics = compute_analytics(
                 &w.journal,
                 now,
@@ -138,46 +116,115 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState, resolver: &NameResolver) {
                 state.active_character_id,
                 resolver,
             );
-            ui.separator();
-            ui.heading(format!("Analytics ({})", state.wallet_period.label()));
-            egui::Grid::new("wallet_analytics").show(ui, |ui| {
-                ui.label("Income");
-                ui.label(widgets::format_isk_signed(analytics.total_in));
-                ui.end_row();
-                ui.label("Expenses");
-                ui.label(widgets::format_isk_signed(-analytics.total_out));
-                ui.end_row();
-                ui.label("Net");
-                ui.label(widgets::format_isk_signed(analytics.net));
-                ui.end_row();
-                ui.label("Journal rows counted");
-                ui.label(format!("{}", analytics.counted));
-                ui.end_row();
+            ui.horizontal_wrapped(|ui| {
+                widgets::metric_tile(
+                    ui,
+                    "Balance",
+                    &widgets::format_isk(w.balance),
+                    theme::ACCENT_CYAN,
+                );
+                widgets::metric_tile(
+                    ui,
+                    "Income",
+                    &widgets::format_isk_signed(analytics.total_in),
+                    theme::POSITIVE,
+                );
+                widgets::metric_tile(
+                    ui,
+                    "Expenses",
+                    &widgets::format_isk_signed(-analytics.total_out),
+                    theme::NEGATIVE,
+                );
+                widgets::metric_tile(
+                    ui,
+                    "Net",
+                    &widgets::format_isk_signed(analytics.net),
+                    widgets::isk_color(analytics.net),
+                );
+            });
+            ui.add_space(4.0);
+
+            widgets::card(ui, |ui| {
+                ui.horizontal_wrapped(|ui| {
+                    ui.label("Period:");
+                    for period in WalletPeriod::ALL {
+                        if ui
+                            .selectable_label(state.wallet_period == period, period.label())
+                            .clicked()
+                        {
+                            tracing::debug!("[WALLET] period filter {}", period.label());
+                            state.wallet_period = period;
+                        }
+                    }
+                });
+                let focus = widgets::search_box(
+                    ui,
+                    &mut state.wallet_search,
+                    "Filter journal/transactions (press / to focus, arrows move)",
+                    state.focus_search,
+                );
+                state.text_input_focused |= focus;
+                if focus {
+                    state.focus_search = false;
+                }
             });
 
-            if !analytics.by_ref_type.is_empty() {
-                ui.label("By type (click to filter journal):");
-                let mut ref_rows: Vec<(String, f64)> = analytics.by_ref_type.clone();
-                ref_rows.truncate(8);
-                for (ref_type, net) in ref_rows {
-                    let selected = state.wallet_ref_filter.as_deref() == Some(ref_type.as_str());
-                    let label = format!("{}: {}", ref_type, widgets::format_isk_signed(net));
-                    if ui.selectable_label(selected, label).clicked() {
-                        tracing::debug!("[WALLET] ref-type filter {}", ref_type);
-                        state.wallet_ref_filter = if selected { None } else { Some(ref_type) };
+            // --- Two-column Analytics: By type + Top counterparties ---
+            ui.columns(2, |cols| {
+                widgets::card(&mut cols[0], |ui| {
+                    widgets::section_title(
+                        ui,
+                        &format!("Analytics ({}) — By type", state.wallet_period.label()),
+                    );
+                    ui.label(format!("Journal rows counted: {}", analytics.counted));
+                    if analytics.by_ref_type.is_empty() {
+                        ui.label("No journal rows in this period.");
+                    } else {
+                        ui.label(
+                            egui::RichText::new("By type (click to filter journal):")
+                                .color(theme::TEXT_SECONDARY),
+                        );
+                        let mut ref_rows: Vec<(String, f64)> = analytics.by_ref_type.clone();
+                        ref_rows.truncate(8);
+                        for (ref_type, net) in ref_rows {
+                            let selected =
+                                state.wallet_ref_filter.as_deref() == Some(ref_type.as_str());
+                            ui.horizontal(|ui| {
+                                if ui.selectable_label(selected, &ref_type).clicked() {
+                                    tracing::debug!("[WALLET] ref-type filter {}", ref_type);
+                                    state.wallet_ref_filter =
+                                        if selected { None } else { Some(ref_type) };
+                                }
+                                ui.colored_label(
+                                    widgets::isk_color(net),
+                                    widgets::format_isk_signed(net),
+                                );
+                            });
+                        }
+                        if state.wallet_ref_filter.is_some()
+                            && ui.button("Clear type filter").clicked()
+                        {
+                            state.wallet_ref_filter = None;
+                        }
                     }
-                }
-                if state.wallet_ref_filter.is_some() && ui.button("Clear type filter").clicked() {
-                    state.wallet_ref_filter = None;
-                }
-            }
-
-            if !analytics.top_counterparties.is_empty() {
-                ui.label("Top counterparties (resolved names):");
-                for (name, net) in &analytics.top_counterparties {
-                    ui.label(format!("{}: {}", name, widgets::format_isk_signed(*net)));
-                }
-            }
+                });
+                widgets::card(&mut cols[1], |ui| {
+                    widgets::section_title(ui, "Top counterparties (resolved names)");
+                    if analytics.top_counterparties.is_empty() {
+                        ui.label("No counterparties in this period.");
+                    } else {
+                        for (name, net) in &analytics.top_counterparties {
+                            ui.horizontal(|ui| {
+                                ui.label(name);
+                                ui.colored_label(
+                                    widgets::isk_color(*net),
+                                    widgets::format_isk_signed(*net),
+                                );
+                            });
+                        }
+                    }
+                });
+            });
 
             // --- Journal table ---
             let active_id = state.active_character_id;
@@ -223,95 +270,135 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState, resolver: &NameResolver) {
                 state.selected_journal_row = visible.len().saturating_sub(1);
             }
 
-            ui.separator();
-            ui.heading(format!("Journal ({} rows)", visible.len()));
-            if visible.is_empty() {
-                widgets::empty_panel(ui, "No journal entries match the current filters.");
-            } else {
-                egui::ScrollArea::vertical()
-                    .id_salt("wallet_scroll")
-                    .max_height(260.0)
-                    .show(ui, |ui| {
-                        egui::Grid::new("wallet_journal")
+            widgets::card(ui, |ui| {
+                widgets::section_title(ui, &format!("Journal ({} rows)", visible.len()));
+                ui.add_space(4.0);
+                if visible.is_empty() {
+                    widgets::empty_panel(ui, "No journal entries match the current filters.");
+                } else {
+                    egui::ScrollArea::vertical()
+                        .id_salt("wallet_scroll")
+                        .max_height(260.0)
+                        .show(ui, |ui| {
+                            egui::Grid::new("wallet_journal")
+                                .striped(true)
+                                .spacing([14.0, 5.0])
+                                .show(ui, |ui| {
+                                    for header in
+                                        ["Date", "Type", "Amount", "Counterparty", "Description"]
+                                    {
+                                        ui.label(
+                                            egui::RichText::new(header)
+                                                .strong()
+                                                .color(theme::TEXT_SECONDARY),
+                                        );
+                                    }
+                                    ui.end_row();
+                                    for (idx, row) in visible.iter().enumerate() {
+                                        let party = journal_counterparty_id(row, active_id)
+                                            .map(|id| resolver.name(id))
+                                            .unwrap_or_default();
+                                        let marker = if idx == state.selected_journal_row {
+                                            ">"
+                                        } else {
+                                            ""
+                                        };
+                                        ui.label(format!(
+                                            "{} {}",
+                                            marker,
+                                            widgets::format_date_short(&row.date)
+                                        ));
+                                        ui.label(&row.ref_type);
+                                        ui.colored_label(
+                                            widgets::isk_color(row.amount),
+                                            widgets::format_isk_signed(row.amount),
+                                        );
+                                        ui.label(&party);
+                                        ui.label(&row.description);
+                                        ui.end_row();
+                                    }
+                                });
+                        });
+                }
+            });
+
+            // --- Transactions table ---
+            widgets::card(ui, |ui| {
+                widgets::section_title(ui, "Transactions");
+                ui.add_space(4.0);
+                if w.transactions.is_empty() {
+                    widgets::empty_panel(ui, "No market transactions yet.");
+                } else {
+                    let mut visible_tx: Vec<_> = w
+                        .transactions
+                        .iter()
+                        .filter(|row| within_window(&row.date, now, state.wallet_period.days()))
+                        .filter(|row| {
+                            let item = resolver.name(row.type_id);
+                            let location = resolver.location_name(row.location_id);
+                            widgets::matches_search(&item, &query)
+                                || widgets::matches_search(&location, &query)
+                        })
+                        .collect();
+                    visible_tx.sort_by(|a, b| b.date.cmp(&a.date));
+                    if visible_tx.is_empty() {
+                        widgets::empty_panel(ui, "No transactions match the current filters.");
+                    } else {
+                        egui::Grid::new("wallet_transactions")
                             .striped(true)
+                            .spacing([14.0, 5.0])
                             .show(ui, |ui| {
-                                ui.label("Date");
-                                ui.label("Type");
-                                ui.label("Amount");
-                                ui.label("Counterparty");
-                                ui.label("Description");
+                                for header in
+                                    ["Date", "Side", "Item", "Quantity", "Unit Price", "Location"]
+                                {
+                                    ui.label(
+                                        egui::RichText::new(header)
+                                            .strong()
+                                            .color(theme::TEXT_SECONDARY),
+                                    );
+                                }
                                 ui.end_row();
-                                for (idx, row) in visible.iter().enumerate() {
-                                    let party = journal_counterparty_id(row, active_id)
-                                        .map(|id| resolver.name(id))
-                                        .unwrap_or_default();
-                                    let marker = if idx == state.selected_journal_row {
-                                        ">"
+                                for row in &visible_tx {
+                                    let item = resolver.name(row.type_id);
+                                    let location = resolver.location_name(row.location_id);
+                                    ui.label(widgets::format_date_short(&row.date));
+                                    if row.is_buy {
+                                        widgets::badge(
+                                            ui,
+                                            "BUY",
+                                            theme::NEGATIVE_BG,
+                                            theme::NEGATIVE,
+                                        );
                                     } else {
-                                        ""
-                                    };
-                                    ui.label(format!(
-                                        "{} {}",
-                                        marker,
-                                        widgets::format_date_short(&row.date)
-                                    ));
-                                    ui.label(&row.ref_type);
-                                    ui.label(widgets::format_isk_signed(row.amount));
-                                    ui.label(&party);
-                                    ui.label(&row.description);
+                                        widgets::badge(
+                                            ui,
+                                            "SELL",
+                                            theme::POSITIVE_BG,
+                                            theme::POSITIVE,
+                                        );
+                                    }
+                                    ui.label(item);
+                                    ui.label(widgets::format_count(row.quantity));
+                                    ui.label(widgets::format_isk(row.unit_price));
+                                    ui.label(location);
                                     ui.end_row();
                                 }
                             });
-                    });
-            }
-
-            // --- Transactions table ---
-            ui.separator();
-            ui.heading("Transactions");
-            if w.transactions.is_empty() {
-                widgets::empty_panel(ui, "No market transactions yet.");
-            } else {
-                let mut visible_tx: Vec<_> = w
-                    .transactions
-                    .iter()
-                    .filter(|row| within_window(&row.date, now, state.wallet_period.days()))
-                    .filter(|row| {
-                        let item = resolver.name(row.type_id);
-                        let location = resolver.location_name(row.location_id);
-                        widgets::matches_search(&item, &query)
-                            || widgets::matches_search(&location, &query)
-                    })
-                    .collect();
-                visible_tx.sort_by(|a, b| b.date.cmp(&a.date));
-                for row in &visible_tx {
-                    let item = resolver.name(row.type_id);
-                    let location = resolver.location_name(row.location_id);
-                    let verb = if row.is_buy { "Bought" } else { "Sold" };
-                    ui.label(format!(
-                        "{}: {} {} x{} at {} each ({})",
-                        widgets::format_date_short(&row.date),
-                        verb,
-                        item,
-                        row.quantity,
-                        widgets::format_isk(row.unit_price),
-                        location
-                    ));
+                    }
                 }
-                if visible_tx.is_empty() {
-                    widgets::empty_panel(ui, "No transactions match the current filters.");
-                }
-            }
+            });
 
             if !w.loyalty.is_empty() {
-                ui.separator();
-                ui.heading("Loyalty points");
-                for row in &w.loyalty {
-                    ui.label(format!(
-                        "{}: {} LP",
-                        resolver.name(row.corporation_id),
-                        row.loyalty_points
-                    ));
-                }
+                widgets::card(ui, |ui| {
+                    widgets::section_title(ui, "Loyalty points");
+                    for row in &w.loyalty {
+                        ui.label(format!(
+                            "{}: {} LP",
+                            resolver.name(row.corporation_id),
+                            widgets::format_count(row.loyalty_points)
+                        ));
+                    }
+                });
             }
         }
         LoadState::Loading => widgets::loading_panel(ui, "Loading wallet..."),

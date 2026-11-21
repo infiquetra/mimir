@@ -471,72 +471,90 @@ fn show_types(ui: &mut egui::Ui, state: &mut AppState, reference: &ExplorationRe
         widgets::empty_panel(ui, "No wormhole reference data.");
         return;
     }
-    ui.horizontal(|ui| {
-        for filter in DestinationFilter::ALL {
-            let selected = state.exploration_destination == Some(filter);
-            if ui.selectable_label(selected, filter.label()).clicked() {
-                state.exploration_destination = if selected { None } else { Some(filter) };
+    widgets::card(ui, |ui| {
+        ui.horizontal_wrapped(|ui| {
+            for filter in DestinationFilter::ALL {
+                let selected = state.exploration_destination == Some(filter);
+                if ui.selectable_label(selected, filter.label()).clicked() {
+                    state.exploration_destination = if selected { None } else { Some(filter) };
+                    tracing::info!(
+                        "[EXPLORE] destination filter {:?}",
+                        state.exploration_destination
+                    );
+                }
+            }
+            if ui
+                .selectable_label(state.exploration_capital_only, "Capital-size")
+                .clicked()
+            {
+                state.exploration_capital_only = !state.exploration_capital_only;
                 tracing::info!(
-                    "[EXPLORE] destination filter {:?}",
-                    state.exploration_destination
+                    "[EXPLORE] capital filter {}",
+                    state.exploration_capital_only
                 );
             }
-        }
-        if ui
-            .selectable_label(state.exploration_capital_only, "Capital-size")
-            .clicked()
-        {
-            state.exploration_capital_only = !state.exploration_capital_only;
-            tracing::info!(
-                "[EXPLORE] capital filter {}",
-                state.exploration_capital_only
-            );
-        }
+        });
+        ui.label(
+            egui::RichText::new(CAPITAL_QUALIFICATION)
+                .size(12.0)
+                .color(super::theme::TEXT_SECONDARY),
+        );
     });
-    ui.label(CAPITAL_QUALIFICATION);
     let groups = filtered_types(
         reference,
         &state.exploration_search,
         state.exploration_destination,
         state.exploration_capital_only,
     );
-    if groups.is_empty() {
-        widgets::empty_panel(ui, "No wormhole types match.");
-    } else {
-        let (code_groups, type_count) = group_result_counts(&groups);
-        let has_multiple = groups.iter().any(|g| g.variants.len() > 1);
-        if has_multiple {
-            ui.label(format!(
-                "{} code groups ({} types)",
-                code_groups, type_count
-            ));
-        } else {
-            ui.label(format!("{} code groups", code_groups));
-        }
-        let shown = code_groups.min(EXPLORATION_RENDER_MAX);
-        if code_groups > EXPLORATION_RENDER_MAX {
-            ui.label(format!("Showing {} of {} code groups.", shown, code_groups));
-        }
-        for group in groups.iter().take(EXPLORATION_RENDER_MAX) {
-            let mut row = group.code.clone();
-            if let Some(label) = shared_destination_label(group, &reference.types) {
-                row.push_str(&format!(" \u{00B7} {}", label));
+    ui.columns(2, |cols| {
+        widgets::card(&mut cols[0], |ui| {
+            if groups.is_empty() {
+                widgets::empty_panel(ui, "No wormhole types match.");
+            } else {
+                let (code_groups, type_count) = group_result_counts(&groups);
+                let has_multiple = groups.iter().any(|g| g.variants.len() > 1);
+                if has_multiple {
+                    ui.label(format!(
+                        "{} code groups ({} types)",
+                        code_groups, type_count
+                    ));
+                } else {
+                    ui.label(format!("{} code groups", code_groups));
+                }
+                let shown = code_groups.min(EXPLORATION_RENDER_MAX);
+                if code_groups > EXPLORATION_RENDER_MAX {
+                    ui.label(format!("Showing {} of {} code groups.", shown, code_groups));
+                }
+                egui::ScrollArea::vertical()
+                    .id_salt("explore_types_scroll")
+                    .max_height(460.0)
+                    .show(ui, |ui| {
+                        for group in groups.iter().take(EXPLORATION_RENDER_MAX) {
+                            let mut row = group.code.clone();
+                            if let Some(label) = shared_destination_label(group, &reference.types) {
+                                row.push_str(&format!(" \u{00B7} {}", label));
+                            }
+                            if group.variants.len() > 1 {
+                                row.push_str(&format!(
+                                    " \u{00B7} {} variants",
+                                    group.variants.len()
+                                ));
+                            }
+                            let selected =
+                                state.exploration_selected_code.as_deref() == Some(&group.code);
+                            if ui.selectable_label(selected, row).clicked() {
+                                tracing::info!("[EXPLORE] selected wormhole code={}", group.code);
+                                state.exploration_selected_code = Some(group.code.clone());
+                            }
+                        }
+                    });
             }
-            if group.variants.len() > 1 {
-                row.push_str(&format!(" \u{00B7} {} variants", group.variants.len()));
-            }
-            let selected = state.exploration_selected_code.as_deref() == Some(&group.code);
-            if ui.selectable_label(selected, row).clicked() {
-                tracing::info!("[EXPLORE] selected wormhole code={}", group.code);
-                state.exploration_selected_code = Some(group.code.clone());
-            }
-        }
-    }
-    ui.separator();
-    match &state.exploration_selected_code {
-        Some(code) => show_type_detail(ui, reference, code),
-        None => widgets::empty_panel(ui, "Select a wormhole code for details."),
-    }
+        });
+        widgets::card(&mut cols[1], |ui| match &state.exploration_selected_code {
+            Some(code) => show_type_detail(ui, reference, code),
+            None => widgets::empty_panel(ui, "Select a wormhole code for details."),
+        });
+    });
 }
 
 #[allow(clippy::too_many_lines)]
@@ -546,29 +564,41 @@ fn show_systems(ui: &mut egui::Ui, state: &mut AppState, reference: &Exploration
         return;
     }
     let systems = filter_systems(&reference.systems, &state.exploration_search);
-    if systems.is_empty() {
-        widgets::empty_panel(ui, "No systems match.");
-    } else {
-        let total = systems.len();
-        ui.label(format!("{} systems", total));
-        let shown = total.min(EXPLORATION_RENDER_MAX);
-        if total > EXPLORATION_RENDER_MAX {
-            ui.label(format!("Showing {} of {} systems.", shown, total));
-        }
-        for system in systems.iter().take(EXPLORATION_RENDER_MAX) {
-            let row = format!("{} \u{00B7} {}", system.name, system.security_label());
-            let selected = state.exploration_selected_system_id == Some(system.system_id);
-            if ui.selectable_label(selected, row).clicked() {
-                tracing::info!("[EXPLORE] selected system name={}", system.name);
-                state.exploration_selected_system_id = Some(system.system_id);
+    ui.columns(2, |cols| {
+        widgets::card(&mut cols[0], |ui| {
+            if systems.is_empty() {
+                widgets::empty_panel(ui, "No systems match.");
+            } else {
+                let total = systems.len();
+                ui.label(format!("{} systems", total));
+                let shown = total.min(EXPLORATION_RENDER_MAX);
+                if total > EXPLORATION_RENDER_MAX {
+                    ui.label(format!("Showing {} of {} systems.", shown, total));
+                }
+                egui::ScrollArea::vertical()
+                    .id_salt("explore_systems_scroll")
+                    .max_height(460.0)
+                    .show(ui, |ui| {
+                        for system in systems.iter().take(EXPLORATION_RENDER_MAX) {
+                            let row =
+                                format!("{} \u{00B7} {}", system.name, system.security_label());
+                            let selected =
+                                state.exploration_selected_system_id == Some(system.system_id);
+                            if ui.selectable_label(selected, row).clicked() {
+                                tracing::info!("[EXPLORE] selected system name={}", system.name);
+                                state.exploration_selected_system_id = Some(system.system_id);
+                            }
+                        }
+                    });
             }
-        }
-    }
-    ui.separator();
-    match state.exploration_selected_system_id {
-        Some(system_id) => show_system_detail(ui, reference, system_id),
-        None => widgets::empty_panel(ui, "Select a system for details."),
-    }
+        });
+        widgets::card(&mut cols[1], |ui| {
+            match state.exploration_selected_system_id {
+                Some(system_id) => show_system_detail(ui, reference, system_id),
+                None => widgets::empty_panel(ui, "Select a system for details."),
+            }
+        });
+    });
 }
 
 #[allow(clippy::too_many_lines)]
@@ -578,50 +608,68 @@ fn show_effects(ui: &mut egui::Ui, state: &mut AppState, reference: &Exploration
         return;
     }
     let effects = filter_effects(&reference.effects, &state.exploration_search);
-    if effects.is_empty() {
-        widgets::empty_panel(ui, "No effects match.");
-    } else {
-        let total = effects.len();
-        ui.label(format!("{} effects", total));
-        let shown = total.min(EXPLORATION_RENDER_MAX);
-        if total > EXPLORATION_RENDER_MAX {
-            ui.label(format!("Showing {} of {} effects.", shown, total));
-        }
-        for family in [
-            EffectFamily::Pulsar,
-            EffectFamily::BlackHole,
-            EffectFamily::CataclysmicVariable,
-            EffectFamily::Magnetar,
-            EffectFamily::RedGiant,
-            EffectFamily::WolfRayet,
-        ] {
-            let in_family: Vec<&&RefEffect> =
-                effects.iter().filter(|e| e.family == family).collect();
-            if in_family.is_empty() {
-                continue;
-            }
-            ui.heading(family.label());
-            for effect in in_family.iter().take(EXPLORATION_RENDER_MAX) {
-                let selected = state.exploration_selected_family == Some(family)
-                    && state.exploration_selected_strength.clamp(1, 6) == effect.strength;
-                if ui
-                    .selectable_label(selected, format!("Strength {}", effect.strength))
-                    .clicked()
-                {
-                    tracing::info!(
-                        "[EXPLORE] selected effect family={} strength={}",
-                        family.label(),
-                        effect.strength
-                    );
-                    state.exploration_selected_family = Some(family);
-                    state.exploration_selected_strength = effect.strength.clamp(1, 6);
+    ui.columns(2, |cols| {
+        widgets::card(&mut cols[0], |ui| {
+            if effects.is_empty() {
+                widgets::empty_panel(ui, "No effects match.");
+            } else {
+                let total = effects.len();
+                ui.label(format!("{} effects", total));
+                let shown = total.min(EXPLORATION_RENDER_MAX);
+                if total > EXPLORATION_RENDER_MAX {
+                    ui.label(format!("Showing {} of {} effects.", shown, total));
                 }
+                egui::ScrollArea::vertical()
+                    .id_salt("explore_effects_scroll")
+                    .max_height(460.0)
+                    .show(ui, |ui| {
+                        for family in [
+                            EffectFamily::Pulsar,
+                            EffectFamily::BlackHole,
+                            EffectFamily::CataclysmicVariable,
+                            EffectFamily::Magnetar,
+                            EffectFamily::RedGiant,
+                            EffectFamily::WolfRayet,
+                        ] {
+                            let in_family: Vec<&&RefEffect> =
+                                effects.iter().filter(|e| e.family == family).collect();
+                            if in_family.is_empty() {
+                                continue;
+                            }
+                            ui.heading(family.label());
+                            for effect in in_family.iter().take(EXPLORATION_RENDER_MAX) {
+                                let selected = state.exploration_selected_family == Some(family)
+                                    && state.exploration_selected_strength.clamp(1, 6)
+                                        == effect.strength;
+                                if ui
+                                    .selectable_label(
+                                        selected,
+                                        format!("Strength {}", effect.strength),
+                                    )
+                                    .clicked()
+                                {
+                                    tracing::info!(
+                                        "[EXPLORE] selected effect family={} strength={}",
+                                        family.label(),
+                                        effect.strength
+                                    );
+                                    state.exploration_selected_family = Some(family);
+                                    state.exploration_selected_strength =
+                                        effect.strength.clamp(1, 6);
+                                }
+                            }
+                        }
+                    });
             }
-        }
-    }
-    if let Some(family) = state.exploration_selected_family {
-        show_effect_detail(ui, reference, family, state.exploration_selected_strength);
-    }
+        });
+        widgets::card(&mut cols[1], |ui| {
+            if let Some(family) = state.exploration_selected_family {
+                show_effect_detail(ui, reference, family, state.exploration_selected_strength);
+            } else {
+                widgets::empty_panel(ui, "Select a wormhole effect for details.");
+            }
+        });
+    });
 }
 
 pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
@@ -654,24 +702,30 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
         }
         LoadState::Ready(data) => Arc::clone(&data.reference),
     };
-    ui.label(format!(
-        "Reference data: CCP SDE {} (bundled, offline)",
-        reference.manifest.sde_build
-    ));
-    let hint = search_hint(state.exploration_section);
-    let focus = widgets::search_box(ui, &mut state.exploration_search, hint, state.focus_search);
-    state.text_input_focused |= focus;
-    if focus {
-        state.focus_search = false;
-    }
-    ui.horizontal(|ui| {
-        for section in ExplorationSection::ALL {
-            let selected = state.exploration_section == section;
-            if ui.selectable_label(selected, section.label()).clicked() {
-                tracing::info!("[EXPLORE] section {}", section.label());
-                state.exploration_section = section;
-            }
+    widgets::card(ui, |ui| {
+        ui.label(
+            egui::RichText::new(format!(
+                "Reference data: CCP SDE {} (bundled, offline)",
+                reference.manifest.sde_build
+            ))
+            .color(super::theme::TEXT_SECONDARY),
+        );
+        let hint = search_hint(state.exploration_section);
+        let focus =
+            widgets::search_box(ui, &mut state.exploration_search, hint, state.focus_search);
+        state.text_input_focused |= focus;
+        if focus {
+            state.focus_search = false;
         }
+        ui.horizontal_wrapped(|ui| {
+            for section in ExplorationSection::ALL {
+                let selected = state.exploration_section == section;
+                if ui.selectable_label(selected, section.label()).clicked() {
+                    tracing::info!("[EXPLORE] section {}", section.label());
+                    state.exploration_section = section;
+                }
+            }
+        });
     });
     match state.exploration_section {
         ExplorationSection::Types => show_types(ui, state, &reference),
