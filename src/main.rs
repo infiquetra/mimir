@@ -5,11 +5,37 @@ use std::io::Write;
 use std::sync::{Arc, Mutex};
 
 use mimir::app::shell::{Backends, MimirApp};
+use mimir::app::state::View;
 use mimir::auth::jwt_verify::JwtVerifier;
 use mimir::auth::token_store::TokenStore;
 use mimir::portraits::PortraitService;
 use mimir::storage::db;
 use mimir::EsiClient;
+
+/// Parse `--view <name>` or `--view=<name>` from CLI arguments.
+fn parse_view_arg(args: &[String]) -> Option<View> {
+    let mut iter = args.iter().skip(1);
+    while let Some(arg) = iter.next() {
+        let raw = if arg == "--view" {
+            match iter.next() {
+                Some(val) => val.as_str(),
+                None => {
+                    tracing::warn!("[STARTUP] --view flag missing value");
+                    return None;
+                }
+            }
+        } else if let Some(val) = arg.strip_prefix("--view=") {
+            val
+        } else {
+            continue;
+        };
+        if let Some(view) = View::from_cli_name(raw) {
+            return Some(view);
+        }
+        tracing::warn!("[STARTUP] ignoring unknown --view value {:?}", raw);
+    }
+    None
+}
 
 /// Writer that mirrors formatted log lines into the in-app log buffer.
 struct BufferWriter(Arc<Mutex<Vec<String>>>);
@@ -60,10 +86,17 @@ fn init_tracing(log_buffer: Arc<Mutex<Vec<String>>>) {
 }
 
 fn main() -> eframe::Result<()> {
-    let demo = mimir::demo::data::demo_requested_from_process();
+    let args: Vec<String> = std::env::args().collect();
+    let demo =
+        mimir::demo::data::is_demo_requested(&args, std::env::var("MIMIR_DEMO").ok().as_deref());
+    let initial_view = parse_view_arg(&args);
     let log_buffer: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
     init_tracing(log_buffer.clone());
-    tracing::info!("[STARTUP] Mimir starting demo={}", demo);
+    tracing::info!(
+        "[STARTUP] Mimir starting demo={} initial_view={:?}",
+        demo,
+        initial_view.map(|v| v.label())
+    );
 
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
@@ -75,13 +108,22 @@ fn main() -> eframe::Result<()> {
 
     // Open the database eagerly so schema errors surface at startup, then
     // hand the shared connection plus token store and ESI client to the app.
+    // Demo mode uses an isolated in-memory database so live storage is untouched.
     // Token values are never logged.
-    let backends = match db::open_db(&db::db_path()) {
+    let db_result = if demo {
+        tracing::info!("[DEMO] using in-memory database; live database path untouched");
+        db::open_in_memory()
+    } else {
+        db::open_db(&db::db_path())
+    };
+    let backends = match db_result {
         Ok(conn) => {
-            tracing::info!(
-                "[DB] startup database open ok path={}",
-                db::db_path().display()
-            );
+            if !demo {
+                tracing::info!(
+                    "[DB] startup database open ok path={}",
+                    db::db_path().display()
+                );
+            }
             let token_store = Arc::new(TokenStore::new(db::app_data_dir()));
             // One shared verifier so login, step-up, and refresh see a
             // single JWKS cache. Construction makes no network call;
@@ -146,7 +188,36 @@ fn main() -> eframe::Result<()> {
         options,
         Box::new(move |_cc| {
             tracing::info!("[STARTUP] egui frame created");
-            Ok(Box::new(MimirApp::new(demo, log_buffer, runtime, backends)))
+            let mut app = MimirApp::new(demo, log_buffer, runtime, backends);
+            if let Some(view) = initial_view {
+                app.apply_initial_view(view);
+            }
+            Ok(Box::new(app))
         }),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_view_arg_supports_space_and_equals_forms() {
+        let s = |v: &[&str]| v.iter().map(|x| (*x).to_string()).collect::<Vec<_>>();
+        assert_eq!(
+            parse_view_arg(&s(&["mimir", "--demo", "--view", "fittings"])),
+            Some(View::Fittings)
+        );
+        assert_eq!(
+            parse_view_arg(&s(&["mimir", "--view=Planets"])),
+            Some(View::Planets)
+        );
+        assert_eq!(
+            parse_view_arg(&s(&["mimir", "--view", "PI"])),
+            Some(View::Planets)
+        );
+        assert_eq!(parse_view_arg(&s(&["mimir", "--view", "unknown"])), None);
+        assert_eq!(parse_view_arg(&s(&["mimir", "--view"])), None);
+        assert_eq!(parse_view_arg(&s(&["mimir"])), None);
+    }
 }

@@ -4,19 +4,21 @@
 use crate::app::state::{AppState, AuthState, View};
 
 /// Bracketed feature tags the log filter can select (design section 1).
-pub const LOG_TAGS: [&str; 15] = [
+pub const LOG_TAGS: [&str; 17] = [
     "[AUTH]",
     "[ESI]",
     "[ASSETS]",
     "[WALLET]",
     "[SKILLS]",
     "[CHAR]",
+    "[MARKET]",
     "[INDUSTRY]",
     "[PI]",
     "[FITTING]",
     "[EXPLORE]",
     "[DB]",
     "[DEMO]",
+    "[PORTRAIT]",
     "[UI]",
     "[STARTUP]",
     "[PLANS]",
@@ -83,8 +85,7 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
         if demo {
             crate::demo::data::seed_demo_state(state);
         } else {
-            state.status_message =
-                "Demo off. Live characters load after sign-in/refresh.".to_string();
+            state.clear_for_demo_exit();
         }
     }
     ui.horizontal(|ui| {
@@ -203,10 +204,13 @@ mod tests {
         assert_eq!(filter_log_lines(&[], "", None).len(), 0);
         assert!(LOG_TAGS.contains(&"[WALLET]"));
         assert!(LOG_TAGS.contains(&"[ASSETS]"));
+        assert!(LOG_TAGS.contains(&"[MARKET]"));
         assert!(LOG_TAGS.contains(&"[INDUSTRY]"));
         assert!(LOG_TAGS.contains(&"[PI]"));
         assert!(LOG_TAGS.contains(&"[FITTING]"));
         assert!(LOG_TAGS.contains(&"[EXPLORE]"));
+        assert!(LOG_TAGS.contains(&"[PORTRAIT]"));
         assert!(LOG_TAGS.contains(&"[PLANS]"));
+        assert_eq!(LOG_TAGS.len(), 17);
     }
 }

@@ -29,6 +29,19 @@
 
 ---
 
+## 2026-11-21
+
+### Head-of-queue assumptions, asymmetric wallet counterparties, and keyboard-focus timing gaps in the Rust port
+
+**Author.** Mimir audit and cleanup pass
+**Context.** Post-PR #621 screenshot smoke testing and source auditing caught several subtle UI/state bugs across `dashboard`, `skills`, `wallet`, `characters`, `settings`, `shell`, and `endpoints`.
+**Evidence.** (1) Demo dashboard screenshots showed `"Gunnery level 5 — finished"` in Training even though later items in `assets/demo/skillqueue.json` were still running: `src/ui/dashboard.rs:198` rendered `queue.iter().take(3)` without skipping finished entries, `src/ui/skills.rs` hardcoded `ProgressBar` on `idx == 0`, and `shell.rs` (`load_cached_state`, `BackendMsg::Refreshed`) read `.first()` without filtering out expired `finish_date` rows. Extracted shared `active_queue_index`, `active_or_first_queue_item`, and `upcoming_queue_items` helpers in `src/ui/skills.rs:62-93`. (2) `src/ui/wallet.rs` `compute_analytics` already picked the non-self party via `[second_party_id, first_party_id]`, while the journal table and search filter (`wallet.rs:188,237`) still read `second_party_id` directly — displaying and matching the active character's own name on incoming bounties and sales — and Transactions ignored `state.wallet_period`. Extracted `journal_counterparty_id` (`wallet.rs:40`). (3) Combined wealth on `dashboard.rs` summed `state.summaries.values()` instead of iterating `state.characters` (ignoring fallback to active wallet balance when summary is absent and trusting map retention implicitly; replaced by `combined_wallet_balance` at `dashboard.rs:19`). (4) `shell::collect_keys` (`src/app/shell.rs:3685`) checked only `state.text_input_focused`, risking a single-frame shortcut swallow on newly focused non-`search_box` inputs (` || ctx.wants_keyboard_input()` fixes it), `src/ui/characters.rs:64` still cited `"Settings (key 5)"` (key 5 is Assets; Settings is key 0), and `LOG_TAGS` (`src/ui/settings.rs:7`) omitted `[MARKET]` and `[PORTRAIT]`.
+**Mechanism.** Helpers authored earlier for one block (`compute_analytics` counterparty selection, `currently_training` queue head filtering, `MARKET_MAX_PAGES` pagination caps) were not yet shared with sibling paths in the same module or across `dashboard`/`shell`.
+**Fix.** Extracted shared pure helpers with unit tests per fix, aligned UI/background consumers on `fix/rust-audit-and-cleanup`, retired 21 unreferenced Flutter PNGs, and replaced Flutter instructions in `CLAUDE.md`, `GEMINI.md`, and `tasks/todo.md`.
+**Validation.** `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `cargo test`, `cargo build`, and headless Xvfb demo screenshots (`--demo --view dashboard/wallet/fittings`) confirming zero `mimir.db` mutation and corrected training & counterparty output.
+**Generalizable rule.** Whenever a domain invariant (active queue item, wallet counterparty, keyboard-input guard, page cap, or active-roster boundary) already lives in one consumer helper, promote it to a shared pure helper immediately rather than letting sibling call sites diverge onto `.first()`, `.second_party_id`, or unbounded loops.
+**Refs.** `src/ui/skills.rs`, `src/ui/dashboard.rs`, `src/ui/wallet.rs`, `src/ui/characters.rs`, `src/ui/settings.rs`, `src/app/state.rs`, `src/app/shell.rs`, `src/esi/endpoints.rs`, `src/main.rs`, DECISIONS 2026-11-21 entry.
+
 ## 2026-11-19
 
 ### A complete-looking plain-modifier census can still be undisclosably incomplete — propulsion velocity, one dual-entry family, and a count that truncates only after bonusing

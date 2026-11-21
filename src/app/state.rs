@@ -89,6 +89,28 @@ impl View {
     pub fn previous(&self) -> View {
         View::ALL[(self.index() + View::ALL.len() - 1) % View::ALL.len()]
     }
+
+    /// Match a CLI `--view` argument case-insensitively by label or shorthand.
+    pub fn from_cli_name(input: &str) -> Option<View> {
+        let normalized = input.trim().to_ascii_lowercase();
+        if let Some(exact) = View::ALL
+            .iter()
+            .find(|v| v.label().eq_ignore_ascii_case(&normalized))
+        {
+            return Some(*exact);
+        }
+        match normalized.as_str() {
+            "dash" => Some(View::Dashboard),
+            "char" | "character" | "chars" => Some(View::Characters),
+            "skill" => Some(View::Skills),
+            "asset" => Some(View::Assets),
+            "planet" | "pi" => Some(View::Planets),
+            "fit" | "fitting" => Some(View::Fittings),
+            "setting" => Some(View::Settings),
+            "explore" => Some(View::Exploration),
+            _ => None,
+        }
+    }
 }
 
 /// Per-view load state (ports the Flutter Empty/Loading/Error contract).
@@ -1093,6 +1115,22 @@ impl AppState {
                 // never carry it across a switch. Same-character
                 // reselect keeps it, like the assets grant flag.
                 self.structures_needs_reauthorize = false;
+                // Wallet and public character info belong to the active
+                // character; never show the previous character's balance or
+                // overview while the newly selected character loads.
+                tracing::debug!(
+                    "[WALLET] clearing wallet on character switch from={} to={}",
+                    previous_id,
+                    character_id
+                );
+                self.wallet = LoadState::Loading;
+                tracing::debug!(
+                    "[CHAR] clearing character public info on character switch from={} to={}",
+                    previous_id,
+                    character_id
+                );
+                self.character_detail = LoadState::Loading;
+                self.dashboard = LoadState::Loading;
                 // Same ownership argument as assets: detail sections are
                 // fetched tolerantly, so reset at the switch boundary.
                 tracing::debug!(
@@ -1349,6 +1387,11 @@ impl AppState {
             // the is_empty branch further down overrides this to Empty.
             tracing::debug!("[ASSETS] clearing assets of removed active character");
             self.assets = LoadState::Loading;
+            tracing::debug!("[WALLET] clearing wallet of removed active character");
+            self.wallet = LoadState::Loading;
+            tracing::debug!("[CHAR] clearing character public info of removed active character");
+            self.character_detail = LoadState::Loading;
+            self.dashboard = LoadState::Loading;
             tracing::debug!("[CHAR] clearing character details of removed active character");
             self.character_details = LoadState::Loading;
             tracing::debug!("[SKILLS] clearing skills of removed active character");
@@ -1478,6 +1521,76 @@ impl AppState {
             self.skill_plan_picker_search.clear();
             self.dashboard = LoadState::Empty;
         }
+    }
+
+    /// Reset all demo characters, per-character caches, and drafts when
+    /// toggling demo mode off cleanly while preserving character-independent
+    /// static reference data (`exploration`, `skill_catalogue_type_ids`).
+    pub fn clear_for_demo_exit(&mut self) {
+        tracing::info!("[DEMO] clearing demo state on demo exit");
+        self.demo = false;
+        self.characters.clear();
+        self.active_character_id = None;
+        self.summaries.clear();
+        self.demo_skill_plans.clear();
+        self.portraits.clear();
+        self.portrait_requests.clear();
+        self.confirm_delete_id = None;
+        self.selected_queue_row = 0;
+        self.selected_journal_row = 0;
+        self.skills = LoadState::Empty;
+        self.wallet = LoadState::Empty;
+        self.assets = LoadState::Empty;
+        self.assets_needs_reauthorize = false;
+        self.structures_needs_reauthorize = false;
+        self.character_detail = LoadState::Empty;
+        self.character_details = LoadState::Empty;
+        self.market = LoadState::Empty;
+        self.market_candidates.clear();
+        self.market_lookup_message = None;
+        self.market_generation = self.market_generation.wrapping_add(1);
+        self.industry = LoadState::Empty;
+        self.planetary = LoadState::Empty;
+        self.planetary_selected_planet_id = None;
+        self.planetary_detail_fetch_requested = false;
+        self.planetary_generation = self.planetary_generation.wrapping_add(1);
+        self.fittings = LoadState::Empty;
+        self.fittings_selected_fitting_id = None;
+        self.fittings_import_text.clear();
+        self.fittings_imported = None;
+        self.fittings_import_error = None;
+        self.fittings_import_owner = None;
+        self.fittings_editor_add_name.clear();
+        self.fittings_editor_add_quantity.clear();
+        self.fittings_editor_error = None;
+        self.fittings_import_edited = false;
+        self.fittings_editor_quantity.clear();
+        self.fittings_editor_charge.clear();
+        self.fittings_editor_name = None;
+        self.fittings_browser_section = ImportSection::High;
+        self.fittings_browser_search.clear();
+        self.fittings_browser_rows.clear();
+        self.fittings_browser_rows_section = None;
+        self.fittings_ship_search.clear();
+        self.fittings_ship_change_search.clear();
+        self.fittings_ship_rows.clear();
+        self.fittings_ship_rows_built = false;
+        self.fittings_write_needs_reauthorize = false;
+        self.fittings_write_confirm = None;
+        self.fittings_write_requested = None;
+        self.fittings_pending_selection = None;
+        self.skill_plans = LoadState::Empty;
+        self.skill_plans_owner = None;
+        self.selected_skill_plan_id = None;
+        self.skill_plan_editor = None;
+        self.skill_plan_name_draft.clear();
+        self.skill_plan_description_draft.clear();
+        self.skill_plan_confirm = None;
+        self.skill_plan_action = None;
+        self.skill_plan_picker_open = false;
+        self.skill_plan_picker_search.clear();
+        self.dashboard = LoadState::Empty;
+        self.status_message = "Demo off. Live characters load after sign-in/refresh.".to_string();
     }
 
     pub fn switch_view(&mut self, view: View) {
@@ -4141,5 +4254,98 @@ mod tests {
         assert!(state.portraits.is_empty());
         assert!(state.portrait_requests.is_empty());
         assert_eq!(state.skill_catalogue_type_ids.len(), 495);
+    }
+
+    #[test]
+    fn cli_view_names_and_aliases_resolve_case_insensitively() {
+        for view in View::ALL {
+            assert_eq!(View::from_cli_name(view.label()), Some(view));
+            assert_eq!(
+                View::from_cli_name(&view.label().to_ascii_lowercase()),
+                Some(view)
+            );
+        }
+        assert_eq!(View::from_cli_name("CHAR"), Some(View::Characters));
+        assert_eq!(View::from_cli_name("character"), Some(View::Characters));
+        assert_eq!(View::from_cli_name("skill"), Some(View::Skills));
+        assert_eq!(View::from_cli_name("asset"), Some(View::Assets));
+        assert_eq!(View::from_cli_name("planet"), Some(View::Planets));
+        assert_eq!(View::from_cli_name("pi"), Some(View::Planets));
+        assert_eq!(View::from_cli_name("fit"), Some(View::Fittings));
+        assert_eq!(View::from_cli_name("fitting"), Some(View::Fittings));
+        assert_eq!(View::from_cli_name("explore"), Some(View::Exploration));
+        assert_eq!(View::from_cli_name("unknown-view"), None);
+    }
+
+    #[test]
+    fn switch_and_active_removal_reset_wallet_detail_and_dashboard() {
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "One"), row(2, "Two")];
+        state.set_active_character(1);
+        state.wallet = LoadState::Ready(WalletData {
+            balance: 500.0,
+            ..Default::default()
+        });
+        state.character_detail = LoadState::Ready(CharacterPublicInfo {
+            name: "One".to_string(),
+            corporation_id: 1000166,
+            ..Default::default()
+        });
+        state.dashboard = LoadState::Ready(CharacterPublicInfo {
+            name: "One".to_string(),
+            corporation_id: 1000166,
+            ..Default::default()
+        });
+
+        // Reselecting the active character preserves loaded state.
+        state.set_active_character(1);
+        assert!(state.wallet.is_ready());
+        assert!(state.character_detail.is_ready());
+        assert!(state.dashboard.is_ready());
+
+        // Switching away resets wallet, character_detail, and dashboard.
+        state.set_active_character(2);
+        assert!(matches!(state.wallet, LoadState::Loading));
+        assert!(matches!(state.character_detail, LoadState::Loading));
+        assert!(matches!(state.dashboard, LoadState::Loading));
+
+        // Seed character 2 data, then remove active character 2 while 1 remains.
+        state.wallet = LoadState::Ready(WalletData {
+            balance: 900.0,
+            ..Default::default()
+        });
+        state.character_detail = LoadState::Ready(CharacterPublicInfo::default());
+        state.dashboard = LoadState::Ready(CharacterPublicInfo::default());
+        state.remove_character(2);
+        assert_eq!(state.active_character_id, Some(1));
+        assert!(matches!(state.wallet, LoadState::Loading));
+        assert!(matches!(state.character_detail, LoadState::Loading));
+        assert!(matches!(state.dashboard, LoadState::Loading));
+    }
+
+    #[test]
+    fn clear_for_demo_exit_clears_character_data_but_preserves_static_sets() {
+        let sde = Sde::load_bundled().expect("bundled SDE loads");
+        let exploration_ref =
+            ExplorationRef::load_bundled().expect("bundled exploration reference loads");
+        let mut state = AppState::new(true);
+        state.install_skill_catalogue_type_ids(&sde);
+        crate::demo::data::seed_demo_state(&mut state);
+        state.exploration = LoadState::Ready(ExplorationData {
+            reference: Arc::new(exploration_ref),
+        });
+
+        state.clear_for_demo_exit();
+        assert!(!state.demo);
+        assert!(state.characters.is_empty());
+        assert_eq!(state.active_character_id, None);
+        assert!(state.summaries.is_empty());
+        assert!(state.demo_skill_plans.is_empty());
+        assert!(matches!(state.wallet, LoadState::Empty));
+        assert!(matches!(state.skills, LoadState::Empty));
+        assert!(matches!(state.dashboard, LoadState::Empty));
+        assert!(matches!(state.character_detail, LoadState::Empty));
+        assert!(matches!(state.exploration, LoadState::Ready(_)));
+        assert!(!state.skill_catalogue_type_ids.is_empty());
     }
 }
