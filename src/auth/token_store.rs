@@ -5,6 +5,8 @@
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Mutex;
 
 use serde::{Deserialize, Serialize};
 
@@ -142,6 +144,7 @@ impl TokenPayload {
 pub struct TokenStore {
     pub fallback_path: PathBuf,
     use_keyring: bool,
+    file_lock: Mutex<()>,
 }
 
 impl TokenStore {
@@ -154,6 +157,7 @@ impl TokenStore {
         Self {
             fallback_path,
             use_keyring: true,
+            file_lock: Mutex::new(()),
         }
     }
 
@@ -166,6 +170,7 @@ impl TokenStore {
         Self {
             fallback_path,
             use_keyring: false,
+            file_lock: Mutex::new(()),
         }
     }
 
@@ -255,6 +260,10 @@ impl TokenStore {
                 }
             }
         }
+        let _guard = self
+            .file_lock
+            .lock()
+            .unwrap_or_else(|poison| poison.into_inner());
         let mut map = self.read_file_map()?;
         if map.remove(&character_id.to_string()).is_some() {
             self.write_file_map(&map)?;
@@ -270,6 +279,10 @@ impl TokenStore {
     /// enumerated portably, so keyring-only installs report via `load`.
     pub fn file_character_ids(&self) -> AppResult<Vec<i64>> {
         tracing::debug!("[AUTH] TokenStore::file_character_ids");
+        let _guard = self
+            .file_lock
+            .lock()
+            .unwrap_or_else(|poison| poison.into_inner());
         let map = self.read_file_map()?;
         let mut ids: Vec<i64> = map.keys().filter_map(|k| k.parse::<i64>().ok()).collect();
         ids.sort_unstable();
@@ -277,6 +290,10 @@ impl TokenStore {
     }
 
     fn save_to_file(&self, character_id: i64, payload: &TokenPayload) -> AppResult<()> {
+        let _guard = self
+            .file_lock
+            .lock()
+            .unwrap_or_else(|poison| poison.into_inner());
         let mut map = self.read_file_map()?;
         map.insert(character_id.to_string(), payload.clone());
         self.write_file_map(&map)?;
@@ -288,6 +305,10 @@ impl TokenStore {
     }
 
     fn load_from_file(&self, character_id: i64) -> AppResult<Option<StoredTokens>> {
+        let _guard = self
+            .file_lock
+            .lock()
+            .unwrap_or_else(|poison| poison.into_inner());
         let map = self.read_file_map()?;
         Ok(map
             .get(&character_id.to_string())
@@ -321,31 +342,53 @@ impl TokenStore {
     }
 }
 
-/// Write with owner-only permissions (0600 on Unix) from creation onward.
+/// Atomically write with owner-only permissions (0600 on Unix) via a unique
+/// sibling temp file and rename so concurrent crashes never leave a truncated file.
 fn write_private_file(path: &Path, contents: &str) -> AppResult<()> {
     use std::io::Write;
+    static TMP_COUNTER: AtomicU64 = AtomicU64::new(0);
+
+    let parent = path
+        .parent()
+        .filter(|p| !p.as_os_str().is_empty())
+        .unwrap_or_else(|| Path::new("."));
+    let base_name = path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("tokens");
+    let seq = TMP_COUNTER.fetch_add(1, Ordering::Relaxed);
+    let tmp_path = parent.join(format!(".{}.{}.{}.tmp", base_name, std::process::id(), seq));
+
     let mut options = std::fs::OpenOptions::new();
-    options.write(true).create(true).truncate(true);
+    options.write(true).create_new(true);
     #[cfg(unix)]
     {
         use std::os::unix::fs::OpenOptionsExt;
         options.mode(0o600);
     }
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        // Tighten a pre-existing wider-permission file BEFORE new secrets
-        // land in it; creation mode alone does not cover existing files.
-        if path.exists() {
-            std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600))?;
+
+    let write_res = (|| -> AppResult<()> {
+        let mut file = options.open(&tmp_path)?;
+        file.write_all(contents.as_bytes())?;
+        file.sync_all()?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&tmp_path, std::fs::Permissions::from_mode(0o600))?;
         }
+        Ok(())
+    })();
+    if let Err(e) = write_res {
+        let _ = std::fs::remove_file(&tmp_path);
+        return Err(e);
     }
-    let mut file = options.open(path)?;
-    file.write_all(contents.as_bytes())?;
+    if let Err(e) = std::fs::rename(&tmp_path, path) {
+        let _ = std::fs::remove_file(&tmp_path);
+        return Err(e.into());
+    }
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        // Tighten a pre-existing file that was created with wider perms.
         std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600))?;
     }
     Ok(())
@@ -418,5 +461,34 @@ mod tests {
         assert_eq!(tokens.refresh.as_str(), "secret-refresh-value");
         assert_eq!(tokens.expires_at_unix, claims.exp);
         assert!(!tokens.needs_refresh_now());
+    }
+
+    #[test]
+    fn concurrent_file_saves_preserve_all_characters() {
+        use std::sync::Arc;
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join("tokens.json");
+        let store = Arc::new(TokenStore::file_only(path.clone()));
+        let mut handles = Vec::new();
+        for id in 101..=108 {
+            let store = store.clone();
+            handles.push(std::thread::spawn(move || {
+                store.save(&sample(id)).expect("concurrent save succeeds");
+            }));
+        }
+        for handle in handles {
+            handle.join().expect("thread finished");
+        }
+        let ids = store.file_character_ids().expect("ids");
+        assert_eq!(ids, vec![101, 102, 103, 104, 105, 106, 107, 108]);
+        for id in 101..=108 {
+            assert!(store.load(id).expect("load").is_some());
+        }
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mode = std::fs::metadata(&path).expect("meta").permissions().mode() & 0o777;
+            assert_eq!(mode, 0o600);
+        }
     }
 }

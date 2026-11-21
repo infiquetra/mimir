@@ -113,6 +113,34 @@ impl CallbackServer {
          <p>Return to Mimir and try again.</p></body></html>"
     }
 
+    /// Bind the listener synchronously inside a Tokio runtime handle so port
+    /// conflicts fail immediately before opening the system browser.
+    pub fn start_sync(&self, handle: &tokio::runtime::Handle) -> Result<SocketAddr, AuthError> {
+        let mut guard = self
+            .listener
+            .try_lock()
+            .map_err(|_| AuthError::Callback("listener locked".to_string()))?;
+        if let Some(listener) = guard.as_ref() {
+            return listener
+                .local_addr()
+                .map_err(|e| AuthError::Callback(e.to_string()));
+        }
+        let std_listener = std::net::TcpListener::bind(&self.bind_addr)
+            .map_err(|e| AuthError::Callback(format!("bind {}: {}", self.bind_addr, e)))?;
+        std_listener
+            .set_nonblocking(true)
+            .map_err(|e| AuthError::Callback(e.to_string()))?;
+        let _enter = handle.enter();
+        let listener =
+            TcpListener::from_std(std_listener).map_err(|e| AuthError::Callback(e.to_string()))?;
+        let addr = listener
+            .local_addr()
+            .map_err(|e| AuthError::Callback(e.to_string()))?;
+        tracing::info!("[AUTH] callback listener bound addr={}", addr);
+        *guard = Some(listener);
+        Ok(addr)
+    }
+
     /// Bind the listener now so callers can read the actual address (tests
     /// bind port 0). Idempotent.
     pub async fn start(&self) -> Result<SocketAddr, AuthError> {
@@ -165,12 +193,30 @@ impl CallbackServer {
             };
             tracing::debug!("[AUTH] callback connection peer={}", peer);
             let mut buffer = [0u8; 8192];
-            let read = tokio::time::timeout_at(deadline, socket.read(&mut buffer)).await;
+            let read_deadline = deadline.min(tokio::time::Instant::now() + Duration::from_secs(5));
+            let read = tokio::time::timeout_at(read_deadline, socket.read(&mut buffer)).await;
             let count = match read {
                 Ok(Ok(0)) => continue,
                 Ok(Ok(n)) => n,
-                Ok(Err(e)) => return Err(AuthError::Callback(format!("read: {e}"))),
-                Err(_) => return Err(AuthError::CallbackTimeout),
+                Ok(Err(e)) => {
+                    tracing::debug!(
+                        "[AUTH] ignoring transient callback peer read error peer={} error={}",
+                        peer,
+                        e
+                    );
+                    continue;
+                }
+                Err(_) => {
+                    if tokio::time::Instant::now() >= deadline {
+                        tracing::warn!("[AUTH] callback wait timed out");
+                        return Err(AuthError::CallbackTimeout);
+                    }
+                    tracing::debug!(
+                        "[AUTH] callback peer read timed out before overall deadline peer={}",
+                        peer
+                    );
+                    continue;
+                }
             };
             let request = String::from_utf8_lossy(&buffer[..count]);
             let target = request
@@ -265,5 +311,37 @@ mod tests {
             .wait_for_callback_timeout(Duration::from_millis(150))
             .await;
         assert!(matches!(result, Err(AuthError::CallbackTimeout)));
+    }
+
+    #[tokio::test]
+    async fn listener_ignores_abrupt_drop_before_valid_callback() {
+        let server = std::sync::Arc::new(CallbackServer::with_bind_addr("127.0.0.1:0"));
+        let addr = server
+            .start_sync(&tokio::runtime::Handle::current())
+            .expect("sync bind");
+        let waiting = {
+            let server = server.clone();
+            tokio::spawn(async move {
+                server
+                    .wait_for_callback_timeout(Duration::from_secs(5))
+                    .await
+            })
+        };
+        // Connect and drop immediately without sending bytes (like browser preconnect).
+        let stream = tokio::net::TcpStream::connect(addr)
+            .await
+            .expect("preconnect");
+        drop(stream);
+
+        let url = format!("http://{addr}/callback?code=recovered&state=s1");
+        let body = reqwest::get(&url)
+            .await
+            .expect("browser request")
+            .text()
+            .await
+            .expect("page body");
+        assert!(body.contains("Authenticated with Mimir"));
+        let params = waiting.await.expect("task").expect("callback");
+        assert_eq!(params.into_result("s1").expect("code"), "recovered");
     }
 }

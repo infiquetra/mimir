@@ -26,6 +26,20 @@
 
 ## 2026-11-21
 
+### Per-character refresh locks, composite wallet PKs, and resilient ESI name/structure routing (`fix/rust-reliability-and-correctness`)
+
+**Author.** Mimir Wave 3 reliability and correctness pass
+**Decision.** Fixed 16 verified bugs across auth, ESI client/endpoints, SQLite schema, name resolution, state lifecycle, fitting calculations, and UI focus handling:
+1. Added `updated_at: Instant` cooldown recovery to `EsiClient`'s `ErrorLimit` (`src/esi/client.rs`), per-character async mutexes (`refresh_locks`) around rotating refresh-token exchanges, and a `Mutex` + atomic sibling-temp-then-rename write path in `TokenStore` (`src/auth/token_store.rs`).
+2. Switched `get_character_orders` and `get_character_industry_jobs` (`src/esi/endpoints.rs`) to single unpaginated requests matching ESI's OpenAPI spec, eliminating 10x duplicate row concatenation and false `truncated` flags.
+3. Raised `STRUCTURE_ID_MIN` to `1_000_000_000_000` (`1e12`) in `src/names/resolver.rs`, excluded asset/blueprint container `item_id` locations in `schedule_name_resolution`, and added `resolve_names_resilient` binary bisection on HTTP 404 batches.
+4. Upgraded SQLite schema to `SCHEMA_VERSION = 3` (`src/storage/{schema.sql,db.rs,repositories.rs}`) with composite primary keys `(character_id, id)` on `wallet_journal` and `(character_id, transaction_id)` on `wallet_transactions`.
+5. Wired `BackendSender` repaint wakeups (`ctx.request_repaint()`), lazy `Backends::open_live()` on demo exit, `refresh_generation` + anti-resurrection checks in `start_refresh()`, synchronous callback listener binding before browser launch, composite input-focus guards on Skills/Wallet arrow navigation, `fittings_write_confirm` clearing in `clear_editor_state`, section-scoped stacking in `fitting::editor::add_stacked`, and safe staggered duration clamping/iteration bounds in `ship_cap_stability::run_simulator`. Additionally, `AppState::remove_character` now resets `assets_needs_reauthorize` and `structures_needs_reauthorize` only when removing the active character (or emptying the roster), matching `fittings_write_needs_reauthorize` and superseding the earlier unconditional-clear notes in `docs/assets-port-design.md` and `docs/structure-names-design.md`.
+**Rejected alternatives.** Retrying all `/universe/names/` IDs individually by default (too many HTTP requests vs bisecting only on 404); storing wallet IDs with app-level deduplication without fixing the SQLite PK (cross-character trades would still steal rows on disk).
+**Rationale.** Every fix addresses a deterministic failure observed by inspecting the state machine, ESI specs, and SDE data without altering intended offline behavior or design-locked wordings.
+**Revisit when.** ESI introduces pagination on character market orders or industry jobs, or Mimir migrates token persistence away from `tokens.json`.
+**Refs.** `src/esi/{client,endpoints}.rs`, `src/auth/{token_store,callback_server}.rs`, `src/names/resolver.rs`, `src/storage/{schema.sql,db.rs,repositories.rs}`, `src/app/{shell,state}.rs`, `src/fitting/{editor,ship_cap_stability}.rs`, `src/ui/{skills,wallet,fittings}.rs`, LEARNINGS 2026-11-21 Wave 3 entry.
+
 ### EVE dark theme, card/two-pane layout, and workspace prioritization across all 11 views (`feat/rust-ui-ux-overhaul`)
 
 **Author.** Mimir UI/UX overhaul pass

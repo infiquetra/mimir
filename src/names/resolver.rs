@@ -31,11 +31,12 @@ pub const NAMES_BATCH_SIZE: usize = 1000;
 /// scheduled pass instead of bursting against ESI's error limit.
 pub const MAX_STRUCTURE_LOOKUPS_PER_PASS: usize = 10;
 
-/// Player-built structure ids start here; NPC station ids are far below it
-/// (60,000,000 range) and resolve through `/universe/names/`.
-pub const STRUCTURE_ID_MIN: i64 = 1_000_000_000;
+/// Player-built Upwell structure ids start at 10^12 (`1_000_000_000_000`);
+/// NPC stations (60,000,000 range) and character/corporation/alliance ids
+/// (`< 10^12`, e.g. modern 2.1B+ characters) resolve through `/universe/names/`.
+pub const STRUCTURE_ID_MIN: i64 = 1_000_000_000_000;
 
-/// True when the id can only be a player-built structure, which
+/// True when the id is in the Upwell player-built structure range, which
 /// `/universe/names/` never resolves.
 pub fn is_structure_id(id: i64) -> bool {
     id >= STRUCTURE_ID_MIN
@@ -67,6 +68,60 @@ pub fn structure_lookup_batch(missing_structure_ids: &[i64]) -> Vec<i64> {
     batch.sort_unstable();
     batch.truncate(MAX_STRUCTURE_LOOKUPS_PER_PASS);
     batch
+}
+
+/// Resolve non-structure universe IDs against `POST /universe/names/`.
+/// ESI rejects an entire batch with HTTP 404 when even one ID in it is
+/// invalid (e.g., ID `1` EVE System in wallet journals or container item IDs),
+/// so any 404 batch is bisected until only single rejected IDs are isolated.
+/// Returns `(resolved, rejected_404_ids, fatal_non_404_error)`.
+pub async fn resolve_names_resilient(
+    client: &EsiClient,
+    ids: &[i64],
+) -> (Vec<UniverseName>, Vec<i64>, Option<crate::error::AppError>) {
+    use crate::error::{AppError, EsiError};
+
+    let mut resolved: Vec<UniverseName> = Vec::new();
+    let mut rejected: Vec<i64> = Vec::new();
+    let mut fatal: Option<AppError> = None;
+
+    for chunk in ids.chunks(NAMES_BATCH_SIZE) {
+        let mut stack: Vec<Vec<i64>> = vec![chunk.to_vec()];
+        while let Some(batch) = stack.pop() {
+            if batch.is_empty() {
+                continue;
+            }
+            tracing::debug!("[ESI] resolve names batch count={}", batch.len());
+            match crate::esi::endpoints::resolve_names(client, &batch).await {
+                Ok(mut names) => resolved.append(&mut names),
+                Err(AppError::Esi(EsiError::NotFound(_))) => {
+                    if batch.len() == 1 {
+                        tracing::debug!("[ESI] universe name rejected id={}", batch[0]);
+                        rejected.push(batch[0]);
+                    } else {
+                        let mid = batch.len() / 2;
+                        tracing::debug!(
+                            "[ESI] universe names batch 404; bisecting len={}",
+                            batch.len()
+                        );
+                        let (left, right) = batch.split_at(mid);
+                        stack.push(right.to_vec());
+                        stack.push(left.to_vec());
+                    }
+                }
+                Err(e) => {
+                    tracing::warn!("[ESI] resolve names batch failed: {}", e);
+                    fatal = Some(e);
+                    break;
+                }
+            }
+        }
+        if fatal.is_some() {
+            break;
+        }
+    }
+
+    (resolved, rejected, fatal)
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -297,31 +352,32 @@ impl NameResolver {
             pending.iter().copied().partition(|&id| is_structure_id(id));
 
         let mut fresh: Vec<UniverseNameRow> = Vec::new();
-        for chunk in batch.chunks(NAMES_BATCH_SIZE) {
-            tracing::debug!("[ESI] resolve names batch count={}", chunk.len());
-            match crate::esi::endpoints::resolve_names(client, chunk).await {
-                Ok(names) => {
-                    for n in &names {
-                        // Persist only displayable names, so a numeric
-                        // batch answer never reaches the DB even though
-                        // the memory insert guard would reject it anyway.
-                        if is_displayable_name(&n.name) {
-                            fresh.push(UniverseNameRow {
-                                id: n.id,
-                                name: n.name.clone(),
-                                category: n.category.clone(),
-                            });
-                        }
-                    }
-                    self.extend_from_universe_names(&names);
-                }
-                Err(e) => {
-                    // Offline / ESI down: keep what memory+DB gave us and
-                    // report the failure; the UI shows Unknown meanwhile.
-                    tracing::warn!("[ESI] resolve names batch failed: {}", e);
-                    return Err(e);
+        let mut batch_fatal: Option<crate::error::AppError> = None;
+        if !batch.is_empty() {
+            let (names, rejected, fatal) = resolve_names_resilient(client, &batch).await;
+            for n in &names {
+                // Persist only displayable names, so a numeric
+                // batch answer never reaches the DB even though
+                // the memory insert guard would reject it anyway.
+                if is_displayable_name(&n.name) {
+                    fresh.push(UniverseNameRow {
+                        id: n.id,
+                        name: n.name.clone(),
+                        category: n.category.clone(),
+                    });
                 }
             }
+            self.extend_from_universe_names(&names);
+            self.mark_unresolved(&rejected);
+            batch_fatal = fatal;
+        }
+        if let Some(err) = batch_fatal {
+            if let Some(conn) = conn {
+                if !fresh.is_empty() {
+                    repositories::upsert_universe_names(conn, &fresh)?;
+                }
+            }
+            return Err(err);
         }
 
         // Structure ids resolve one at a time through the authenticated
@@ -587,7 +643,9 @@ mod tests {
     #[test]
     fn structure_classification_matches_eve_id_ranges() {
         assert!(!is_structure_id(60003760)); // Jita 4-4 NPC station
-        assert!(is_structure_id(1_000_000_000));
+        assert!(!is_structure_id(2_112_625_428)); // Modern EVE character ID
+        assert!(!is_structure_id(999_999_999_999));
+        assert!(is_structure_id(1_000_000_000_000));
         assert!(is_structure_id(1_037_000_000_001));
     }
 
@@ -969,5 +1027,65 @@ mod tests {
             r.missing(&[1030000000001]).is_empty(),
             "empty answer pins the id"
         );
+    }
+
+    #[tokio::test]
+    async fn resolve_names_resilient_bisects_around_invalid_id() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        use tokio::net::TcpListener;
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind mock");
+        let addr = listener.local_addr().expect("addr");
+        tokio::spawn(async move {
+            loop {
+                let Ok((mut socket, _)) = listener.accept().await else {
+                    break;
+                };
+                tokio::spawn(async move {
+                    let mut buf = vec![0u8; 8192];
+                    let n = socket.read(&mut buf).await.unwrap_or(0);
+                    let req = String::from_utf8_lossy(&buf[..n]);
+                    let body_str = req.split("\r\n\r\n").nth(1).unwrap_or("[]");
+                    let ids: Vec<i64> = serde_json::from_str(body_str).unwrap_or_default();
+                    let (status, resp_body) = if ids.contains(&1) {
+                        (
+                            404,
+                            r#"{"error":"Ensure all IDs are valid before resolving."}"#.to_string(),
+                        )
+                    } else {
+                        let entries: Vec<serde_json::Value> = ids
+                            .iter()
+                            .map(|&id| {
+                                let (name, cat) = match id {
+                                    34 => ("Tritanium", "inventory_type"),
+                                    35 => ("Pyerite", "inventory_type"),
+                                    2_112_625_428 => ("Modern Capsuleer", "character"),
+                                    _ => ("Other", "inventory_type"),
+                                };
+                                serde_json::json!({ "id": id, "name": name, "category": cat })
+                            })
+                            .collect();
+                        (200, serde_json::Value::Array(entries).to_string())
+                    };
+                    let payload = format!(
+                        "HTTP/1.1 {status} OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{resp_body}",
+                        resp_body.len()
+                    );
+                    let _ = socket.write_all(payload.as_bytes()).await;
+                    let _ = socket.flush().await;
+                });
+            }
+        });
+
+        let client = EsiClient::with_http(reqwest::Client::new(), format!("http://{addr}"));
+        let (names, rejected, fatal) =
+            resolve_names_resilient(&client, &[34, 1, 35, 2_112_625_428]).await;
+        assert!(fatal.is_none());
+        assert_eq!(rejected, vec![1]);
+        assert_eq!(names.len(), 3);
+        assert_eq!(names[0].id, 34);
+        assert_eq!(names[1].id, 35);
+        assert_eq!(names[2].id, 2_112_625_428);
+        assert_eq!(names[2].name, "Modern Capsuleer");
     }
 }

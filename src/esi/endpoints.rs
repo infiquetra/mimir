@@ -385,152 +385,53 @@ pub async fn get_market_history(
     Ok(rows)
 }
 
-/// The character's own open orders. Requires scope
+/// The character's own open orders (unpaginated in ESI: returns all active
+/// orders in a single response). Requires scope
 /// `esi-markets.read_character_orders.v1` (progressive step-up,
 /// never first-auth); a missing scope surfaces as HTTP 403 →
-/// `EsiError::Reauthorize`. Any page error propagates; partial page
-/// lists are never returned as success.
+/// `EsiError::Reauthorize`.
 pub async fn get_character_orders(
     client: &EsiClient,
     character_id: i64,
 ) -> AppResult<(Vec<CharacterOrder>, bool)> {
-    get_character_orders_capped(client, character_id, MARKET_MAX_PAGES).await
-}
-
-async fn get_character_orders_capped(
-    client: &EsiClient,
-    character_id: i64,
-    max_pages: u32,
-) -> AppResult<(Vec<CharacterOrder>, bool)> {
-    let max_pages = max_pages.max(1);
-    tracing::debug!(
-        "[MARKET] GET /characters/{}/orders/ (capped pages={})",
-        character_id,
-        max_pages
-    );
-    let mut page = 1u32;
-    let mut all: Vec<CharacterOrder> = Vec::new();
-    let mut truncated = false;
-    loop {
-        let (items, meta) = client
-            .auth_get_page::<Vec<CharacterOrder>>(
-                &format!("/characters/{character_id}/orders/"),
-                character_id,
-                Some(page),
-            )
-            .await?;
-        let count = items.len();
-        tracing::debug!(
-            "[MARKET] character orders page={} rows={} total={}",
-            page,
-            count,
-            all.len() + count
-        );
-        all.extend(items);
-        match meta.pages {
-            Some(total) if page >= total => break,
-            Some(_) => {
-                if page >= max_pages {
-                    truncated = true;
-                    break;
-                }
-            }
-            None => {
-                if count == 0 {
-                    break;
-                }
-                if page >= max_pages {
-                    truncated = true;
-                    break;
-                }
-            }
-        }
-        page += 1;
-    }
+    tracing::debug!("[MARKET] GET /characters/{}/orders/", character_id);
+    let orders: Vec<CharacterOrder> = client
+        .auth_get(&format!("/characters/{character_id}/orders/"), character_id)
+        .await?;
     tracing::info!(
-        "[MARKET] character orders fetched character_id={} rows={} truncated={}",
+        "[MARKET] character orders fetched character_id={} rows={} truncated=false",
         character_id,
-        all.len(),
-        truncated
+        orders.len()
     );
-    Ok((all, truncated))
+    Ok((orders, false))
 }
 
-/// Hard cap for industry page walks. A character's jobs and
-/// blueprint library are character-bounded populations; the cap
-/// is a runaway guard, and hitting it is always disclosed via
-/// the returned truncated flag rather than silent partial data.
+/// Hard cap for industry page walks. A character's blueprint library is a
+/// character-bounded population; the cap is a runaway guard, and hitting it
+/// is always disclosed via the returned truncated flag rather than silent partial data.
 pub const INDUSTRY_MAX_PAGES: u32 = 10;
 
-/// The character's industry jobs, completed jobs included (the
-/// one locked value, embedded in the path so `build_url` and the
-/// `page=` query compose). Requires scope
-/// `esi-industry.read_character_jobs.v1` (progressive step-up,
-/// never first-auth); a missing scope surfaces as HTTP 403 ->
-/// `EsiError::Reauthorize`. Any page error propagates; partial
-/// page lists are never returned as success. Rows return in
-/// fetch order, unsorted and unfiltered.
+/// The character's industry jobs (unpaginated in ESI), completed jobs
+/// included. Requires scope `esi-industry.read_character_jobs.v1`
+/// (progressive step-up, never first-auth); a missing scope surfaces
+/// as HTTP 403 -> `EsiError::Reauthorize`. Rows return in fetch order,
+/// unsorted and unfiltered.
 pub async fn get_character_industry_jobs(
     client: &EsiClient,
     character_id: i64,
 ) -> AppResult<(Vec<IndustryJob>, bool)> {
-    get_character_industry_jobs_capped(client, character_id, INDUSTRY_MAX_PAGES).await
-}
-
-async fn get_character_industry_jobs_capped(
-    client: &EsiClient,
-    character_id: i64,
-    max_pages: u32,
-) -> AppResult<(Vec<IndustryJob>, bool)> {
-    let max_pages = max_pages.max(1);
     let path = format!("/characters/{character_id}/industry/jobs/?include_completed=true");
     tracing::debug!(
-        "[INDUSTRY] GET /characters/{}/industry/jobs/?include_completed=true (capped pages={})",
-        character_id,
-        max_pages
+        "[INDUSTRY] GET /characters/{}/industry/jobs/?include_completed=true",
+        character_id
     );
-    let mut page = 1u32;
-    let mut all: Vec<IndustryJob> = Vec::new();
-    let mut truncated = false;
-    loop {
-        let (items, meta) = client
-            .auth_get_page::<Vec<IndustryJob>>(&path, character_id, Some(page))
-            .await?;
-        let count = items.len();
-        tracing::debug!(
-            "[INDUSTRY] industry jobs page={} rows={} total={}",
-            page,
-            count,
-            all.len() + count
-        );
-        all.extend(items);
-        match meta.pages {
-            Some(total) if page >= total => break,
-            Some(_) => {
-                if page >= max_pages {
-                    truncated = true;
-                    break;
-                }
-            }
-            None => {
-                if count == 0 {
-                    break;
-                }
-                if page >= max_pages {
-                    truncated = true;
-                    break;
-                }
-            }
-        }
-        page += 1;
-    }
+    let jobs: Vec<IndustryJob> = client.auth_get(&path, character_id).await?;
     tracing::info!(
-        "[INDUSTRY] industry jobs fetched character_id={} rows={} truncated={}",
+        "[INDUSTRY] industry jobs fetched character_id={} rows={} truncated=false",
         character_id,
-        all.len(),
-        truncated
+        jobs.len()
     );
-    Ok((all, truncated))
+    Ok((jobs, false))
 }
 
 /// The character's blueprint library. Requires scope
@@ -1355,43 +1256,32 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn character_orders_walk_pages() {
-        let (base, _counter, captured) = market_server(Some(2), SecondPage::Rows).await;
+    async fn character_orders_single_request_without_xpages_never_duplicates() {
+        use std::sync::atomic::Ordering;
+        let (base, counter, captured) = market_server(None, SecondPage::Rows).await;
         let (client, _dir) = client_with_fresh_tokens(base);
         let (orders, truncated) = get_character_orders(&client, 7).await.expect("orders");
-        assert_eq!(orders.len(), 2);
+        assert_eq!(counter.load(Ordering::SeqCst), 1);
+        assert_eq!(orders.len(), 1);
         assert_eq!(orders[0].order_id, 101);
-        assert_eq!(orders[1].order_id, 102);
         assert!(!truncated);
         let requests = captured.lock().expect("capture lock").clone();
+        assert_eq!(requests.len(), 1);
         assert!(
             requests[0].contains("/characters/7/orders/"),
             "{}",
             requests[0]
         );
-        assert!(requests[1].contains("page=2"), "{}", requests[1]);
+        assert!(!requests[0].contains("page="), "{}", requests[0]);
     }
 
     #[tokio::test]
-    async fn character_orders_cap_is_honored_and_reported_truncated() {
-        use std::sync::atomic::Ordering;
-        let (base, counter, _captured) = market_server(Some(5), SecondPage::Rows).await;
-        let (client, _dir) = client_with_fresh_tokens(base);
-        let (orders, truncated) = get_character_orders_capped(&client, 7, 2)
-            .await
-            .expect("orders");
-        assert_eq!(orders.len(), 2);
-        assert!(truncated);
-        assert_eq!(counter.load(Ordering::SeqCst), 2);
-    }
-
-    #[tokio::test]
-    async fn character_orders_page_two_error_propagates() {
-        let (base, _counter, _captured) = market_server(Some(2), SecondPage::Error).await;
+    async fn character_orders_http_error_propagates() {
+        let (base, _captured) = one_shot_server(500, r#"{"error":"boom"}"#).await;
         let (client, _dir) = client_with_fresh_tokens(base);
         let err = get_character_orders(&client, 7)
             .await
-            .expect_err("page-2 failure must not return partial rows");
+            .expect_err("500 must error");
         assert!(!needs_reauthorize(&err), "error: {err:?}");
     }
 
@@ -1533,36 +1423,28 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn industry_jobs_walk_two_pages_in_fetch_order() {
-        let (base, _counter, captured) = industry_server(Some(2), SecondPage::Rows).await;
+    async fn industry_jobs_single_request_without_xpages_never_duplicates() {
+        use std::sync::atomic::Ordering;
+        let (base, counter, captured) = industry_server(None, SecondPage::Rows).await;
         let (client, _dir) = client_with_fresh_tokens(base);
         let (jobs, truncated) = get_character_industry_jobs(&client, 7).await.expect("jobs");
-        assert_eq!(jobs.len(), 2);
+        assert_eq!(counter.load(Ordering::SeqCst), 1);
+        assert_eq!(jobs.len(), 1);
         assert_eq!(jobs[0].job_id, 101);
-        assert_eq!(jobs[1].job_id, 102);
         assert!(!truncated);
         let requests = captured.lock().expect("capture lock").clone();
-        assert_eq!(requests.len(), 2);
-        assert!(requests[1].contains("page=2"), "{}", requests[1]);
+        assert_eq!(requests.len(), 1);
+        assert!(!requests[0].contains("page="), "{}", requests[0]);
         assert!(
-            requests[1].contains("include_completed=true"),
+            requests[0].contains("include_completed=true"),
             "{}",
-            requests[1]
+            requests[0]
         );
     }
 
     #[tokio::test]
-    async fn industry_caps_are_honored_and_reported_truncated() {
+    async fn blueprints_cap_is_honored_and_reported_truncated() {
         use std::sync::atomic::Ordering;
-        let (base, counter, _captured) = industry_server(Some(5), SecondPage::Rows).await;
-        let (client, _dir) = client_with_fresh_tokens(base);
-        let (jobs, truncated) = get_character_industry_jobs_capped(&client, 7, 2)
-            .await
-            .expect("jobs");
-        assert_eq!(jobs.len(), 2);
-        assert!(truncated);
-        assert_eq!(counter.load(Ordering::SeqCst), 2);
-
         let (base, counter, _captured) = industry_server(Some(5), SecondPage::Rows).await;
         let (client, _dir) = client_with_fresh_tokens(base);
         let (blueprints, truncated) = get_character_blueprints_capped(&client, 7, 2)
@@ -1615,12 +1497,12 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn industry_page_two_errors_propagate() {
-        let (base, _counter, _captured) = industry_server(Some(2), SecondPage::Error).await;
+    async fn industry_errors_propagate() {
+        let (base, _captured) = one_shot_server(500, r#"{"error":"boom"}"#).await;
         let (client, _dir) = client_with_fresh_tokens(base);
         let err = get_character_industry_jobs(&client, 7)
             .await
-            .expect_err("page-2 failure must not return partial rows");
+            .expect_err("500 must error");
         assert!(!needs_reauthorize(&err), "error: {err:?}");
 
         let (base, _counter, _captured) = industry_server(Some(2), SecondPage::Error).await;

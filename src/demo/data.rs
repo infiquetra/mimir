@@ -1274,6 +1274,7 @@ pub fn apply_character(state: &mut AppState, bundle: &DemoBundle, character_id: 
 pub fn seed_demo_state(state: &mut AppState) {
     tracing::info!("[DEMO] seed_demo_state entry");
     state.demo = true;
+    state.offline = false;
     match load_demo_bundle() {
         Ok(bundle) => {
             state.characters = bundle

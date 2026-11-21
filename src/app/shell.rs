@@ -1,6 +1,7 @@
 //! egui application shell: character rail, view switcher, top bar,
 //! keyboard-first navigation, and per-second repaints for countdowns.
 
+use std::collections::{HashMap, HashSet};
 use std::sync::mpsc::{Receiver, Sender};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -30,13 +31,15 @@ use crate::names::fitting_types::FittingTypes;
 use crate::names::industry_ref::IndustryRef;
 use crate::names::planet_schematics::PlanetSchematicsRef;
 use crate::names::resolver::{
-    is_displayable_name, is_structure_id, structure_lookup_batch, NameResolver,
+    is_displayable_name, is_structure_id, resolve_names_resilient, structure_lookup_batch,
+    NameResolver,
 };
 use crate::names::sde::Sde;
 use crate::portraits::{
     ImageKind, PortraitError, PortraitService, LOGO_SIZE, PORTRAIT_SIZE, TYPE_ICON_SIZE,
 };
 use crate::skills::plans::{apply_demo_action, DemoApplyOutcome, SkillPlan, SkillPlanAction};
+use crate::storage::db;
 use crate::storage::repositories::{self, CharacterRow, TokenMetaRow};
 use crate::ui;
 use crate::EsiClient;
@@ -55,8 +58,95 @@ pub struct Backends {
     pub portraits: Arc<PortraitService>,
 }
 
+impl Backends {
+    /// Open the persistent SQLite database, token store, JWT verifier,
+    /// ESI client, and portrait service for live mode. Shared between
+    /// startup and runtime transitions out of `--demo`.
+    pub fn open_live() -> Option<Self> {
+        match db::open_db(&db::db_path()) {
+            Ok(conn) => {
+                tracing::info!(
+                    "[DB] startup database open ok path={}",
+                    db::db_path().display()
+                );
+                let token_store = Arc::new(TokenStore::new(db::app_data_dir()));
+                let jwt_verifier = match JwtVerifier::new() {
+                    Ok(verifier) => Some(Arc::new(verifier)),
+                    Err(e) => {
+                        tracing::warn!("[AUTH] JWT verifier construction failed: {}", e);
+                        None
+                    }
+                };
+                let attach_verifier = |client: EsiClient| match &jwt_verifier {
+                    Some(verifier) => client.with_jwt_verifier(verifier.clone()),
+                    None => client,
+                };
+                let portraits = Arc::new(PortraitService::new(db::app_cache_dir()));
+                let esi = match EsiClient::new() {
+                    Ok(client) => client.with_token_store(token_store.clone()),
+                    Err(e) => {
+                        tracing::warn!("[ESI] client construction failed: {}", e);
+                        EsiClient::default().with_token_store(token_store.clone())
+                    }
+                };
+                Some(Self {
+                    esi: Arc::new(attach_verifier(esi)),
+                    token_store,
+                    db: Arc::new(Mutex::new(conn)),
+                    jwt_verifier,
+                    portraits,
+                })
+            }
+            Err(e) => {
+                tracing::warn!("[DB] startup database open failed: {}", e);
+                None
+            }
+        }
+    }
+}
+
+#[derive(Clone)]
+struct BackendSender {
+    tx: Sender<BackendMsg>,
+    ctx: Arc<Mutex<Option<egui::Context>>>,
+}
+
+impl BackendSender {
+    fn new(tx: Sender<BackendMsg>) -> Self {
+        Self {
+            tx,
+            ctx: Arc::new(Mutex::new(None)),
+        }
+    }
+
+    fn attach_ctx(&self, ctx: egui::Context) {
+        if let Ok(mut guard) = self.ctx.lock() {
+            *guard = Some(ctx);
+        }
+    }
+
+    fn attach_ctx_if_unset(&self, ctx: &egui::Context) {
+        if let Ok(mut guard) = self.ctx.lock() {
+            if guard.is_none() {
+                *guard = Some(ctx.clone());
+            }
+        }
+    }
+
+    fn send(&self, msg: BackendMsg) {
+        if self.tx.send(msg).is_ok() {
+            if let Ok(guard) = self.ctx.lock() {
+                if let Some(ctx) = guard.as_ref() {
+                    ctx.request_repaint();
+                }
+            }
+        }
+    }
+}
+
 enum BackendMsg {
     Refreshed {
+        generation: u64,
         character_id: i64,
         info: Box<CharacterPublicInfo>,
         skills: Box<SkillsData>,
@@ -69,6 +159,7 @@ enum BackendMsg {
         fittings_list: SectionResult<Vec<CharacterFitting>>,
     },
     RefreshFailed {
+        generation: u64,
         character_id: i64,
         message: String,
     },
@@ -83,6 +174,7 @@ enum BackendMsg {
     },
     NamesResolved {
         names: Vec<UniverseName>,
+        rejected: Vec<i64>,
     },
     StructuresResolved {
         character_id: i64,
@@ -140,7 +232,9 @@ pub struct MimirApp {
     /// plans from the destination mode's source (design section
     /// 11.1 call point 3) even when the active id did not change.
     last_demo_mode: bool,
-    tx: Sender<BackendMsg>,
+    demo_in_memory_backends: bool,
+    refresh_generation: HashMap<i64, u64>,
+    tx: BackendSender,
     rx: Receiver<BackendMsg>,
     demo_names_loaded: bool,
     persisted_startup_view: Option<String>,
@@ -913,7 +1007,10 @@ impl MimirApp {
         let fitting_types = fitting_types_load(FittingTypes::load_bundled());
         let industry_data = industry_load(IndustryRef::load_bundled());
         let planet_schematics = planet_schematics_load(PlanetSchematicsRef::load_bundled());
-        let (tx, rx) = std::sync::mpsc::channel();
+        let (raw_tx, rx) = std::sync::mpsc::channel();
+        let tx = BackendSender::new(raw_tx);
+        let demo_in_memory_backends =
+            demo && backends.as_ref().is_some_and(|b| b.jwt_verifier.is_none());
         let mut state = AppState::new(demo);
         // Bundled offline reference, loaded exactly once (design
         // section 9): identical in demo and live modes, never
@@ -1017,6 +1114,8 @@ impl MimirApp {
             demo_bundle,
             last_active_id,
             last_demo_mode: demo,
+            demo_in_memory_backends,
+            refresh_generation: HashMap::new(),
             tx,
             rx,
             demo_names_loaded: false,
@@ -1033,6 +1132,12 @@ impl MimirApp {
             app.state.request_refresh("startup");
         }
         app
+    }
+
+    /// Attach the egui context so background workers can wake the UI thread
+    /// as soon as async messages arrive.
+    pub fn attach_egui_ctx(&self, ctx: egui::Context) {
+        self.tx.attach_ctx(ctx);
     }
 
     /// Override the active view from CLI startup options (`--view`).
@@ -1058,21 +1163,19 @@ impl MimirApp {
         }
     }
 
-    /// Resolve names for IDs visible in live state (corporations, wallet
-    /// counterparties, items, stations) so views show names, not unknowns.
-    /// Structure-class IDs are routed to the bounded authenticated pass
-    /// below: `/universe/names/` cannot resolve them.
-    fn schedule_name_resolution(&mut self) {
-        if self.state.demo {
-            return;
-        }
+    /// Collect public universe IDs and player-structure location IDs visible
+    /// in loaded state, skipping asset/blueprint container `item_id` references.
+    fn collect_live_name_ids(
+        state: &AppState,
+        planet_schematics: Option<&PlanetSchematicsRef>,
+    ) -> (Vec<i64>, Vec<i64>) {
         let mut ids: Vec<i64> = Vec::new();
         let mut structure_ids: Vec<i64> = Vec::new();
-        for c in &self.state.characters {
+        for c in &state.characters {
             ids.push(c.corporation_id);
             ids.extend(c.alliance_id);
         }
-        if let LoadState::Ready(wallet) = &self.state.wallet {
+        if let LoadState::Ready(wallet) = &state.wallet {
             for entry in &wallet.journal {
                 ids.extend(entry.first_party_id);
                 ids.extend(entry.second_party_id);
@@ -1091,9 +1194,21 @@ impl MimirApp {
                 ids.push(lp.corporation_id);
             }
         }
-        if let LoadState::Ready(assets) = &self.state.assets {
+        let mut asset_item_ids: HashSet<i64> = HashSet::new();
+        if let LoadState::Ready(assets) = &state.assets {
+            asset_item_ids.extend(assets.items.iter().map(|item| item.item_id));
+        }
+        if let LoadState::Ready(bundle) = &state.industry {
+            if let Ok(blueprints_data) = &bundle.blueprints {
+                asset_item_ids.extend(blueprints_data.blueprints.iter().map(|bp| bp.item_id));
+            }
+        }
+        if let LoadState::Ready(assets) = &state.assets {
             for item in &assets.items {
                 ids.push(item.type_id);
+                if item.location_type == "item" || asset_item_ids.contains(&item.location_id) {
+                    continue;
+                }
                 if is_structure_id(item.location_id) {
                     structure_ids.push(item.location_id);
                 } else {
@@ -1101,10 +1216,7 @@ impl MimirApp {
                 }
             }
         }
-        if let LoadState::Ready(bundle) = &self.state.character_details {
-            // Detail IDs (design section 8): implant integers are type IDs;
-            // location-class IDs pass the structure guard. Instance IDs
-            // (ship_item_id, jump_clone_id) are never resolved or shown.
+        if let LoadState::Ready(bundle) = &state.character_details {
             if let Ok(implants) = &bundle.implants {
                 ids.extend(implants.iter().copied());
             }
@@ -1144,15 +1256,10 @@ impl MimirApp {
                 ids.push(ship.ship_type_id);
             }
         }
-        // Market IDs (design section 8.4): the selected type, displayed
-        // top-N public-order locations, and character-order types and
-        // locations — every location behind the structure guard. Hub
-        // region IDs, order IDs, region/system IDs on rows are never
-        // scheduled (constants/fallback words cover regions).
-        if let Some(type_id) = self.state.market_selected_type_id {
+        if let Some(type_id) = state.market_selected_type_id {
             ids.push(type_id);
         }
-        if let LoadState::Ready(bundle) = &self.state.market {
+        if let LoadState::Ready(bundle) = &state.market {
             if let Ok(public) = &bundle.public_orders {
                 let summary = ui::market::summarize_orders(&public.orders);
                 for order in summary.top_sells.iter().chain(summary.top_buys.iter()) {
@@ -1174,10 +1281,7 @@ impl MimirApp {
                 }
             }
         }
-        // Industry IDs (design section 6.4): only rendered type IDs and
-        // structure-guarded facility/location IDs. Job, blueprint-instance,
-        // installer, completer, and output IDs are never scheduled.
-        if let LoadState::Ready(bundle) = &self.state.industry {
+        if let LoadState::Ready(bundle) = &state.industry {
             if let Ok(jobs_data) = &bundle.jobs {
                 for job in &jobs_data.jobs {
                     ids.push(job.blueprint_type_id);
@@ -1192,6 +1296,9 @@ impl MimirApp {
             if let Ok(blueprints_data) = &bundle.blueprints {
                 for blueprint in &blueprints_data.blueprints {
                     ids.push(blueprint.type_id);
+                    if asset_item_ids.contains(&blueprint.location_id) {
+                        continue;
+                    }
                     if is_structure_id(blueprint.location_id) {
                         structure_ids.push(blueprint.location_id);
                     } else {
@@ -1200,15 +1307,7 @@ impl MimirApp {
                 }
             }
         }
-        // Planetary IDs (PI design section 10): colony solar-system
-        // IDs behind the structure guard (location path), plus pin,
-        // extractor-product, stored-item, and schematic input/output
-        // type IDs (item path; schematic type IDs come through the
-        // bundled extract first, never schematic IDs themselves).
-        // Planet/pin instance IDs, schematic IDs, anything inside
-        // raw links/routes, and the planet-type word are never
-        // scheduled.
-        if let LoadState::Ready(bundle) = &self.state.planetary {
+        if let LoadState::Ready(bundle) = &state.planetary {
             if let Ok(colonies) = &bundle.colonies {
                 for colony in colonies {
                     if is_structure_id(colony.solar_system_id) {
@@ -1229,7 +1328,7 @@ impl MimirApp {
                             ids.push(content.type_id);
                         }
                         if let (Some(schematic_id), Some(schematics)) =
-                            (pin.schematic_id, self.planet_schematics.as_deref())
+                            (pin.schematic_id, planet_schematics)
                         {
                             if let Some(schematic) = schematics.schematic(schematic_id) {
                                 ids.push(schematic.output.type_id);
@@ -1240,11 +1339,7 @@ impl MimirApp {
                 }
             }
         }
-        // Fittings IDs (fittings design section 10): ship and item
-        // type IDs take the item-name path (no structure guard;
-        // ship/item types are not locations). Fitting IDs (instance
-        // identity), flag words, and quantities are never scheduled.
-        if let LoadState::Ready(bundle) = &self.state.fittings {
+        if let LoadState::Ready(bundle) = &state.fittings {
             if let Ok(fittings) = &bundle.fittings {
                 for fitting in fittings {
                     ids.push(fitting.ship_type_id);
@@ -1254,6 +1349,19 @@ impl MimirApp {
                 }
             }
         }
+        (ids, structure_ids)
+    }
+
+    /// Resolve names for IDs visible in live state (corporations, wallet
+    /// counterparties, items, stations) so views show names, not unknowns.
+    /// Structure-class IDs are routed to the bounded authenticated pass
+    /// below: `/universe/names/` cannot resolve them.
+    fn schedule_name_resolution(&mut self) {
+        if self.state.demo {
+            return;
+        }
+        let (ids, structure_ids) =
+            Self::collect_live_name_ids(&self.state, self.planet_schematics.as_deref());
         let missing = self.resolver.missing(&ids);
         // Structure-class IDs take the bounded authenticated pass
         // below; the batch only ever sees non-structure ids.
@@ -1270,18 +1378,9 @@ impl MimirApp {
             let tx = self.tx.clone();
             tracing::info!("[ESI] resolving {} missing universe names", missing.len());
             runtime.spawn(async move {
-                let mut all: Vec<UniverseName> = Vec::new();
-                for chunk in missing.chunks(1000) {
-                    match endpoints::resolve_names(&esi, chunk).await {
-                        Ok(mut names) => all.append(&mut names),
-                        Err(e) => {
-                            tracing::warn!("[ESI] universe name resolution failed: {}", e);
-                            break;
-                        }
-                    }
-                }
-                if !all.is_empty() {
-                    let _ = tx.send(BackendMsg::NamesResolved { names: all });
+                let (names, rejected, _fatal) = resolve_names_resilient(&esi, &missing).await;
+                if !names.is_empty() || !rejected.is_empty() {
+                    tx.send(BackendMsg::NamesResolved { names, rejected });
                 }
             });
         }
@@ -1401,7 +1500,7 @@ impl MimirApp {
                         }
                     }
                     if !names.is_empty() || !denied.is_empty() {
-                        let _ = tx.send(BackendMsg::StructuresResolved {
+                        tx.send(BackendMsg::StructuresResolved {
                             character_id,
                             names,
                             denied,
@@ -1455,6 +1554,7 @@ impl MimirApp {
         while let Ok(msg) = self.rx.try_recv() {
             match msg {
                 BackendMsg::Refreshed {
+                    generation,
                     character_id,
                     info,
                     skills,
@@ -1466,6 +1566,16 @@ impl MimirApp {
                     planetary_colonies,
                     fittings_list,
                 } => {
+                    if self.state.demo
+                        || self.refresh_generation.get(&character_id).copied() != Some(generation)
+                    {
+                        tracing::warn!(
+                            "[ESI] ignoring stale refresh result character_id={} generation={}",
+                            character_id,
+                            generation
+                        );
+                        continue;
+                    }
                     tracing::info!("[ESI] refresh complete character_id={}", character_id);
                     // A refresh landing after its character was removed
                     // must not resurrect that character's summary (the
@@ -1617,7 +1727,14 @@ impl MimirApp {
                         self.schedule_name_resolution();
                     }
                 }
-                BackendMsg::NamesResolved { names } => {
+                BackendMsg::NamesResolved { names, rejected } => {
+                    if !rejected.is_empty() {
+                        tracing::info!(
+                            "[ESI] marking {} unresolvable universe ids",
+                            rejected.len()
+                        );
+                        self.resolver.mark_unresolved(&rejected);
+                    }
                     tracing::info!("[ESI] resolved {} universe names", names.len());
                     self.apply_landed_names(&names);
                 }
@@ -1647,9 +1764,20 @@ impl MimirApp {
                     }
                 }
                 BackendMsg::RefreshFailed {
+                    generation,
                     character_id,
                     message,
                 } => {
+                    if self.state.demo
+                        || self.refresh_generation.get(&character_id).copied() != Some(generation)
+                    {
+                        tracing::warn!(
+                            "[ESI] ignoring stale refresh failure character_id={} generation={}",
+                            character_id,
+                            generation
+                        );
+                        continue;
+                    }
                     if self.state.active_character_id != Some(character_id) {
                         // A failure landing after a character switch must
                         // not overwrite the new active character's states,
@@ -1702,6 +1830,13 @@ impl MimirApp {
                     }
                 }
                 BackendMsg::LoggedIn { row } => {
+                    if self.state.demo {
+                        tracing::warn!(
+                            "[AUTH] ignoring live login completion in demo mode character_id={}",
+                            row.character_id
+                        );
+                        continue;
+                    }
                     tracing::info!("[AUTH] login complete character_id={}", row.character_id);
                     self.state.auth = AuthState::Success;
                     let id = row.character_id;
@@ -1713,6 +1848,13 @@ impl MimirApp {
                     self.state.request_refresh("post-login");
                 }
                 BackendMsg::StepUpLoggedIn { character_id } => {
+                    if self.state.demo {
+                        tracing::warn!(
+                            "[AUTH] ignoring live step-up completion in demo mode character_id={}",
+                            character_id
+                        );
+                        continue;
+                    }
                     tracing::info!("[AUTH] step-up complete character_id={}", character_id);
                     self.state.auth = AuthState::Success;
                     if self.state.active_character_id == Some(character_id) {
@@ -1864,6 +2006,10 @@ impl MimirApp {
                     }
                 }
                 BackendMsg::LoginFailed { message } => {
+                    if self.state.demo {
+                        tracing::warn!("[AUTH] ignoring live login failure in demo mode");
+                        continue;
+                    }
                     tracing::warn!("[AUTH] login failed: {}", message);
                     self.state.auth = AuthState::Error;
                     self.state.status_message = format!("Sign-in failed: {message}");
@@ -1900,6 +2046,14 @@ impl MimirApp {
                 // token; re-arm pinned structure ids under the new
                 // active character (design section 6.3 rule 2).
                 self.resolver.forget_unresolved_structures();
+                if let (Some(backends), Some(id)) =
+                    (self.backends.as_ref(), self.state.active_character_id)
+                {
+                    if let Ok(conn) = backends.db.lock() {
+                        let _ = repositories::set_active_character(&conn, id);
+                        load_cached_state(&conn, &self.sde, &mut self.state, id);
+                    }
+                }
                 self.state.request_refresh("character-switch");
                 // Plans are local: load beside the refresh request,
                 // never waiting for it (section 11.1 point 2).
@@ -1923,8 +2077,36 @@ impl MimirApp {
             self.last_demo_mode = self.state.demo;
             if exiting_demo {
                 self.state.clear_for_demo_exit();
+                if self.demo_in_memory_backends {
+                    self.backends = Backends::open_live();
+                    self.demo_in_memory_backends = false;
+                }
+                self.resolver = NameResolver::new();
+                self.demo_names_loaded = false;
                 if let Some(b) = &self.backends {
+                    self.resolver.attach(b.esi.clone(), b.db.clone());
                     if let Ok(conn) = b.db.lock() {
+                        match self.resolver.hydrate_from_db(&conn) {
+                            Ok(n) => tracing::info!(
+                                "[ESI] hydrated {} cached universe names on demo exit",
+                                n
+                            ),
+                            Err(e) => {
+                                tracing::warn!("[ESI] name hydrate on demo exit failed: {}", e);
+                            }
+                        }
+                        match repositories::get_setting(&conn, "startup_view") {
+                            Ok(Some(saved)) => {
+                                self.persisted_startup_view = Some(saved.clone());
+                                self.state.startup_view = view_for_startup_label(&saved);
+                            }
+                            Ok(None) => {
+                                self.persisted_startup_view =
+                                    Some(View::Dashboard.label().to_string());
+                                self.state.startup_view = View::Dashboard;
+                            }
+                            Err(_) => {}
+                        }
                         match repositories::list_characters(&conn) {
                             Ok(rows) => {
                                 tracing::info!(
@@ -2399,7 +2581,7 @@ impl MimirApp {
                             ImageKind::Type => TYPE_ICON_SIZE,
                         };
                         let image = service.image(kind, id, size).await;
-                        let _ = tx.send(BackendMsg::PortraitFetched { kind, id, image });
+                        tx.send(BackendMsg::PortraitFetched { kind, id, image });
                     });
                 }
             }
@@ -2519,7 +2701,7 @@ impl MimirApp {
                     .as_ref()
                     .is_ok_and(|d| d.truncated)
             );
-            let _ = tx.send(BackendMsg::MarketFetched {
+            tx.send(BackendMsg::MarketFetched {
                 generation,
                 data: Box::new(data),
             });
@@ -2641,7 +2823,7 @@ impl MimirApp {
                         needs_reauthorize,
                     }
                 });
-            let _ = tx.send(BackendMsg::PlanetaryDetailFetched {
+            tx.send(BackendMsg::PlanetaryDetailFetched {
                 generation,
                 selection,
                 result,
@@ -2700,7 +2882,7 @@ impl MimirApp {
                     types
                 })
                 .map_err(|e| e.to_string());
-            let _ = tx.send(BackendMsg::MarketLookupDone {
+            tx.send(BackendMsg::MarketLookupDone {
                 generation,
                 query,
                 result,
@@ -2725,10 +2907,19 @@ impl MimirApp {
             tracing::warn!("[ESI] refresh skipped: no backend/character");
             return;
         };
+        let generation = {
+            let entry = self.refresh_generation.entry(id).or_insert(0);
+            *entry = entry.wrapping_add(1);
+            *entry
+        };
         let esi = backends.esi.clone();
         let db = backends.db.clone();
         let tx = self.tx.clone();
-        tracing::info!("[ESI] refresh started character_id={}", id);
+        tracing::info!(
+            "[ESI] refresh started character_id={} generation={}",
+            id,
+            generation
+        );
         runtime.spawn(async move {
             let result = async {
                 let info = endpoints::get_character(&esi, id).await?;
@@ -2987,103 +3178,124 @@ impl MimirApp {
                     fittings_list,
                 )) => {
                     // Persist the full refresh so the next launch renders
-                    // cached skills/wallet offline (load_cached_state).
+                    // cached skills/wallet offline (load_cached_state), unless
+                    // the character was deleted while the refresh was in flight.
                     if let Ok(conn) = db.lock() {
-                        let _ = repositories::upsert_character(
-                            &conn,
-                            &CharacterRow {
-                                character_id: id,
-                                name: info.name.clone(),
-                                corporation_id: info.corporation_id,
-                                alliance_id: info.alliance_id,
-                                is_active: true,
-                            },
-                        );
-                        let queue_rows: Vec<repositories::SkillQueueRow> = skills
-                            .queue
-                            .iter()
-                            .map(|q| repositories::SkillQueueRow {
-                                character_id: id,
-                                queue_position: q.queue_position,
-                                skill_id: q.skill_id,
-                                finished_level: q.finished_level,
-                                start_date: q.start_date.clone(),
-                                finish_date: q.finish_date.clone(),
-                            })
-                            .collect();
-                        let _ = repositories::replace_skill_queue(&conn, id, &queue_rows);
-                        let skill_rows: Vec<repositories::CharacterSkillRow> = skills
-                            .skills
-                            .skills
-                            .iter()
-                            .map(|s| repositories::CharacterSkillRow {
-                                character_id: id,
-                                skill_id: s.skill_id,
-                                active_skill_level: s.active_skill_level,
-                                trained_skill_level: s.trained_skill_level,
-                                skillpoints_in_skill: s.skillpoints_in_skill,
-                            })
-                            .collect();
-                        let _ = repositories::replace_character_skills(&conn, id, &skill_rows);
-                        let _ = repositories::set_wallet_balance(
-                            &conn,
-                            &repositories::WalletBalanceRow {
-                                character_id: id,
-                                balance: wallet.balance,
-                            },
-                        );
-                        let journal_rows: Vec<repositories::WalletJournalRow> = wallet
-                            .journal
-                            .iter()
-                            .map(|j| repositories::WalletJournalRow {
-                                id: j.id,
-                                character_id: id,
-                                amount: j.amount,
-                                balance: j.balance,
-                                date: j.date.clone(),
-                                description: j.description.clone(),
-                                ref_type: j.ref_type.clone(),
-                                first_party_id: j.first_party_id,
-                                second_party_id: j.second_party_id,
-                            })
-                            .collect();
-                        let _ = repositories::upsert_journal(&conn, &journal_rows);
-                        let transaction_rows: Vec<repositories::WalletTransactionRow> = wallet
-                            .transactions
-                            .iter()
-                            .map(|t| repositories::WalletTransactionRow {
-                                transaction_id: t.transaction_id,
-                                character_id: id,
-                                journal_ref_id: t.journal_ref_id,
-                                date: t.date.clone(),
-                                type_id: t.type_id,
-                                quantity: t.quantity,
-                                unit_price: t.unit_price,
-                                is_buy: t.is_buy,
-                                is_personal: t.is_personal,
-                                client_id: t.client_id,
-                                location_id: t.location_id,
-                            })
-                            .collect();
-                        let _ = repositories::upsert_transactions(&conn, &transaction_rows);
-                        let loyalty_rows: Vec<repositories::LoyaltyRow> = wallet
-                            .loyalty
-                            .iter()
-                            .map(|l| repositories::LoyaltyRow {
-                                character_id: id,
-                                corporation_id: l.corporation_id,
-                                loyalty_points: l.loyalty_points,
-                            })
-                            .collect();
-                        let _ = repositories::replace_loyalty(&conn, id, &loyalty_rows);
-                        tracing::info!(
-                            "[DB] refresh persisted character_id={} queue={} journal={}",
-                            id,
-                            queue_rows.len(),
-                            journal_rows.len()
-                        );
+                        let existing_active = match repositories::get_character(&conn, id) {
+                            Ok(Some(row)) => Some(row.is_active),
+                            Ok(None) => None,
+                            Err(e) => {
+                                tracing::warn!(
+                                    "[DB] failed checking character existence before refresh persist character_id={} error={}",
+                                    id,
+                                    e
+                                );
+                                None
+                            }
+                        };
+                        if let Some(is_active) = existing_active {
+                            let _ = repositories::upsert_character(
+                                &conn,
+                                &CharacterRow {
+                                    character_id: id,
+                                    name: info.name.clone(),
+                                    corporation_id: info.corporation_id,
+                                    alliance_id: info.alliance_id,
+                                    is_active,
+                                },
+                            );
+                            let queue_rows: Vec<repositories::SkillQueueRow> = skills
+                                .queue
+                                .iter()
+                                .map(|q| repositories::SkillQueueRow {
+                                    character_id: id,
+                                    queue_position: q.queue_position,
+                                    skill_id: q.skill_id,
+                                    finished_level: q.finished_level,
+                                    start_date: q.start_date.clone(),
+                                    finish_date: q.finish_date.clone(),
+                                })
+                                .collect();
+                            let _ = repositories::replace_skill_queue(&conn, id, &queue_rows);
+                            let skill_rows: Vec<repositories::CharacterSkillRow> = skills
+                                .skills
+                                .skills
+                                .iter()
+                                .map(|s| repositories::CharacterSkillRow {
+                                    character_id: id,
+                                    skill_id: s.skill_id,
+                                    active_skill_level: s.active_skill_level,
+                                    trained_skill_level: s.trained_skill_level,
+                                    skillpoints_in_skill: s.skillpoints_in_skill,
+                                })
+                                .collect();
+                            let _ = repositories::replace_character_skills(&conn, id, &skill_rows);
+                            let _ = repositories::set_wallet_balance(
+                                &conn,
+                                &repositories::WalletBalanceRow {
+                                    character_id: id,
+                                    balance: wallet.balance,
+                                },
+                            );
+                            let journal_rows: Vec<repositories::WalletJournalRow> = wallet
+                                .journal
+                                .iter()
+                                .map(|j| repositories::WalletJournalRow {
+                                    id: j.id,
+                                    character_id: id,
+                                    amount: j.amount,
+                                    balance: j.balance,
+                                    date: j.date.clone(),
+                                    description: j.description.clone(),
+                                    ref_type: j.ref_type.clone(),
+                                    first_party_id: j.first_party_id,
+                                    second_party_id: j.second_party_id,
+                                })
+                                .collect();
+                            let _ = repositories::upsert_journal(&conn, &journal_rows);
+                            let transaction_rows: Vec<repositories::WalletTransactionRow> = wallet
+                                .transactions
+                                .iter()
+                                .map(|t| repositories::WalletTransactionRow {
+                                    transaction_id: t.transaction_id,
+                                    character_id: id,
+                                    journal_ref_id: t.journal_ref_id,
+                                    date: t.date.clone(),
+                                    type_id: t.type_id,
+                                    quantity: t.quantity,
+                                    unit_price: t.unit_price,
+                                    is_buy: t.is_buy,
+                                    is_personal: t.is_personal,
+                                    client_id: t.client_id,
+                                    location_id: t.location_id,
+                                })
+                                .collect();
+                            let _ = repositories::upsert_transactions(&conn, &transaction_rows);
+                            let loyalty_rows: Vec<repositories::LoyaltyRow> = wallet
+                                .loyalty
+                                .iter()
+                                .map(|l| repositories::LoyaltyRow {
+                                    character_id: id,
+                                    corporation_id: l.corporation_id,
+                                    loyalty_points: l.loyalty_points,
+                                })
+                                .collect();
+                            let _ = repositories::replace_loyalty(&conn, id, &loyalty_rows);
+                            tracing::info!(
+                                "[DB] refresh persisted character_id={} queue={} journal={}",
+                                id,
+                                queue_rows.len(),
+                                journal_rows.len()
+                            );
+                        } else {
+                            tracing::info!(
+                                "[DB] skipping refresh persistence for removed character_id={}",
+                                id
+                            );
+                        }
                     }
-                    let _ = tx.send(BackendMsg::Refreshed {
+                    tx.send(BackendMsg::Refreshed {
+                        generation,
                         character_id: id,
                         info: Box::new(info),
                         skills: Box::new(skills),
@@ -3097,7 +3309,8 @@ impl MimirApp {
                     });
                 }
                 Err(e) => {
-                    let _ = tx.send(BackendMsg::RefreshFailed {
+                    tx.send(BackendMsg::RefreshFailed {
+                        generation,
                         character_id: id,
                         message: e.to_string(),
                     });
@@ -3113,6 +3326,12 @@ impl MimirApp {
             tracing::warn!("[AUTH] sign-in ignored in demo mode");
             self.state.status_message =
                 "Demo mode uses sample data; EVE sign-in is disabled.".to_string();
+            return;
+        }
+        if self.state.auth.is_busy() {
+            tracing::warn!("[AUTH] sign-in ignored; sign-in already in progress");
+            self.state.status_message =
+                "Sign-in already in progress; finish it in your browser first.".to_string();
             return;
         }
         let (Some(backends), Some(runtime)) = (self.backends.as_ref(), self.runtime.as_ref())
@@ -3137,6 +3356,12 @@ impl MimirApp {
                 return;
             }
         };
+        let callback_server = CallbackServer::new();
+        if let Err(e) = callback_server.start_sync(runtime.handle()) {
+            self.state.auth = AuthState::Error;
+            self.state.status_message = format!("Could not start sign-in callback listener: {e}");
+            return;
+        }
         tracing::info!("[AUTH] opening browser for EVE SSO (url not logged with state)");
         if let Err(e) = open::that(request.authorize_url.as_str()) {
             self.state.auth = AuthState::Error;
@@ -3149,7 +3374,7 @@ impl MimirApp {
         let tx = self.tx.clone();
         runtime.spawn(async move {
             let outcome = async {
-                let params = CallbackServer::new().wait_for_callback().await?;
+                let params = callback_server.wait_for_callback().await?;
                 let code = params.into_result(&request.state)?;
                 let tokens = oauth::exchange_code(&code, &request.pkce.verifier).await?;
                 // Verify the signature before any claims field is read:
@@ -3160,17 +3385,7 @@ impl MimirApp {
                     .ok_or(crate::AuthError::MalformedToken)?;
                 let stored = StoredTokens::from_token_response(character_id, &tokens, &claims);
                 token_store.save(&stored)?;
-                if let Ok(conn) = db.lock() {
-                    let _ = repositories::set_token_meta(
-                        &conn,
-                        &TokenMetaRow {
-                            character_id,
-                            scopes: claims.scp.join(" "),
-                            expires_at: claims.exp,
-                        },
-                    );
-                }
-                Ok::<_, crate::AppError>(CharacterRow {
+                let row = CharacterRow {
                     character_id,
                     name: if claims.name.is_empty() {
                         "Unknown Item".to_string()
@@ -3180,15 +3395,28 @@ impl MimirApp {
                     corporation_id: 0,
                     alliance_id: None,
                     is_active: true,
-                })
+                };
+                if let Ok(conn) = db.lock() {
+                    let _ = repositories::set_token_meta(
+                        &conn,
+                        &TokenMetaRow {
+                            character_id,
+                            scopes: claims.scp.join(" "),
+                            expires_at: claims.exp,
+                        },
+                    );
+                    let _ = repositories::upsert_character(&conn, &row);
+                    let _ = repositories::set_active_character(&conn, character_id);
+                }
+                Ok::<_, crate::AppError>(row)
             }
             .await;
             match outcome {
                 Ok(row) => {
-                    let _ = tx.send(BackendMsg::LoggedIn { row });
+                    tx.send(BackendMsg::LoggedIn { row });
                 }
                 Err(e) => {
-                    let _ = tx.send(BackendMsg::LoginFailed {
+                    tx.send(BackendMsg::LoginFailed {
                         message: e.to_string(),
                     });
                 }
@@ -3355,6 +3583,12 @@ impl MimirApp {
                 return;
             }
         };
+        let callback_server = CallbackServer::new();
+        if let Err(e) = callback_server.start_sync(runtime.handle()) {
+            self.state.auth = AuthState::Error;
+            self.state.status_message = format!("Could not start sign-in callback listener: {e}");
+            return;
+        }
         tracing::info!("[AUTH] opening browser for EVE SSO step-up (url not logged with state)");
         if let Err(e) = open::that(auth_request.authorize_url.as_str()) {
             self.state.auth = AuthState::Error;
@@ -3372,7 +3606,7 @@ impl MimirApp {
         let expected_scopes = union;
         runtime.spawn(async move {
             let outcome = async {
-                let params = CallbackServer::new().wait_for_callback().await?;
+                let params = callback_server.wait_for_callback().await?;
                 let code = params.into_result(&auth_request.state)?;
                 let tokens = oauth::exchange_code(&code, &auth_request.pkce.verifier).await?;
                 // Verify the signature before the character/scope checks:
@@ -3432,10 +3666,10 @@ impl MimirApp {
             .await;
             match outcome {
                 Ok(character_id) => {
-                    let _ = tx.send(BackendMsg::StepUpLoggedIn { character_id });
+                    tx.send(BackendMsg::StepUpLoggedIn { character_id });
                 }
                 Err(e) => {
-                    let _ = tx.send(BackendMsg::LoginFailed {
+                    tx.send(BackendMsg::LoginFailed {
                         message: e.to_string(),
                     });
                 }
@@ -3587,7 +3821,7 @@ impl MimirApp {
                                 }
                             }
                         };
-                    let _ = tx.send(BackendMsg::FittingWriteDone {
+                    tx.send(BackendMsg::FittingWriteDone {
                         character_id,
                         kind: FittingWriteKind::Save,
                         outcome,
@@ -3627,7 +3861,7 @@ impl MimirApp {
                                 }
                             }
                         };
-                    let _ = tx.send(BackendMsg::FittingWriteDone {
+                    tx.send(BackendMsg::FittingWriteDone {
                         character_id,
                         kind: FittingWriteKind::Delete,
                         outcome,
@@ -3639,14 +3873,19 @@ impl MimirApp {
 
     fn logout(&mut self, character_id: i64) {
         tracing::info!("[AUTH] logout character_id={}", character_id);
-        if let (Some(backends), Some(runtime)) = (self.backends.as_ref(), self.runtime.as_ref()) {
-            if let Ok(Some(tokens)) = backends.token_store.load(character_id) {
-                let refresh = tokens.refresh.as_str().to_string();
-                runtime.spawn(async move {
-                    let _ = oauth::revoke_token(&refresh).await;
-                });
+        if let Some(backends) = self.backends.as_ref() {
+            if let Some(runtime) = self.runtime.as_ref() {
+                if let Ok(Some(tokens)) = backends.token_store.load(character_id) {
+                    let refresh = tokens.refresh.as_str().to_string();
+                    runtime.spawn(async move {
+                        let _ = oauth::revoke_token(&refresh).await;
+                    });
+                }
             }
             let _ = backends.token_store.delete(character_id);
+            if let Ok(conn) = backends.db.lock() {
+                let _ = repositories::delete_character(&conn, character_id);
+            }
         }
         self.state.remove_character(character_id);
     }
@@ -3802,6 +4041,7 @@ fn queue_has_unfinished_skill(
 
 impl eframe::App for MimirApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        self.tx.attach_ctx_if_unset(ctx);
         self.drain_requests();
         // Persist startup-view choice only when it actually changed since
         // the last write (settings view edits it); no per-frame DB reads.
@@ -5295,5 +5535,79 @@ mod tests {
             },
         ];
         assert!(queue_has_unfinished_skill(&active, now));
+    }
+
+    #[test]
+    fn collect_live_name_ids_skips_container_items_and_uses_upwell_threshold() {
+        use crate::app::state::AssetsData;
+        use crate::esi::models::{AssetItem, CharacterBlueprint};
+
+        let mut state = AppState::new(false);
+        state.characters = vec![CharacterRow {
+            character_id: 2_112_625_428,
+            name: "Pilot".to_string(),
+            corporation_id: 1_000_000_042, // below 1e12, must NOT be treated as a structure
+            alliance_id: None,
+            is_active: true,
+        }];
+        let ship_item_id = 1_040_000_000_001;
+        let container_item_id = 1_040_000_000_002;
+        let real_structure_id = 1_030_000_000_123;
+        state.assets = LoadState::Ready(AssetsData {
+            items: vec![
+                AssetItem {
+                    item_id: ship_item_id,
+                    type_id: 587,
+                    quantity: 1,
+                    location_id: real_structure_id,
+                    location_flag: "Hangar".to_string(),
+                    location_type: "station".to_string(),
+                    is_singleton: true,
+                    is_blueprint_copy: None,
+                },
+                AssetItem {
+                    item_id: container_item_id,
+                    type_id: 2048,
+                    quantity: 1,
+                    location_id: ship_item_id,
+                    location_flag: "LoSlot0".to_string(),
+                    location_type: "item".to_string(),
+                    is_singleton: true,
+                    is_blueprint_copy: None,
+                },
+                AssetItem {
+                    item_id: 1_040_000_000_003,
+                    type_id: 34,
+                    quantity: 100,
+                    location_id: container_item_id,
+                    location_flag: "Cargo".to_string(),
+                    // Even if location_type isn't "item", matching parent item_id is skipped.
+                    location_type: "other".to_string(),
+                    is_singleton: false,
+                    is_blueprint_copy: None,
+                },
+            ],
+            custom_names: Default::default(),
+        });
+        state.industry = LoadState::Ready(IndustryData {
+            jobs: Ok(IndustryJobsData::default()),
+            blueprints: Ok(BlueprintsData {
+                blueprints: vec![CharacterBlueprint {
+                    item_id: 1_040_000_000_004,
+                    type_id: 681,
+                    location_id: container_item_id,
+                    location_flag: "Locked".to_string(),
+                    quantity: -1,
+                    time_efficiency: 0,
+                    material_efficiency: 0,
+                    runs: -1,
+                }],
+                truncated: false,
+            }),
+        });
+
+        let (ids, structures) = MimirApp::collect_live_name_ids(&state, None);
+        assert!(ids.contains(&1_000_000_042));
+        assert_eq!(structures, vec![real_structure_id]);
     }
 }
