@@ -2771,6 +2771,11 @@ impl MimirApp {
             {
                 tracing::debug!("[MARKET] demo market fetch re-applies fixture character");
                 crate::demo::data::apply_character(&mut self.state, &bundle, id);
+            } else {
+                tracing::debug!(
+                    "[MARKET] demo market fetch settled empty: no active demo character"
+                );
+                self.state.market = LoadState::Empty;
             }
             return;
         }
@@ -6280,5 +6285,32 @@ mod tests {
             app.state.market_lookup_message.as_deref(),
             Some(MARKET_LOOKUP_NOT_FOUND)
         );
+    }
+
+    #[test]
+    fn demo_market_region_switch_without_characters_settles_empty() {
+        let mut app = MimirApp::new(true, Arc::new(Mutex::new(Vec::new())), None, None);
+        let ids: Vec<i64> = app
+            .state
+            .characters
+            .iter()
+            .map(|c| c.character_id)
+            .collect();
+        for id in ids {
+            app.state.remove_character(id);
+        }
+        assert!(app.state.active_character_id.is_none());
+        assert!(app.state.market_selected_type_id.is_some());
+
+        app.state.set_market_region(10000043);
+        assert!(matches!(app.state.market, LoadState::Loading));
+        assert!(app.state.market_fetch_requested);
+
+        app.drain_requests();
+        assert!(
+            matches!(app.state.market, LoadState::Empty),
+            "demo region switch without active demo character must settle to Empty"
+        );
+        assert!(!app.state.market_fetch_requested);
     }
 }
