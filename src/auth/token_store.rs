@@ -200,6 +200,9 @@ impl TokenStore {
                             "[AUTH] tokens saved to keyring character_id={}",
                             tokens.character_id
                         );
+                        // Remove any older fallback entry so plaintext tokens never
+                        // linger or shadow newer rotations if keyring later fails.
+                        let _ = self.remove_from_file(tokens.character_id);
                         return Ok(());
                     }
                     Err(e) => {
@@ -211,11 +214,23 @@ impl TokenStore {
                 }
             }
         }
-        self.save_to_file(tokens.character_id, &payload)
+        self.save_to_file(tokens.character_id, &payload)?;
+        if self.use_keyring {
+            if let Ok(entry) = keyring::Entry::new(
+                Self::keyring_service(),
+                &Self::keyring_user(tokens.character_id),
+            ) {
+                // Best-effort purge of stale keyring secret after rotated token landed
+                // in the fallback file so the next load cannot return the old token.
+                let _ = entry.delete_credential();
+            }
+        }
+        Ok(())
     }
 
     pub fn load(&self, character_id: i64) -> AppResult<Option<StoredTokens>> {
         tracing::debug!("[AUTH] TokenStore::load character_id={}", character_id);
+        let mut keyring_tokens = None;
         if self.use_keyring {
             if let Ok(entry) =
                 keyring::Entry::new(Self::keyring_service(), &Self::keyring_user(character_id))
@@ -227,12 +242,13 @@ impl TokenStore {
                                 "[AUTH] tokens loaded from keyring character_id={}",
                                 character_id
                             );
-                            return Ok(Some(payload.into_stored(character_id)));
+                            keyring_tokens = Some(payload.into_stored(character_id));
+                        } else {
+                            tracing::warn!(
+                                "[AUTH] keyring payload undecodable character_id={}",
+                                character_id
+                            );
                         }
-                        tracing::warn!(
-                            "[AUTH] keyring payload undecodable character_id={}",
-                            character_id
-                        );
                     }
                     Err(keyring::Error::NoEntry) => {}
                     Err(e) => {
@@ -241,7 +257,39 @@ impl TokenStore {
                 }
             }
         }
-        self.load_from_file(character_id)
+        let file_tokens = if keyring_tokens.is_some() {
+            self.load_from_file(character_id).unwrap_or_else(|e| {
+                tracing::warn!(
+                    "[AUTH] ignoring unreadable fallback file while keyring succeeded: {}",
+                    e
+                );
+                None
+            })
+        } else {
+            self.load_from_file(character_id)?
+        };
+        let had_keyring = keyring_tokens.is_some();
+        let had_file = file_tokens.is_some();
+        match select_fresher_tokens(keyring_tokens, file_tokens) {
+            Some((winner, true)) => {
+                if had_file {
+                    let _ = self.remove_from_file(character_id);
+                }
+                Ok(Some(winner))
+            }
+            Some((winner, false)) => {
+                if had_keyring && self.use_keyring {
+                    if let Ok(entry) = keyring::Entry::new(
+                        Self::keyring_service(),
+                        &Self::keyring_user(character_id),
+                    ) {
+                        let _ = entry.delete_credential();
+                    }
+                }
+                Ok(Some(winner))
+            }
+            None => Ok(None),
+        }
     }
 
     pub fn delete(&self, character_id: i64) -> AppResult<()> {
@@ -264,13 +312,24 @@ impl TokenStore {
             .file_lock
             .lock()
             .unwrap_or_else(|poison| poison.into_inner());
-        let mut map = self.read_file_map()?;
-        if map.remove(&character_id.to_string()).is_some() {
-            self.write_file_map(&map)?;
-            tracing::info!(
-                "[AUTH] tokens deleted from fallback file character_id={}",
-                character_id
-            );
+        match self.read_file_map() {
+            Ok(mut map) => {
+                if map.remove(&character_id.to_string()).is_some() {
+                    self.write_file_map(&map)?;
+                    tracing::info!(
+                        "[AUTH] tokens deleted from fallback file character_id={}",
+                        character_id
+                    );
+                }
+            }
+            Err(e) => {
+                tracing::warn!(
+                    "[AUTH] clearing corrupt fallback token file during delete character_id={} error={}",
+                    character_id,
+                    e
+                );
+                self.write_file_map(&BTreeMap::new())?;
+            }
         }
         Ok(())
     }
@@ -294,13 +353,28 @@ impl TokenStore {
             .file_lock
             .lock()
             .unwrap_or_else(|poison| poison.into_inner());
-        let mut map = self.read_file_map()?;
+        let mut map = self.read_file_map_lossy()?;
         map.insert(character_id.to_string(), payload.clone());
         self.write_file_map(&map)?;
         tracing::info!(
             "[AUTH] tokens saved to fallback file character_id={}",
             character_id
         );
+        Ok(())
+    }
+
+    fn remove_from_file(&self, character_id: i64) -> AppResult<()> {
+        let _guard = self
+            .file_lock
+            .lock()
+            .unwrap_or_else(|poison| poison.into_inner());
+        if !self.fallback_path.exists() {
+            return Ok(());
+        }
+        let mut map = self.read_file_map_lossy()?;
+        if map.remove(&character_id.to_string()).is_some() {
+            self.write_file_map(&map)?;
+        }
         Ok(())
     }
 
@@ -330,6 +404,26 @@ impl TokenStore {
         })
     }
 
+    fn read_file_map_lossy(&self) -> AppResult<BTreeMap<String, TokenPayload>> {
+        if !self.fallback_path.exists() {
+            return Ok(BTreeMap::new());
+        }
+        let text = std::fs::read_to_string(&self.fallback_path)?;
+        if text.trim().is_empty() {
+            return Ok(BTreeMap::new());
+        }
+        match serde_json::from_str(&text) {
+            Ok(map) => Ok(map),
+            Err(e) => {
+                tracing::warn!(
+                    "[AUTH] fallback token file corrupt; resetting fallback store error={}",
+                    e
+                );
+                Ok(BTreeMap::new())
+            }
+        }
+    }
+
     fn write_file_map(&self, map: &BTreeMap<String, TokenPayload>) -> AppResult<()> {
         if let Some(parent) = self.fallback_path.parent() {
             if !parent.as_os_str().is_empty() {
@@ -339,6 +433,26 @@ impl TokenStore {
         let text = serde_json::to_string_pretty(map)?;
         write_private_file(&self.fallback_path, &text)?;
         Ok(())
+    }
+}
+
+/// Prefer whichever decodable token set has a newer expiry timestamp so a
+/// fallback rotation is never shadowed by a stale keyring entry (or vice versa).
+fn select_fresher_tokens(
+    keyring: Option<StoredTokens>,
+    file: Option<StoredTokens>,
+) -> Option<(StoredTokens, bool)> {
+    match (keyring, file) {
+        (Some(k), Some(f)) => {
+            if f.expires_at_unix > k.expires_at_unix {
+                Some((f, false))
+            } else {
+                Some((k, true))
+            }
+        }
+        (Some(k), None) => Some((k, true)),
+        (None, Some(f)) => Some((f, false)),
+        (None, None) => None,
     }
 }
 
@@ -490,5 +604,41 @@ mod tests {
             let mode = std::fs::metadata(&path).expect("meta").permissions().mode() & 0o777;
             assert_eq!(mode, 0o600);
         }
+    }
+
+    #[test]
+    fn select_fresher_tokens_prefers_higher_expiry() {
+        let mut stale = sample(7);
+        stale.access = AccessToken("old-token".to_string());
+        stale.expires_at_unix = 100;
+        let mut fresh = sample(7);
+        fresh.access = AccessToken("new-token".to_string());
+        fresh.expires_at_unix = 200;
+
+        let (winner, from_keyring) =
+            select_fresher_tokens(Some(stale.clone()), Some(fresh.clone())).expect("winner");
+        assert!(!from_keyring);
+        assert_eq!(winner.access.as_str(), "new-token");
+
+        let (winner, from_keyring) =
+            select_fresher_tokens(Some(fresh), Some(stale)).expect("winner");
+        assert!(from_keyring);
+        assert_eq!(winner.access.as_str(), "new-token");
+    }
+
+    #[test]
+    fn corrupt_fallback_file_recovers_on_save_and_delete() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join("tokens.json");
+        let store = TokenStore::file_only(path.clone());
+
+        std::fs::write(&path, "{not valid json").expect("seed corrupt");
+        store.save(&sample(9)).expect("save recovers corrupt file");
+        let loaded = store.load(9).expect("load").expect("present");
+        assert_eq!(loaded.access.as_str(), "secret-access-value");
+
+        std::fs::write(&path, "{corrupt again").expect("re-corrupt");
+        store.delete(9).expect("delete resets corrupt file");
+        assert!(store.load(9).expect("load after delete").is_none());
     }
 }

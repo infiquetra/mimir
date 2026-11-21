@@ -132,10 +132,11 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
         ui.horizontal(|ui| {
             ui.label("Filter:");
             let response = ui.text_edit_singleline(&mut state.log_filter);
-            state.text_input_focused |= response.has_focus();
-            if response.has_focus() {
+            if state.focus_search {
+                response.request_focus();
                 state.focus_search = false;
             }
+            state.text_input_focused |= response.has_focus();
             if ui.button("Clear").clicked() {
                 state.log_filter.clear();
                 state.log_tag_filter = None;

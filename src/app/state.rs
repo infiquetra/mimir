@@ -1531,6 +1531,7 @@ impl AppState {
     pub fn clear_for_demo_exit(&mut self) {
         tracing::info!("[DEMO] clearing demo state on demo exit");
         self.demo = false;
+        self.auth = AuthState::Idle;
         self.characters.clear();
         self.active_character_id = None;
         self.summaries.clear();
@@ -1548,6 +1549,8 @@ impl AppState {
         self.character_detail = LoadState::Empty;
         self.character_details = LoadState::Empty;
         self.market = LoadState::Empty;
+        self.market_selected_type_id = None;
+        self.market_selected_type_name = None;
         self.market_candidates.clear();
         self.market_lookup_message = None;
         self.market_generation = self.market_generation.wrapping_add(1);
@@ -1592,6 +1595,15 @@ impl AppState {
         self.skill_plan_picker_open = false;
         self.skill_plan_picker_search.clear();
         self.dashboard = LoadState::Empty;
+        self.refresh_requested = false;
+        self.retry_requested = false;
+        self.login_requested = false;
+        self.stepup_requested = None;
+        self.logout_requested_id = None;
+        self.delete_requested_id = None;
+        self.market_fetch_requested = false;
+        self.market_lookup_requested = None;
+        self.focus_search = false;
         self.status_message = "Demo off. Live characters load after sign-in/refresh.".to_string();
     }
 
@@ -1600,6 +1612,7 @@ impl AppState {
             tracing::debug!("[UI] switch view to {}", view.label());
         }
         self.view = view;
+        self.focus_search = false;
     }
 
     pub fn request_refresh(&mut self, reason: &str) {
@@ -4341,11 +4354,34 @@ mod tests {
         state.exploration = LoadState::Ready(ExplorationData {
             reference: Arc::new(exploration_ref),
         });
+        state.auth = AuthState::AwaitingCallback;
+        state.refresh_requested = true;
+        state.retry_requested = true;
+        state.login_requested = true;
+        state.stepup_requested = Some(StepUpRequest::new(1, &["publicData"]));
+        state.logout_requested_id = Some(1);
+        state.delete_requested_id = Some(2);
+        state.market_fetch_requested = true;
+        state.market_lookup_requested = Some("Tritanium".to_string());
+        state.focus_search = true;
 
         state.clear_for_demo_exit();
         assert!(!state.demo);
+        assert_eq!(state.auth, AuthState::Idle);
         assert!(state.characters.is_empty());
         assert_eq!(state.active_character_id, None);
+        assert_eq!(state.market_selected_type_id, None);
+        assert_eq!(state.market_selected_type_name, None);
+        assert!(!state.refresh_requested);
+        assert!(!state.retry_requested);
+        assert!(!state.login_requested);
+        assert!(state.stepup_requested.is_none());
+        assert!(state.logout_requested_id.is_none());
+        assert!(state.delete_requested_id.is_none());
+        assert!(!state.market_fetch_requested);
+        assert!(state.market_lookup_requested.is_none());
+        assert!(!state.planetary_detail_fetch_requested);
+        assert!(!state.focus_search);
         assert!(state.summaries.is_empty());
         assert!(state.demo_skill_plans.is_empty());
         assert!(matches!(state.wallet, LoadState::Empty));

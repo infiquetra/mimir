@@ -31,6 +31,17 @@
 
 ## 2026-11-21
 
+### Upwell assets carry `location_type: "item"` in live ESI, and `drain_requests` phase order governs mode/logout transitions
+
+**Author.** Mimir Pass-3 reliability pass
+**Context.** Pass-3 verification against CCP ESI documentation and end-to-end state transition ordering caught a live regression from Wave 3 alongside keyring/fallback split-brain and demo/logout phase bugs.
+**Evidence.** (1) Items docked in player-built Upwell structures come back from `GET /characters/{id}/assets/` with `"location_type": "item"`, `"location_id": <structure_id>`, and `"location_flag": "Hangar"` / `"Deliveries"` / `"AssetSafety"`; skipping all `location_type == "item"` rows hid every Upwell structure name in Assets. (2) If `TokenStore::save` falls back to `tokens.json` once after a keyring write error and never clears the keyring entry (or prefers keyring unconditionally on `load`), later reads return the revoked pre-rotation refresh token. (3) Running `active_id_changed` ahead of `demo != last_demo_mode` or `logout_requested_id` in `drain_requests` either leaks Tritanium market fetches onto empty live state on demo exit or strands promoted logout replacements on `LoadState::Loading`.
+**Mechanism.** Fixture tests used `location_type: "station"` for Upwell assets, masking the live ESI schema; dual-store writes lacked mutual cleanup and expiry comparison; and drain phases were ordered chronologically by feature addition instead of state dependency order.
+**Fix.** Filtered asset containers via `asset_item_ids` + `ship_item_id` + `is_ship_internal_flag`; added cross-store cleanup, `select_fresher_tokens`, and lossy recovery in `TokenStore`; framed `CallbackServer` reads to `\r\n\r\n` with strict `/callback` matching; reordered `drain_requests` and cleared auth/market/request state on demo transitions.
+**Validation.** Updated Upwell asset fixture test to `location_type: "item"`, added `TokenStore` / `CallbackServer` / `AppState` regression tests, and ran full `cargo test` and Xvfb smoke verification.
+**Generalizable rule.** Verify ESI enum semantics against live payloads (`location_type: "item"` covers docked Upwell structures, not just containers), arbitrate dual-backend stores by recency with stale cleanup, and order frame-drain handlers `logout/delete -> mode switch -> active character switch -> fetches`.
+**Refs.** DECISIONS 2026-11-21 Pass-3 entry; `src/app/{shell,state}.rs`, `src/auth/{token_store,callback_server}.rs`.
+
 ### Non-paginated ESI arrays, 404-all-or-nothing `/universe/names/`, Upwell `1e12` floor, and `run_simulator` zero-duration spin
 
 **Author.** Mimir Wave 3 reliability and correctness pass

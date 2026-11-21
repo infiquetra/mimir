@@ -271,13 +271,6 @@ impl EsiClient {
             );
             return Ok(tokens.access);
         }
-        if !tokens.needs_refresh_at(now_unix()) {
-            tracing::debug!(
-                "[AUTH] reusing freshly rotated access token character_id={}",
-                character_id
-            );
-            return Ok(tokens.access);
-        }
         // Fail closed before the refresh (and therefore before any
         // save) when verification is not wired: never skip it.
         let verifier = self.jwt_verifier.as_ref().ok_or_else(|| {

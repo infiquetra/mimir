@@ -113,7 +113,9 @@ fn main() -> eframe::Result<()> {
         tracing::info!("[DEMO] using in-memory database; live database path untouched");
         match db::open_in_memory() {
             Ok(conn) => {
-                let token_store = Arc::new(TokenStore::new(db::app_data_dir()));
+                let token_store = Arc::new(TokenStore::file_only(
+                    std::env::temp_dir().join("mimir-demo-unused-tokens.json"),
+                ));
                 let portraits = Arc::new(PortraitService::new(db::app_cache_dir()));
                 let esi = match EsiClient::new() {
                     Ok(client) => client.with_token_store(token_store.clone()),

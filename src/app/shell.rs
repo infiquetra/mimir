@@ -133,13 +133,17 @@ impl BackendSender {
         }
     }
 
+    fn request_repaint(&self) {
+        if let Ok(guard) = self.ctx.lock() {
+            if let Some(ctx) = guard.as_ref() {
+                ctx.request_repaint();
+            }
+        }
+    }
+
     fn send(&self, msg: BackendMsg) {
         if self.tx.send(msg).is_ok() {
-            if let Ok(guard) = self.ctx.lock() {
-                if let Some(ctx) = guard.as_ref() {
-                    ctx.request_repaint();
-                }
-            }
+            self.request_repaint();
         }
     }
 }
@@ -1163,6 +1167,30 @@ impl MimirApp {
         }
     }
 
+    fn is_ship_internal_flag(flag: &str) -> bool {
+        flag.starts_with("HiSlot")
+            || flag.starts_with("MedSlot")
+            || flag.starts_with("LoSlot")
+            || flag.starts_with("RigSlot")
+            || flag.starts_with("SubSystemSlot")
+            || flag.starts_with("ServiceSlot")
+            || flag.starts_with("FighterTube")
+            || flag.starts_with("Specialized")
+            || matches!(
+                flag,
+                "DroneBay"
+                    | "FighterBay"
+                    | "Cargo"
+                    | "FleetHangar"
+                    | "ShipHangar"
+                    | "FrigateEscapeBay"
+                    | "QuafeBay"
+                    | "CorpseBay"
+                    | "BoosterBay"
+                    | "Implant"
+            )
+    }
+
     /// Collect public universe IDs and player-structure location IDs visible
     /// in loaded state, skipping asset/blueprint container `item_id` references.
     fn collect_live_name_ids(
@@ -1203,10 +1231,24 @@ impl MimirApp {
                 asset_item_ids.extend(blueprints_data.blueprints.iter().map(|bp| bp.item_id));
             }
         }
+        if let LoadState::Ready(bundle) = &state.character_details {
+            if let Ok(ship) = &bundle.ship {
+                if ship.ship_item_id > 0 {
+                    asset_item_ids.insert(ship.ship_item_id);
+                }
+            }
+        }
         if let LoadState::Ready(assets) = &state.assets {
             for item in &assets.items {
                 ids.push(item.type_id);
-                if item.location_type == "item" || asset_item_ids.contains(&item.location_id) {
+                // Live ESI puts docked Upwell structure assets under
+                // `location_type == "item"` with `location_flag == "Hangar"` /
+                // `"Deliveries"` / etc., so only skip container item IDs or
+                // ship-internal fitted/cargo flags.
+                if asset_item_ids.contains(&item.location_id)
+                    || (item.location_type == "item"
+                        && Self::is_ship_internal_flag(&item.location_flag))
+                {
                     continue;
                 }
                 if is_structure_id(item.location_id) {
@@ -1535,16 +1577,19 @@ impl MimirApp {
             }
         }
         if let Some(b) = &self.backends {
-            if let Ok(conn) = b.db.lock() {
-                let rows: Vec<repositories::UniverseNameRow> = names
-                    .iter()
-                    .map(|n| repositories::UniverseNameRow {
-                        id: n.id,
-                        name: n.name.clone(),
-                        category: n.category.clone(),
-                    })
-                    .collect();
-                let _ = repositories::upsert_universe_names(&conn, &rows);
+            let rows: Vec<repositories::UniverseNameRow> = names
+                .iter()
+                .filter(|n| is_displayable_name(&n.name))
+                .map(|n| repositories::UniverseNameRow {
+                    id: n.id,
+                    name: n.name.clone(),
+                    category: n.category.clone(),
+                })
+                .collect();
+            if !rows.is_empty() {
+                if let Ok(conn) = b.db.lock() {
+                    let _ = repositories::upsert_universe_names(&conn, &rows);
+                }
             }
         }
     }
@@ -1835,6 +1880,7 @@ impl MimirApp {
                             "[AUTH] ignoring live login completion in demo mode character_id={}",
                             row.character_id
                         );
+                        self.state.auth = AuthState::Idle;
                         continue;
                     }
                     tracing::info!("[AUTH] login complete character_id={}", row.character_id);
@@ -1853,6 +1899,7 @@ impl MimirApp {
                             "[AUTH] ignoring live step-up completion in demo mode character_id={}",
                             character_id
                         );
+                        self.state.auth = AuthState::Idle;
                         continue;
                     }
                     tracing::info!("[AUTH] step-up complete character_id={}", character_id);
@@ -2008,6 +2055,7 @@ impl MimirApp {
                 BackendMsg::LoginFailed { message } => {
                     if self.state.demo {
                         tracing::warn!("[AUTH] ignoring live login failure in demo mode");
+                        self.state.auth = AuthState::Idle;
                         continue;
                     }
                     tracing::warn!("[AUTH] login failed: {}", message);
@@ -2027,52 +2075,43 @@ impl MimirApp {
                 }
             }
         }
-        // Demo character switching swaps per-view data from the cached bundle.
-        let mut active_id_changed = false;
-        if self.state.active_character_id != self.last_active_id {
-            active_id_changed = true;
-            self.last_active_id = self.state.active_character_id;
-            if self.state.demo {
-                if let (Some(bundle), Some(id)) =
-                    (self.demo_bundle.clone(), self.state.active_character_id)
-                {
-                    crate::demo::data::apply_character(&mut self.state, &bundle, id);
-                }
-                // Plans load synchronously from demo memory; they
-                // never wait for anything (section 11.1 point 2).
-                self.load_skill_plans_into_state();
+        // Drain logout/delete FIRST so any active-character promotion runs
+        // through the mode/active-character transition logic below in the
+        // same frame rather than stranding views on Loading.
+        if let Some(id) = self.state.logout_requested_id.take() {
+            // UI disables these buttons while busy; this drain guard is
+            // the backstop so no path can delete tokens mid-callback.
+            if self.state.auth.is_busy() {
+                tracing::warn!(
+                    "[AUTH] ignoring logout while sign-in in progress character_id={}",
+                    id
+                );
+                self.state.status_message =
+                    "Finish sign-in in your browser before logging out or deleting characters."
+                        .to_string();
             } else {
-                // Structure denials were for the previous character's
-                // token; re-arm pinned structure ids under the new
-                // active character (design section 6.3 rule 2).
-                self.resolver.forget_unresolved_structures();
-                if let (Some(backends), Some(id)) =
-                    (self.backends.as_ref(), self.state.active_character_id)
-                {
-                    if let Ok(conn) = backends.db.lock() {
-                        let _ = repositories::set_active_character(&conn, id);
-                        load_cached_state(&conn, &self.sde, &mut self.state, id);
-                    }
-                }
-                self.state.request_refresh("character-switch");
-                // Plans are local: load beside the refresh request,
-                // never waiting for it (section 11.1 point 2).
-                self.load_skill_plans_into_state();
-                // Design section 8.5: the switch reset the market
-                // bundle to Loading; refill it under the new character
-                // when a type is selected.
-                if self.state.market_selected_type_id.is_some() {
-                    tracing::debug!("[MARKET] market refetch queued after character switch");
-                    self.state.market_fetch_requested = true;
-                }
+                self.logout(id);
             }
         }
-        // Demo entry/exit (section 11.1 point 3): seeding happens
-        // inside views as well as here, and the settings toggle
-        // flips the mode without changing the active id, so detect
-        // the transition itself. When the active id also changed,
-        // the block above already loaded from the new source.
+        if let Some(id) = self.state.delete_requested_id.take() {
+            if self.state.auth.is_busy() {
+                tracing::warn!(
+                    "[AUTH] ignoring delete while sign-in in progress character_id={}",
+                    id
+                );
+                self.state.status_message =
+                    "Finish sign-in in your browser before logging out or deleting characters."
+                        .to_string();
+            } else {
+                self.delete_character(id);
+            }
+        }
+        // Demo entry/exit runs BEFORE `active_id_changed` so exiting demo
+        // syncs `last_active_id` and never leaks a bogus character-switch
+        // refresh or stale market fetch into live mode.
+        let mut demo_mode_changed = false;
         if self.state.demo != self.last_demo_mode {
+            demo_mode_changed = true;
             let exiting_demo = self.last_demo_mode && !self.state.demo;
             self.last_demo_mode = self.state.demo;
             if exiting_demo {
@@ -2136,9 +2175,39 @@ impl MimirApp {
                 }
                 self.last_active_id = self.state.active_character_id;
                 self.load_skill_plans_into_state();
-            } else if !active_id_changed {
+            } else {
                 self.load_skill_plans_into_state();
             }
+        }
+        // Demo character switching swaps per-view data from the cached bundle.
+        if self.state.active_character_id != self.last_active_id {
+            self.last_active_id = self.state.active_character_id;
+            if self.state.demo {
+                if let (Some(bundle), Some(id)) =
+                    (self.demo_bundle.clone(), self.state.active_character_id)
+                {
+                    crate::demo::data::apply_character(&mut self.state, &bundle, id);
+                }
+                self.load_skill_plans_into_state();
+            } else {
+                self.resolver.forget_unresolved_structures();
+                if let Some(id) = self.state.active_character_id {
+                    if let Some(backends) = self.backends.as_ref() {
+                        if let Ok(conn) = backends.db.lock() {
+                            let _ = repositories::set_active_character(&conn, id);
+                            load_cached_state(&conn, &self.sde, &mut self.state, id);
+                        }
+                    }
+                    self.state.request_refresh("character-switch");
+                    if self.state.market_selected_type_id.is_some() {
+                        tracing::debug!("[MARKET] market refetch queued after character switch");
+                        self.state.market_fetch_requested = true;
+                    }
+                }
+                self.load_skill_plans_into_state();
+            }
+        } else if demo_mode_changed && self.state.demo {
+            self.load_skill_plans_into_state();
         }
         if self.state.refresh_requested || self.state.retry_requested {
             self.state.refresh_requested = false;
@@ -2171,34 +2240,6 @@ impl MimirApp {
         }
         if !self.state.portrait_requests.is_empty() {
             self.start_portrait_fetches();
-        }
-        if let Some(id) = self.state.logout_requested_id.take() {
-            // UI disables these buttons while busy; this drain guard is
-            // the backstop so no path can delete tokens mid-callback.
-            if self.state.auth.is_busy() {
-                tracing::warn!(
-                    "[AUTH] ignoring logout while sign-in in progress character_id={}",
-                    id
-                );
-                self.state.status_message =
-                    "Finish sign-in in your browser before logging out or deleting characters."
-                        .to_string();
-            } else {
-                self.logout(id);
-            }
-        }
-        if let Some(id) = self.state.delete_requested_id.take() {
-            if self.state.auth.is_busy() {
-                tracing::warn!(
-                    "[AUTH] ignoring delete while sign-in in progress character_id={}",
-                    id
-                );
-                self.state.status_message =
-                    "Finish sign-in in your browser before logging out or deleting characters."
-                        .to_string();
-            } else {
-                self.delete_character(id);
-            }
         }
     }
 
@@ -2939,11 +2980,13 @@ impl MimirApp {
                 let (assets, assets_needs_reauthorize) =
                     match endpoints::get_assets(&esi, id).await {
                         Ok(items) => {
-                            let singleton_ids: Vec<i64> = items
+                            let mut singleton_ids: Vec<i64> = items
                                 .iter()
                                 .filter(|a| a.is_singleton)
                                 .map(|a| a.item_id)
                                 .collect();
+                            singleton_ids.sort_unstable();
+                            singleton_ids.dedup();
                             let mut custom_names = std::collections::HashMap::new();
                             for chunk in singleton_ids.chunks(1000) {
                                 match endpoints::get_asset_names(&esi, id, chunk).await {
@@ -3873,32 +3916,38 @@ impl MimirApp {
 
     fn logout(&mut self, character_id: i64) {
         tracing::info!("[AUTH] logout character_id={}", character_id);
-        if let Some(backends) = self.backends.as_ref() {
-            if let Some(runtime) = self.runtime.as_ref() {
-                if let Ok(Some(tokens)) = backends.token_store.load(character_id) {
-                    let refresh = tokens.refresh.as_str().to_string();
-                    runtime.spawn(async move {
-                        let _ = oauth::revoke_token(&refresh).await;
-                    });
+        if !self.state.demo {
+            if let Some(backends) = self.backends.as_ref() {
+                if let Some(runtime) = self.runtime.as_ref() {
+                    if let Ok(Some(tokens)) = backends.token_store.load(character_id) {
+                        let refresh = tokens.refresh.as_str().to_string();
+                        runtime.spawn(async move {
+                            let _ = oauth::revoke_token(&refresh).await;
+                        });
+                    }
                 }
-            }
-            let _ = backends.token_store.delete(character_id);
-            if let Ok(conn) = backends.db.lock() {
-                let _ = repositories::delete_character(&conn, character_id);
+                let _ = backends.token_store.delete(character_id);
+                if let Ok(conn) = backends.db.lock() {
+                    let _ = repositories::delete_character(&conn, character_id);
+                }
             }
         }
         self.state.remove_character(character_id);
+        self.tx.request_repaint();
     }
 
     fn delete_character(&mut self, character_id: i64) {
         tracing::info!("[CHAR] delete character_id={}", character_id);
-        if let Some(backends) = self.backends.as_ref() {
-            let _ = backends.token_store.delete(character_id);
-            if let Ok(conn) = backends.db.lock() {
-                let _ = repositories::delete_character(&conn, character_id);
+        if !self.state.demo {
+            if let Some(backends) = self.backends.as_ref() {
+                let _ = backends.token_store.delete(character_id);
+                if let Ok(conn) = backends.db.lock() {
+                    let _ = repositories::delete_character(&conn, character_id);
+                }
             }
         }
         self.state.remove_character(character_id);
+        self.tx.request_repaint();
     }
 
     /// Demo rows reference invented universe ids; load their pre-resolved
@@ -5540,7 +5589,7 @@ mod tests {
     #[test]
     fn collect_live_name_ids_skips_container_items_and_uses_upwell_threshold() {
         use crate::app::state::AssetsData;
-        use crate::esi::models::{AssetItem, CharacterBlueprint};
+        use crate::esi::models::{AssetItem, CharacterBlueprint, CharacterShip};
 
         let mut state = AppState::new(false);
         state.characters = vec![CharacterRow {
@@ -5550,9 +5599,23 @@ mod tests {
             alliance_id: None,
             is_active: true,
         }];
+        let active_ship_id = 1_040_000_000_099;
         let ship_item_id = 1_040_000_000_001;
         let container_item_id = 1_040_000_000_002;
         let real_structure_id = 1_030_000_000_123;
+        state.character_details = LoadState::Ready(CharacterDetailData {
+            attributes: Ok(Default::default()),
+            implants: Ok(Vec::new()),
+            clones: Ok(Default::default()),
+            standings: Ok(Vec::new()),
+            location: Ok(Default::default()),
+            ship: Ok(CharacterShip {
+                ship_item_id: active_ship_id,
+                ship_name: "Active Frigate".to_string(),
+                ship_type_id: 587,
+            }),
+            online: Ok(Default::default()),
+        });
         state.assets = LoadState::Ready(AssetsData {
             items: vec![
                 AssetItem {
@@ -5560,8 +5623,9 @@ mod tests {
                     type_id: 587,
                     quantity: 1,
                     location_id: real_structure_id,
+                    // Live ESI uses location_type="item" for items docked in Upwell structures!
                     location_flag: "Hangar".to_string(),
-                    location_type: "station".to_string(),
+                    location_type: "item".to_string(),
                     is_singleton: true,
                     is_blueprint_copy: None,
                 },
@@ -5584,6 +5648,16 @@ mod tests {
                     // Even if location_type isn't "item", matching parent item_id is skipped.
                     location_type: "other".to_string(),
                     is_singleton: false,
+                    is_blueprint_copy: None,
+                },
+                AssetItem {
+                    item_id: 1_040_000_000_005,
+                    type_id: 2889,
+                    quantity: 1,
+                    location_id: active_ship_id,
+                    location_flag: "HiSlot0".to_string(),
+                    location_type: "item".to_string(),
+                    is_singleton: true,
                     is_blueprint_copy: None,
                 },
             ],

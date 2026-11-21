@@ -4065,6 +4065,7 @@ fn fittings_draft_editor_panel(
                         .hint_text("Search by name"),
                 );
                 state.text_input_focused |= ship_change_search_response.has_focus();
+                ensure_ship_rows_built(state, catalogue);
                 let ship_change_search = state.fittings_ship_change_search.clone();
                 let ship_change_filtered: Vec<&ShipRow> = state
                     .fittings_ship_rows
@@ -4542,6 +4543,7 @@ fn fittings_import_controls_panel(
                         .hint_text("Search by name"),
                 );
                 state.text_input_focused |= ship_search_response.has_focus();
+                ensure_ship_rows_built(state, catalogue);
                 let ship_search = state.fittings_ship_search.clone();
                 let ship_filtered: Vec<&ShipRow> = state
                     .fittings_ship_rows
@@ -4980,6 +4982,17 @@ fn show_saved_fittings_section(
     }
 }
 
+fn ensure_ship_rows_built(state: &mut AppState, catalogue: &FittingTypes) {
+    if !state.fittings_ship_rows_built {
+        state.fittings_ship_rows = ship_candidates(catalogue);
+        state.fittings_ship_rows_built = true;
+        tracing::debug!(
+            "[FITTING] ship candidates built rows={}",
+            state.fittings_ship_rows.len()
+        );
+    }
+}
+
 pub fn show(
     ui: &mut egui::Ui,
     state: &mut AppState,
@@ -4996,14 +5009,7 @@ pub fn show(
         return;
     }
     if let Some(catalogue) = fitting_types {
-        if !state.fittings_ship_rows_built {
-            state.fittings_ship_rows = ship_candidates(catalogue);
-            state.fittings_ship_rows_built = true;
-            tracing::debug!(
-                "[FITTING] ship candidates built rows={}",
-                state.fittings_ship_rows.len()
-            );
-        }
+        ensure_ship_rows_built(state, catalogue);
     }
     if write_confirm_is_stale(state) {
         state.fittings_write_confirm = None;
