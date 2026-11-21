@@ -1,7 +1,7 @@
 //! Dashboard: multi-character overview grid, combined wealth, training
 //! overview with countdowns, and a wallet summary.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use chrono::Utc;
 
@@ -57,6 +57,266 @@ pub fn character_training_cells(
     )
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OpsTone {
+    Primary,
+    Accent,
+    Positive,
+    Warning,
+    Secondary,
+    Muted,
+}
+
+impl OpsTone {
+    pub fn color(self) -> egui::Color32 {
+        match self {
+            OpsTone::Primary => theme::TEXT_PRIMARY,
+            OpsTone::Accent => theme::ACCENT_CYAN,
+            OpsTone::Positive => theme::POSITIVE,
+            OpsTone::Warning => theme::WARNING,
+            OpsTone::Secondary => theme::TEXT_SECONDARY,
+            OpsTone::Muted => theme::TEXT_MUTED,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OpsMetric {
+    pub value: String,
+    pub detail: Option<String>,
+    pub tone: OpsTone,
+}
+
+impl OpsMetric {
+    fn plain(value: impl Into<String>, tone: OpsTone) -> Self {
+        Self {
+            value: value.into(),
+            detail: None,
+            tone,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OperationsSnapshot {
+    pub industry: OpsMetric,
+    pub planets: OpsMetric,
+    pub assets: OpsMetric,
+    pub fittings: OpsMetric,
+}
+
+fn format_count_noun(count: i64, singular: &str, plural: &str) -> String {
+    let formatted = widgets::format_count(count);
+    let noun = if count == 1 { singular } else { plural };
+    format!("{formatted} {noun}")
+}
+
+/// Summarize already-loaded Industry, Planetary Industry, Assets, and Fittings
+/// bundles for the active character without triggering fetches or exposing raw IDs.
+pub fn operations_snapshot(state: &AppState, now: chrono::DateTime<Utc>) -> OperationsSnapshot {
+    let industry = match &state.industry {
+        LoadState::Loading => OpsMetric::plain("Loading...", OpsTone::Muted),
+        LoadState::Empty => OpsMetric::plain("Not loaded", OpsTone::Muted),
+        LoadState::Error(_) => OpsMetric::plain("Unavailable", OpsTone::Muted),
+        LoadState::Ready(bundle) => {
+            let detail = match &bundle.blueprints {
+                Ok(bps) => Some(format_count_noun(
+                    bps.blueprints.len() as i64,
+                    "blueprint",
+                    "blueprints",
+                )),
+                Err(e) if e.needs_reauthorize => Some("Blueprints need authorization".to_string()),
+                Err(_) => None,
+            };
+            match &bundle.jobs {
+                Ok(jobs_data) => {
+                    let mut active = 0usize;
+                    let mut ready = 0usize;
+                    let mut paused = 0usize;
+                    for job in &jobs_data.jobs {
+                        match job.status.as_str() {
+                            "active" => active = active.saturating_add(1),
+                            "ready" => ready = ready.saturating_add(1),
+                            "paused" => paused = paused.saturating_add(1),
+                            _ => {}
+                        }
+                    }
+                    let (value, tone) = if ready > 0 && active > 0 {
+                        (format!("{active} active, {ready} ready"), OpsTone::Positive)
+                    } else if ready > 0 {
+                        (format!("{ready} ready to deliver"), OpsTone::Positive)
+                    } else if active > 0 {
+                        (
+                            format_count_noun(active as i64, "active job", "active jobs"),
+                            OpsTone::Accent,
+                        )
+                    } else if paused > 0 {
+                        (
+                            format_count_noun(paused as i64, "paused job", "paused jobs"),
+                            OpsTone::Warning,
+                        )
+                    } else if !jobs_data.jobs.is_empty() {
+                        (
+                            format_count_noun(
+                                jobs_data.jobs.len() as i64,
+                                "historical job",
+                                "historical jobs",
+                            ),
+                            OpsTone::Secondary,
+                        )
+                    } else {
+                        ("No industry jobs".to_string(), OpsTone::Secondary)
+                    };
+                    OpsMetric {
+                        value,
+                        detail,
+                        tone,
+                    }
+                }
+                Err(e) if e.needs_reauthorize => {
+                    OpsMetric::plain("Needs authorization", OpsTone::Warning)
+                }
+                Err(_) => OpsMetric::plain("Unavailable", OpsTone::Muted),
+            }
+        }
+    };
+
+    let planets = match &state.planetary {
+        LoadState::Loading => OpsMetric::plain("Loading...", OpsTone::Muted),
+        LoadState::Empty => OpsMetric::plain("Not loaded", OpsTone::Muted),
+        LoadState::Error(_) => OpsMetric::plain("Unavailable", OpsTone::Muted),
+        LoadState::Ready(bundle) => match &bundle.colonies {
+            Ok(colonies) => {
+                if colonies.is_empty() {
+                    OpsMetric::plain("No colonies", OpsTone::Secondary)
+                } else {
+                    let value = format_count_noun(colonies.len() as i64, "colony", "colonies");
+                    let total_pins: i64 = colonies
+                        .iter()
+                        .fold(0i64, |acc, c| acc.saturating_add(c.num_pins.max(0)));
+                    let mut detail =
+                        format!("{} total", format_count_noun(total_pins, "pin", "pins"));
+                    let mut tone = OpsTone::Accent;
+                    if let Some(selected) = &bundle.detail {
+                        if Some(selected.selection.character_id) == state.active_character_id {
+                            if let Ok(colony) = &selected.result {
+                                if super::planets::has_active_extractor(&colony.pins, now) {
+                                    detail.push_str(" — extracting");
+                                    tone = OpsTone::Positive;
+                                } else {
+                                    detail.push_str(" — selected colony idle");
+                                }
+                            }
+                        }
+                    }
+                    OpsMetric {
+                        value,
+                        detail: Some(detail),
+                        tone,
+                    }
+                }
+            }
+            Err(e) if e.needs_reauthorize => {
+                OpsMetric::plain("Needs authorization", OpsTone::Warning)
+            }
+            Err(_) => OpsMetric::plain("Unavailable", OpsTone::Muted),
+        },
+    };
+
+    let assets = match &state.assets {
+        LoadState::Loading => OpsMetric::plain("Loading...", OpsTone::Muted),
+        LoadState::Empty => OpsMetric::plain("Not loaded", OpsTone::Muted),
+        LoadState::Error(_) if state.assets_needs_reauthorize => {
+            OpsMetric::plain("Needs authorization", OpsTone::Warning)
+        }
+        LoadState::Error(_) => OpsMetric::plain("Unavailable", OpsTone::Muted),
+        LoadState::Ready(data) => {
+            if data.items.is_empty() {
+                OpsMetric::plain("No items", OpsTone::Secondary)
+            } else {
+                let distinct_locations: HashSet<i64> =
+                    data.items.iter().map(|item| item.location_id).collect();
+                OpsMetric {
+                    value: format_count_noun(data.items.len() as i64, "stack", "stacks"),
+                    detail: Some(format!(
+                        "Across {}",
+                        format_count_noun(distinct_locations.len() as i64, "location", "locations")
+                    )),
+                    tone: OpsTone::Primary,
+                }
+            }
+        }
+    };
+
+    let fittings = match &state.fittings {
+        LoadState::Loading => OpsMetric::plain("Loading...", OpsTone::Muted),
+        LoadState::Empty => OpsMetric::plain("Not loaded", OpsTone::Muted),
+        LoadState::Error(_) => OpsMetric::plain("Unavailable", OpsTone::Muted),
+        LoadState::Ready(bundle) => match &bundle.fittings {
+            Ok(list) => {
+                if list.is_empty() {
+                    OpsMetric::plain("No saved fittings", OpsTone::Secondary)
+                } else {
+                    OpsMetric::plain(
+                        format_count_noun(list.len() as i64, "saved fitting", "saved fittings"),
+                        OpsTone::Primary,
+                    )
+                }
+            }
+            Err(e) if e.needs_reauthorize => {
+                OpsMetric::plain("Needs authorization", OpsTone::Warning)
+            }
+            Err(_) => OpsMetric::plain("Unavailable", OpsTone::Muted),
+        },
+    };
+
+    OperationsSnapshot {
+        industry,
+        planets,
+        assets,
+        fittings,
+    }
+}
+
+fn render_ops_tile(ui: &mut egui::Ui, label: &str, metric: &OpsMetric, button_label: &str) -> bool {
+    let mut clicked = false;
+    egui::Frame::none()
+        .fill(theme::BG_CARD_ALT)
+        .stroke(egui::Stroke::new(1.0_f32, theme::BORDER_SUBTLE))
+        .rounding(egui::Rounding::same(6.0))
+        .inner_margin(egui::Margin::symmetric(10.0, 8.0))
+        .show(ui, |ui| {
+            ui.set_width(ui.available_width());
+            ui.label(
+                egui::RichText::new(label)
+                    .size(11.5)
+                    .color(theme::TEXT_SECONDARY),
+            );
+            ui.add_space(2.0);
+            ui.label(
+                egui::RichText::new(&metric.value)
+                    .size(15.0)
+                    .strong()
+                    .color(metric.tone.color()),
+            );
+            ui.add_space(1.0);
+            // Keep uniform card height so quick-open buttons align across the row.
+            let detail_text = metric.detail.as_deref().unwrap_or(" ");
+            ui.label(
+                egui::RichText::new(detail_text)
+                    .size(12.0)
+                    .color(theme::TEXT_SECONDARY),
+            );
+            ui.add_space(6.0);
+            ui.horizontal(|ui| {
+                if ui.button(button_label).clicked() {
+                    clicked = true;
+                }
+            });
+        });
+    clicked
+}
+
 /// Sum wallet balances across the current character roster, falling back to the
 /// active character's live wallet balance if its summary is absent.
 pub fn combined_wallet_balance(
@@ -79,7 +339,7 @@ pub fn combined_wallet_balance(
             combined = Some(combined.unwrap_or(0.0) + value);
         }
     }
-    tracing::debug!(
+    tracing::trace!(
         "[UI] combined_wallet_balance characters={} has_total={}",
         characters.len(),
         combined.is_some()
@@ -455,6 +715,47 @@ pub fn show(
     if open_wallet {
         state.switch_view(View::Wallet);
     }
+
+    // --- Operations at a glance (already-loaded active character bundles) ---
+    let ops = operations_snapshot(state, now);
+    let mut open_ops_view: Option<View> = None;
+    widgets::card(ui, |ui| {
+        widgets::section_title(ui, "Operations at a glance (active character)");
+        ui.add_space(6.0);
+        ui.columns(4, |cols| {
+            if render_ops_tile(
+                &mut cols[0],
+                "Industry",
+                &ops.industry,
+                "Open Industry (key 7)",
+            ) {
+                open_ops_view = Some(View::Industry);
+            }
+            if render_ops_tile(
+                &mut cols[1],
+                "Planetary Industry",
+                &ops.planets,
+                "Open Planets (key 8)",
+            ) {
+                open_ops_view = Some(View::Planets);
+            }
+            if render_ops_tile(&mut cols[2], "Assets", &ops.assets, "Open Assets (key 5)") {
+                open_ops_view = Some(View::Assets);
+            }
+            if render_ops_tile(
+                &mut cols[3],
+                "Saved Fittings",
+                &ops.fittings,
+                "Open Fittings (key 9)",
+            ) {
+                open_ops_view = Some(View::Fittings);
+            }
+        });
+    });
+    if let Some(view) = open_ops_view {
+        tracing::info!("[UI] dashboard quick-open view={}", view.label());
+        state.switch_view(view);
+    }
 }
 
 #[cfg(test)]
@@ -533,5 +834,90 @@ mod tests {
         assert!(!tr_m);
         assert!(!fin_m);
         assert!(fin.contains('h') || fin.contains('m'));
+    }
+
+    #[test]
+    fn operations_snapshot_summarizes_demo_character_without_raw_ids() {
+        let mut state = AppState::new(true);
+        crate::demo::data::seed_demo_state(&mut state);
+        let now = widgets::parse_esi_date("2026-11-18T12:00:00Z").expect("valid date");
+
+        let ops = operations_snapshot(&state, now);
+        assert_eq!(ops.industry.value, "1 active, 1 ready");
+        assert_eq!(ops.industry.detail.as_deref(), Some("4 blueprints"));
+        assert_eq!(ops.industry.tone, OpsTone::Positive);
+
+        assert_eq!(ops.planets.value, "2 colonies");
+        assert_eq!(
+            ops.planets.detail.as_deref(),
+            Some("8 pins total — extracting")
+        );
+        assert_eq!(ops.planets.tone, OpsTone::Positive);
+
+        assert_eq!(ops.assets.value, "6 stacks");
+        assert_eq!(ops.assets.detail.as_deref(), Some("Across 3 locations"));
+        assert_eq!(ops.assets.tone, OpsTone::Primary);
+
+        assert_eq!(ops.fittings.value, "2 saved fittings");
+        assert_eq!(ops.fittings.detail, None);
+        assert_eq!(ops.fittings.tone, OpsTone::Primary);
+
+        for metric in [&ops.industry, &ops.planets, &ops.assets, &ops.fittings] {
+            for raw in ["90000001", "60003760", "700000001", "1030000000001"] {
+                assert!(!metric.value.contains(raw), "raw id {raw} leaked in value");
+                if let Some(detail) = &metric.detail {
+                    assert!(!detail.contains(raw), "raw id {raw} leaked in detail");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn operations_snapshot_handles_loading_empty_and_reauthorize_states() {
+        use crate::app::state::{FittingsData, IndustryData, PlanetaryData, SectionError};
+
+        let now = Utc::now();
+        let loading_state = AppState::new(false);
+        let ops = operations_snapshot(&loading_state, now);
+        assert_eq!(ops.industry.value, "Loading...");
+        assert_eq!(ops.planets.value, "Loading...");
+        assert_eq!(ops.assets.value, "Loading...");
+        assert_eq!(ops.fittings.value, "Loading...");
+
+        let mut empty_state = AppState::new(false);
+        empty_state.industry = LoadState::Empty;
+        empty_state.planetary = LoadState::Empty;
+        empty_state.assets = LoadState::Empty;
+        empty_state.fittings = LoadState::Empty;
+        let ops = operations_snapshot(&empty_state, now);
+        assert_eq!(ops.industry.value, "Not loaded");
+        assert_eq!(ops.planets.value, "Not loaded");
+        assert_eq!(ops.assets.value, "Not loaded");
+        assert_eq!(ops.fittings.value, "Not loaded");
+
+        let reauth = || SectionError {
+            message: "forbidden".to_string(),
+            needs_reauthorize: true,
+        };
+        let mut reauth_state = AppState::new(false);
+        reauth_state.industry = LoadState::Ready(IndustryData {
+            jobs: Err(reauth()),
+            blueprints: Err(reauth()),
+        });
+        reauth_state.planetary = LoadState::Ready(PlanetaryData {
+            colonies: Err(reauth()),
+            detail: None,
+        });
+        reauth_state.assets = LoadState::Error("forbidden".to_string());
+        reauth_state.assets_needs_reauthorize = true;
+        reauth_state.fittings = LoadState::Ready(FittingsData {
+            fittings: Err(reauth()),
+        });
+
+        let ops = operations_snapshot(&reauth_state, now);
+        for metric in [&ops.industry, &ops.planets, &ops.assets, &ops.fittings] {
+            assert_eq!(metric.value, "Needs authorization");
+            assert_eq!(metric.tone, OpsTone::Warning);
+        }
     }
 }

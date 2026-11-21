@@ -63,7 +63,7 @@ pub fn active_queue_index(queue: &[&SkillQueueItem], now: DateTime<Utc>) -> Opti
     let idx = queue
         .iter()
         .position(|item| is_queue_entry_unfinished(item.finish_date.as_deref(), now));
-    tracing::debug!(
+    tracing::trace!(
         "[SKILLS] active_queue_index queue_len={} active={:?}",
         queue.len(),
         idx
@@ -81,7 +81,7 @@ pub fn active_or_first_queue_item(
     let picked = active_queue_index(&sorted, now)
         .and_then(|idx| sorted.get(idx).copied())
         .or_else(|| sorted.first().copied());
-    tracing::debug!(
+    tracing::trace!(
         "[SKILLS] active_or_first_queue_item queue_len={} picked={}",
         queue.len(),
         picked.map(|item| item.skill_id).unwrap_or(0)
@@ -112,7 +112,7 @@ pub fn upcoming_queue_items(queue: &[SkillQueueItem], now: DateTime<Utc>) -> Vec
         .into_iter()
         .filter(|item| is_queue_entry_unfinished(item.finish_date.as_deref(), now))
         .collect();
-    tracing::debug!(
+    tracing::trace!(
         "[SKILLS] upcoming_queue_items total={} upcoming={}",
         queue.len(),
         upcoming.len()
