@@ -785,6 +785,10 @@ pub struct AppState {
     pub market_candidates: Vec<UniverseName>,
     pub market_lookup_message: Option<String>,
     pub market_generation: u64,
+    /// Dedicated generation for item-name lookups (`POST /universe/ids/`) so
+    /// selection/region/character changes still invalidate stale lookups while
+    /// submitting a lookup never kills an unrelated in-flight market data fetch.
+    pub market_lookup_generation: u64,
     // View-local trade calculator drafts (market trade calculator
     // design section 3): session-only String drafts for the
     // Market view's Trade Calculator block. Prices start empty;
@@ -1022,6 +1026,15 @@ impl AppState {
         self.characters.iter().find(|c| c.character_id == id)
     }
 
+    /// Cancel any in-flight or displayed market item-name lookup without
+    /// disturbing an unrelated in-flight market data fetch.
+    pub fn clear_market_lookup(&mut self) {
+        self.market_lookup_requested = None;
+        self.market_candidates.clear();
+        self.market_lookup_message = None;
+        self.market_lookup_generation = self.market_lookup_generation.wrapping_add(1);
+    }
+
     /// Select the one market type. A different type discards the
     /// loaded bundle to Loading; reselecting the same type keeps the
     /// rows and just refetches. Either way the generation bumps so a
@@ -1037,8 +1050,7 @@ impl AppState {
         tracing::info!("[MARKET] selected item name={} changed={}", word, changed);
         self.market_selected_type_id = Some(type_id);
         self.market_selected_type_name = Some(word);
-        self.market_candidates.clear();
-        self.market_lookup_message = None;
+        self.clear_market_lookup();
         if changed {
             self.market = LoadState::Loading;
         }
@@ -1072,6 +1084,7 @@ impl AppState {
         };
         tracing::info!("[MARKET] selected region name={}", name);
         self.market_region_id = region_id;
+        self.clear_market_lookup();
         self.market_generation = self.market_generation.wrapping_add(1);
         if self.market_selected_type_id.is_some() {
             self.market = LoadState::Loading;
@@ -1157,8 +1170,7 @@ impl AppState {
                 if self.market_selected_type_id.is_some() {
                     self.market = LoadState::Loading;
                 }
-                self.market_candidates.clear();
-                self.market_lookup_message = None;
+                self.clear_market_lookup();
                 self.market_generation = self.market_generation.wrapping_add(1);
                 // Same ownership argument as assets and detail: industry
                 // sections are fetched tolerantly, so reset at the switch
@@ -1400,8 +1412,7 @@ impl AppState {
             if self.market_selected_type_id.is_some() {
                 self.market = LoadState::Loading;
             }
-            self.market_candidates.clear();
-            self.market_lookup_message = None;
+            self.clear_market_lookup();
             self.market_generation = self.market_generation.wrapping_add(1);
             tracing::debug!("[INDUSTRY] clearing industry of removed active character");
             self.industry = LoadState::Loading;
@@ -1479,6 +1490,7 @@ impl AppState {
             self.character_detail = LoadState::Empty;
             self.character_details = LoadState::Empty;
             self.market = LoadState::Empty;
+            self.clear_market_lookup();
             self.market_generation = self.market_generation.wrapping_add(1);
             self.industry = LoadState::Empty;
             self.planetary = LoadState::Empty;
@@ -1551,8 +1563,7 @@ impl AppState {
         self.market = LoadState::Empty;
         self.market_selected_type_id = None;
         self.market_selected_type_name = None;
-        self.market_candidates.clear();
-        self.market_lookup_message = None;
+        self.clear_market_lookup();
         self.market_generation = self.market_generation.wrapping_add(1);
         self.industry = LoadState::Empty;
         self.planetary = LoadState::Empty;
@@ -4409,5 +4420,25 @@ mod tests {
         state.remove_character(1);
         assert!(!state.assets_needs_reauthorize);
         assert!(!state.structures_needs_reauthorize);
+    }
+
+    #[test]
+    fn market_region_and_clear_lookup_cancel_pending_spinner() {
+        let mut state = AppState::new(false);
+        state.market_search = "Tritanium".to_string();
+        state.market_lookup_requested = Some("Tritanium".to_string());
+        state.market_lookup_message = Some("Looking up that item name…".to_string());
+        state.market_candidates = vec![UniverseName {
+            id: 34,
+            name: "Tritanium".to_string(),
+            category: "inventory_type".to_string(),
+        }];
+        let before = state.market_lookup_generation;
+
+        state.set_market_region(10000043);
+        assert_eq!(state.market_lookup_generation, before + 1);
+        assert_eq!(state.market_lookup_requested, None);
+        assert_eq!(state.market_lookup_message, None);
+        assert!(state.market_candidates.is_empty());
     }
 }

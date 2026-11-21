@@ -722,11 +722,10 @@ fn apply_pending_fitting_selection(
     }
 }
 
-/// Design section 8.3 freshness check: a lookup answer applies only
-/// when its generation is current and its text is still what the
-/// (trimmed) search box holds.
+/// Freshness check for item-name lookups: applies only when its dedicated
+/// lookup generation is current and its text matches the (trimmed) search box.
 fn market_lookup_is_current(state: &AppState, generation: u64, query: &str) -> bool {
-    generation == state.market_generation && query == state.market_search.trim()
+    generation == state.market_lookup_generation && query == state.market_search.trim()
 }
 
 /// Rail key hint per view (exploration design section 6.2): indices
@@ -3027,7 +3026,7 @@ impl MimirApp {
             self.apply_market_lookup_candidates(candidates);
             return;
         }
-        let generation = self.state.market_generation;
+        let generation = self.state.market_lookup_generation;
         let (Some(backends), Some(runtime)) = (self.backends.as_ref(), self.runtime.as_ref())
         else {
             tracing::warn!("[MARKET] item-name lookup skipped: live backends not wired");
@@ -4654,7 +4653,7 @@ mod tests {
     fn market_lookup_freshness_requires_generation_and_current_text() {
         let (mut state, _) = selected_state();
         state.market_search = "  Tritanium ".to_string();
-        let gen = state.market_generation;
+        let gen = state.market_lookup_generation;
         assert!(market_lookup_is_current(&state, gen, "Tritanium"));
         assert!(!market_lookup_is_current(
             &state,
@@ -6232,5 +6231,54 @@ mod tests {
         assert_eq!(summary.balance, Some(123_456.78));
         assert_eq!(summary.location_name.as_deref(), Some("Jita IV - Moon 4"));
         assert_eq!(summary.ship_name.as_deref(), Some("Rifter"));
+    }
+
+    #[test]
+    fn market_lookup_does_not_invalidate_in_flight_market_fetch() {
+        let mut app = MimirApp::new(false, Arc::new(Mutex::new(Vec::new())), None, None);
+        app.state.active_character_id = Some(42);
+        app.last_active_id = Some(42);
+        app.state.set_market_selection(34, "Tritanium".to_string());
+        let fetch_gen = app.state.market_generation;
+        app.state.market_fetch_requested = false;
+        assert!(matches!(app.state.market, LoadState::Loading));
+
+        // Simulate an already-spawned unrelated lookup yielding no match while
+        // the market fetch at `fetch_gen` is still in flight.
+        app.state.market_search = "Tritaniumm".to_string();
+        app.state.market_lookup_message = Some("Looking up that item name…".to_string());
+        app.state.market_lookup_generation = app.state.market_lookup_generation.wrapping_add(1);
+        let lookup_gen = app.state.market_lookup_generation;
+
+        assert_eq!(app.state.market_generation, fetch_gen);
+        app.tx.send(BackendMsg::MarketLookupDone {
+            generation: lookup_gen,
+            query: "Tritaniumm".to_string(),
+            result: Ok(Vec::new()),
+        });
+        app.tx.send(BackendMsg::MarketFetched {
+            generation: fetch_gen,
+            data: Box::new(MarketData {
+                selection: MarketSelection {
+                    type_id: 34,
+                    type_name: "Tritanium".to_string(),
+                    region_id: app.state.market_region_id,
+                    character_id: Some(42),
+                },
+                public_orders: Ok(PublicOrdersData::default()),
+                history: Ok(Vec::new()),
+                character_orders: Ok(CharacterOrdersData::default()),
+            }),
+        });
+        app.drain_requests();
+
+        assert!(
+            app.state.market.is_ready(),
+            "in-flight market fetch must apply instead of staying stuck on Loading"
+        );
+        assert_eq!(
+            app.state.market_lookup_message.as_deref(),
+            Some(MARKET_LOOKUP_NOT_FOUND)
+        );
     }
 }

@@ -26,6 +26,15 @@
 
 ## 2026-11-21
 
+### Decouple `market_lookup_generation` from `market_generation` and cancel pending lookup state on edits/region changes (`fix/rust-market-lookup-lifecycle`)
+
+**Author.** Mimir Pass-7 market lifecycle fix
+**Decision.** Split `AppState::market_lookup_generation` from `AppState::market_generation` and added `AppState::clear_market_lookup()`. Submitting an exact-name lookup (`src/ui/market.rs`) increments only `market_lookup_generation`, while selection/region/character switches and `clear_market_lookup()` bump `market_lookup_generation` alongside clearing `market_lookup_requested`, `market_candidates`, and `market_lookup_message`. Editing the Market search box (`response.changed()`), clicking `"Clear"`, or switching hub regions cancels any pending lookup spinner immediately. This supersedes the single-counter choice noted in `docs/market-port-design.md` section 6.1.
+**Rejected alternatives.** Keeping one shared `market_generation` counter and re-queuing `market_fetch_requested` whenever a lookup finishes with 0/multiple results: fails if a user picks another item later or cancels, and wastes ESI requests by restarting an already-running 3-endpoint fetch.
+**Rationale.** Separating the lookup and fetch generations prevents an unrelated item-name search from stranding an in-flight market data load forever on `LoadState::Loading`, while still invalidating stale lookups across selection/region/character changes.
+**Revisit when.** Market search moves from manual exact-name ESI lookup to an offline bundled SDE autocomplete catalogue.
+**Refs.** `docs/market-port-design.md` sections 6.1/8.3, `src/app/state.rs`, `src/ui/market.rs`, `src/app/shell.rs`, `src/demo/data.rs`.
+
 ### Surface active-character Operations summary on Dashboard from loaded state (`feat/rust-dashboard-operations`)
 
 **Author.** Mimir Wave 6 UX enhancement pass
