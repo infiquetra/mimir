@@ -268,8 +268,11 @@ pub fn quick_pick_types(state: &AppState, resolver: &NameResolver) -> Vec<(i64, 
     picks
 }
 
+const MARKET_LOOKUP_PENDING: &str = "Looking up that item name…";
+
 /// Submit the exact-name lookup: flags only, no fetch here. The
-/// generation bump kills any in-flight answer for older text.
+/// dedicated lookup generation kills any in-flight answer for older
+/// text without cancelling an unrelated in-flight market data fetch.
 fn submit_lookup(state: &mut AppState) {
     let trimmed = state.market_search.trim().to_string();
     if trimmed.is_empty() {
@@ -278,8 +281,8 @@ fn submit_lookup(state: &mut AppState) {
     tracing::debug!("[MARKET] item name lookup submitted");
     state.market_lookup_requested = Some(trimmed);
     state.market_candidates.clear();
-    state.market_lookup_message = Some("Looking up that item name…".to_string());
-    state.market_generation = state.market_generation.wrapping_add(1);
+    state.market_lookup_message = Some(MARKET_LOOKUP_PENDING.to_string());
+    state.market_lookup_generation = state.market_lookup_generation.wrapping_add(1);
 }
 
 fn candidate_word(candidate: &UniverseName) -> String {
@@ -296,7 +299,6 @@ fn show_picker(ui: &mut egui::Ui, state: &mut AppState, resolver: &NameResolver)
     let candidates = state.market_candidates.clone();
     let quick_picks = quick_pick_types(state, resolver);
     let selected_id = state.market_selected_type_id;
-    let looking_up = state.market_lookup_message.as_deref() == Some("Looking up that item name…");
 
     widgets::card(ui, |ui| {
         ui.horizontal(|ui| {
@@ -305,6 +307,9 @@ fn show_picker(ui: &mut egui::Ui, state: &mut AppState, resolver: &NameResolver)
                     .hint_text("Item name, exactly as in EVE (then Look up)")
                     .desired_width(280.0),
             );
+            if response.changed() {
+                state.clear_market_lookup();
+            }
             if state.focus_search {
                 response.request_focus();
                 state.focus_search = false;
@@ -312,14 +317,15 @@ fn show_picker(ui: &mut egui::Ui, state: &mut AppState, resolver: &NameResolver)
             state.text_input_focused |= response.has_focus();
             let enter_submit =
                 response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
-            if looking_up {
-                ui.spinner();
-            }
             if ui.button("Look up item").clicked() || enter_submit {
                 submit_lookup(state);
             }
             if !state.market_search.is_empty() && ui.button("Clear").clicked() {
                 state.market_search.clear();
+                state.clear_market_lookup();
+            }
+            if state.market_lookup_message.as_deref() == Some(MARKET_LOOKUP_PENDING) {
+                ui.spinner();
             }
         });
         ui.label(
@@ -1111,6 +1117,7 @@ mod tests {
         state.market_search = "   ".to_string();
         submit_lookup(&mut state);
         assert_eq!(state.market_lookup_requested, None);
+        assert_eq!(state.market_lookup_generation, 0);
         assert_eq!(state.market_generation, 0);
         state.market_search = "  Tritanium  ".to_string();
         state.market_candidates = vec![UniverseName {
@@ -1122,7 +1129,8 @@ mod tests {
         assert_eq!(state.market_lookup_requested.as_deref(), Some("Tritanium"));
         assert!(state.market_candidates.is_empty());
         assert!(state.market_lookup_message.is_some());
-        assert_eq!(state.market_generation, 1);
+        assert_eq!(state.market_lookup_generation, 1);
+        assert_eq!(state.market_generation, 0);
     }
 
     fn trade_state(buy: &str, sell: &str, broker: &str, tax: &str) -> AppState {

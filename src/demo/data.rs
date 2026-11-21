@@ -1148,8 +1148,7 @@ pub fn apply_character(state: &mut AppState, bundle: &DemoBundle, character_id: 
         character_id,
         per.market.is_some()
     );
-    state.market_candidates.clear();
-    state.market_lookup_message = None;
+    state.clear_market_lookup();
     state.market_generation = state.market_generation.wrapping_add(1);
     match &per.market {
         Some(fixture) => {
