@@ -31,6 +31,17 @@
 
 ## 2026-11-21
 
+### Single-flight write locks, spawn-time refetch generations, and atomic compare-and-save token rotation
+
+**Author.** Mimir Pass-11 reliability pass
+**Context.** Pass-11 adversarial auditing across `develop` (`a30c5c8`) found three async lifetime gaps: clearing `fittings_write_in_flight` on mode switches while background HTTP writes had no generation token allowed concurrent ESI fitting writes and stale outcome application; Market and Planetary refetches reused existing generation numbers across `"Refresh"` / `"Retry"` / step-up refetches; and `EsiClient::valid_access_token` saved rotated OAuth tokens unconditionally after an async refresh without checking whether the character was deleted or re-authenticated while HTTP was in flight.
+**Evidence.** `src/app/state.rs` (`FittingWriteInFlight`, `fittings_write_generation`, `reset_for_mode_switch`, `confirm_delete_id` cleanup in `remove_character`/`set_active_character`), `src/app/shell.rs` (`BackendMsg::FittingWriteDone { generation }`, `start_market_fetch`, `start_planetary_detail_fetch`, `StepUpLoggedIn`), `src/ui/fittings.rs` (`in_flight_kind_for_view`), `src/auth/token_store.rs` (`TokenStore::save_refreshed`), and `src/esi/client.rs` (`EsiClient::valid_access_token`).
+**Mechanism.** Clearing a global single-flight UI record without cancelling or versioning its detached async task merely hides the lock; similarly, stamp generation counters only serve stale-drop guards if every respawn increments them centrally at spawn and before concurrent queue drains; and dual-step read-refresh-write credentials require comparing the stored snapshot under `TokenStore::store_lock` before persisting rotated secrets.
+**Fix.** Stamped fitting writes with `fittings_write_generation` while keeping `fittings_write_in_flight` intact across mode switches (and hiding live spinners in demo UI via `in_flight_kind_for_view`), incremented `market_generation` and `planetary_generation` at every spawn and step-up requeue, gated `valid_access_token` persistence with atomic `TokenStore::save_refreshed`, cleared `confirm_delete_id` on remove/switch, and corrected non-active `StepUpLoggedIn` status copy.
+**Validation.** Targeted unit and async concurrency tests across `state`, `shell`, `ui::fittings`, `token_store`, and `esi::client`, full `cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test && cargo build`, and headless Xvfb demo verification.
+**Generalizable rule.** Never reset a global single-flight lock while its async HTTP task may still land—version the flight and gate unlock on matching generation; advance refetch generations at spawn time; and commit refreshed OAuth tokens only via atomic compare-and-save under the store lock.
+**Refs.** `src/app/{state,shell}.rs`, `src/ui/fittings.rs`, `src/auth/token_store.rs`, `src/esi/client.rs`.
+
 ### Post-render persistence must check both `state.demo` and `last_demo_mode` across mode-exit frames
 
 **Author.** Mimir Pass-5 reliability pass

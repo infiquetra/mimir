@@ -1272,23 +1272,34 @@ fn render_delete_confirm(
     None
 }
 
+/// Whether an active fitting write belongs to the currently visible live
+/// character; demo mode never renders live in-flight spinners even when IDs match.
+fn in_flight_kind_for_view(state: &AppState) -> Option<FittingWriteKind> {
+    if state.demo {
+        return None;
+    }
+    state
+        .fittings_write_in_flight
+        .as_ref()
+        .filter(|flight| Some(flight.character_id) == state.active_character_id)
+        .map(|flight| flight.kind)
+}
+
 /// Render the in-flight spinner row for a write belonging to
 /// the active character (section 6.5). Returns true when a
 /// row was rendered.
 fn render_write_in_flight(ui: &mut egui::Ui, state: &AppState) -> bool {
-    match &state.fittings_write_in_flight {
-        Some(flight) if Some(flight.character_id) == state.active_character_id => {
-            ui.horizontal(|ui| {
-                ui.spinner();
-                ui.label(match flight.kind {
-                    FittingWriteKind::Save => "Saving to EVE...",
-                    FittingWriteKind::Delete => "Deleting from EVE...",
-                });
-            });
-            true
-        }
-        _ => false,
-    }
+    let Some(kind) = in_flight_kind_for_view(state) else {
+        return false;
+    };
+    ui.horizontal(|ui| {
+        ui.spinner();
+        ui.label(match kind {
+            FittingWriteKind::Save => "Saving to EVE...",
+            FittingWriteKind::Delete => "Deleting from EVE...",
+        });
+    });
+    true
 }
 
 /// Whether an armed write confirmation is no longer
@@ -5912,12 +5923,19 @@ mod tests {
             character_id: 42,
             kind: crate::app::state::FittingWriteKind::Save,
             fitting_id: None,
+            generation: 1,
         });
         assert!(!write_enabled(&state), "one flight app-wide");
-        // A fresh demo state cannot write even with a character.
+        assert_eq!(
+            in_flight_kind_for_view(&state),
+            Some(crate::app::state::FittingWriteKind::Save)
+        );
+        // A fresh demo state cannot write or render live in-flight spinners even with a matching character.
         let mut demo2 = AppState::new(true);
         demo2.active_character_id = Some(42);
+        demo2.fittings_write_in_flight = state.fittings_write_in_flight.clone();
         assert!(!write_enabled(&demo2));
+        assert_eq!(in_flight_kind_for_view(&demo2), None);
     }
 
     #[test]

@@ -16,7 +16,7 @@ use serde::Serialize;
 
 use crate::auth::jwt_verify::JwtVerifier;
 use crate::auth::oauth;
-use crate::auth::token_store::{AccessToken, TokenStore};
+use crate::auth::token_store::{AccessToken, RefreshSaveResult, TokenStore};
 use crate::config::{now_unix, EveConfig};
 use crate::error::{AppError, AppResult, AuthError, EsiError};
 
@@ -271,6 +271,8 @@ impl EsiClient {
             );
             return Ok(tokens.access);
         }
+        let original_access = tokens.access.as_str().to_string();
+        let original_refresh = tokens.refresh.as_str().to_string();
         // Fail closed before the refresh (and therefore before any
         // save) when verification is not wired: never skip it.
         let verifier = self.jwt_verifier.as_ref().ok_or_else(|| {
@@ -313,8 +315,23 @@ impl EsiClient {
             return Err(AppError::from(AuthError::CharacterMismatch));
         }
         tokens.apply_refresh(&refreshed, &claims);
-        store.save(&tokens)?;
-        Ok(tokens.access)
+        match store.save_refreshed(&tokens, &original_access, &original_refresh)? {
+            RefreshSaveResult::Saved => Ok(tokens.access),
+            RefreshSaveResult::Superseded(current) => {
+                tracing::info!(
+                    "[AUTH] skipping refresh save; newer tokens already stored character_id={}",
+                    character_id
+                );
+                Ok(current.access)
+            }
+            RefreshSaveResult::Deleted => {
+                tracing::info!(
+                    "[AUTH] dropping refreshed tokens for removed character_id={}",
+                    character_id
+                );
+                Err(AppError::from(EsiError::NoTokens(character_id)))
+            }
+        }
     }
 
     async fn send<T: DeserializeOwned>(
@@ -968,6 +985,76 @@ mod tests {
             token_hits.load(Ordering::SeqCst),
             1,
             "per-character lock must deduplicate concurrent refresh requests"
+        );
+    }
+
+    #[tokio::test]
+    async fn valid_access_token_does_not_resurrect_tokens_deleted_mid_refresh() {
+        let (signed_access, jwks_body) = signed_rs256_token(99);
+        let jwks_listener = TcpListener::bind("127.0.0.1:0").await.expect("bind jwks");
+        let jwks_addr = jwks_listener.local_addr().expect("addr");
+        tokio::spawn(async move {
+            loop {
+                let Ok((mut socket, _)) = jwks_listener.accept().await else {
+                    break;
+                };
+                let body = jwks_body.clone();
+                tokio::spawn(async move {
+                    let mut buf = vec![0u8; 4096];
+                    let _ = socket.read(&mut buf).await;
+                    let payload = format!(
+                        "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                        body.len()
+                    );
+                    let _ = socket.write_all(payload.as_bytes()).await;
+                });
+            }
+        });
+
+        let (hit_tx, hit_rx) = tokio::sync::oneshot::channel::<()>();
+        let (release_tx, release_rx) = tokio::sync::oneshot::channel::<()>();
+        let token_body = token_response_body(&signed_access);
+        let token_listener = TcpListener::bind("127.0.0.1:0").await.expect("bind token");
+        let token_addr = token_listener.local_addr().expect("addr");
+        tokio::spawn(async move {
+            if let Ok((mut socket, _)) = token_listener.accept().await {
+                let mut buf = vec![0u8; 4096];
+                let _ = socket.read(&mut buf).await;
+                let _ = hit_tx.send(());
+                let _ = release_rx.await;
+                let payload = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{token_body}",
+                    token_body.len()
+                );
+                let _ = socket.write_all(payload.as_bytes()).await;
+            }
+        });
+
+        let dir = tempfile::tempdir().expect("tempdir");
+        let store = seeded_expired_store(&dir);
+        let client = Arc::new(
+            EsiClient::with_http(reqwest::Client::new(), "http://127.0.0.1:9".to_string())
+                .with_token_store(store.clone())
+                .with_token_endpoint(
+                    format!("http://{token_addr}/oauth/token"),
+                    "test-client".to_string(),
+                )
+                .with_jwt_verifier(test_verifier(&format!("http://{jwks_addr}"))),
+        );
+        let client_task = client.clone();
+        let refresh_task = tokio::spawn(async move { client_task.valid_access_token(99).await });
+
+        hit_rx.await.expect("refresh request reached token server");
+        store
+            .delete(99)
+            .expect("delete tokens while refresh in flight");
+        let _ = release_tx.send(());
+
+        let result = refresh_task.await.expect("refresh task joined");
+        assert!(matches!(result, Err(AppError::Esi(EsiError::NoTokens(99)))));
+        assert!(
+            store.load(99).expect("load after refresh").is_none(),
+            "deleted character tokens must not be resurrected by in-flight refresh"
         );
     }
 }

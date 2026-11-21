@@ -203,6 +203,7 @@ enum BackendMsg {
         character_id: i64,
         kind: FittingWriteKind,
         outcome: FittingWriteOutcome,
+        generation: u64,
     },
     PortraitFetched {
         kind: ImageKind,
@@ -594,9 +595,12 @@ fn decide_fitting_write_landing(
     state: &AppState,
     character_id: i64,
     kind: FittingWriteKind,
+    generation: u64,
     outcome: &FittingWriteOutcome,
 ) -> FittingWriteLanding {
-    if Some(character_id) != state.active_character_id {
+    if Some(character_id) != state.active_character_id
+        || generation != state.fittings_write_generation
+    {
         return FittingWriteLanding {
             stale: true,
             status: None,
@@ -2003,17 +2007,16 @@ impl MimirApp {
                     }
                     tracing::info!("[AUTH] step-up complete character_id={}", character_id);
                     self.state.auth = AuthState::Success;
+                    // Re-arm pinned structure ids regardless of active character:
+                    // the next refresh for that character re-offers them under the
+                    // newly granted scopes.
+                    self.resolver.forget_unresolved_structures();
                     if self.state.active_character_id == Some(character_id) {
                         // Do NOT clear assets_needs_reauthorize here: login
                         // success alone does not prove the grant loads data.
                         // The Refreshed Ok(assets) arm clears it once a
                         // refresh actually succeeds; a failed refresh leaves
                         // the Re-authorize panel in place.
-                        // Re-arm pinned structure ids: the post-stepup
-                        // refresh's scheduling tail re-offers them under
-                        // the new grant, and the structures banner clears
-                        // only when that pass's pre-check sees the scope.
-                        self.resolver.forget_unresolved_structures();
                         // request_refresh sets its own generic status, so the
                         // specific step-up status must be set after it.
                         self.state.request_refresh("post-stepup");
@@ -2023,6 +2026,8 @@ impl MimirApp {
                         // a later fetch returns character-orders Ok.
                         if self.state.market_selected_type_id.is_some() {
                             tracing::debug!("[MARKET] market refetch queued after step-up");
+                            self.state.market_generation =
+                                self.state.market_generation.wrapping_add(1);
                             self.state.market_fetch_requested = true;
                         }
                         // PI design section 7.5: post-stepup refresh
@@ -2031,6 +2036,8 @@ impl MimirApp {
                         // clears only when a later fetch returns Ok.
                         if self.state.planetary_selected_planet_id.is_some() {
                             tracing::debug!("[PI] colony detail refetch queued after step-up");
+                            self.state.planetary_generation =
+                                self.state.planetary_generation.wrapping_add(1);
                             self.state.planetary_detail_fetch_requested = true;
                         }
                         // Fittings design section 7.3: no fittings
@@ -2045,7 +2052,7 @@ impl MimirApp {
                         self.state.fittings_write_needs_reauthorize = false;
                         self.state.status_message = "Permission granted. Refreshing...".to_string();
                     } else {
-                        self.state.status_message = "Permission granted. Refreshing...".to_string();
+                        self.state.status_message = "Permission granted.".to_string();
                         tracing::warn!(
                             "[AUTH] step-up finished for non-active character_id={}",
                             character_id
@@ -2117,32 +2124,46 @@ impl MimirApp {
                     character_id,
                     kind,
                     outcome,
+                    generation,
                 } => {
-                    // Write design section 8, in order: the
-                    // flight is over whatever the ids say.
-                    self.state.fittings_write_in_flight = None;
+                    // Only the matching flight generation may release the
+                    // single-flight lock: an older write landing late after a
+                    // mode switch must never unblock or release a newer flight.
+                    if self
+                        .state
+                        .fittings_write_in_flight
+                        .as_ref()
+                        .is_some_and(|flight| flight.generation == generation)
+                    {
+                        self.state.fittings_write_in_flight = None;
+                    }
                     if self.state.demo {
                         tracing::warn!(
-                            "[FITTING] dropping live fitting write result in demo mode character_id={} kind={}",
+                            "[FITTING] dropping live fitting write result in demo mode character_id={} kind={} generation={}",
                             character_id,
-                            kind.label()
+                            kind.label(),
+                            generation
                         );
                         continue;
                     }
-                    let landing =
-                        decide_fitting_write_landing(&self.state, character_id, kind, &outcome);
+                    let landing = decide_fitting_write_landing(
+                        &self.state,
+                        character_id,
+                        kind,
+                        generation,
+                        &outcome,
+                    );
                     if landing.stale {
-                        // The user switched character or removed
-                        // the writer mid-flight: drop the result
-                        // whole and claim nothing (the
-                        // StructuresResolved precedent). The write
-                        // may well have succeeded in EVE for the
-                        // original character; switching back and
-                        // refreshing shows the server truth.
+                        // The user switched character, toggled modes, or removed
+                        // the writer mid-flight: drop the result whole and claim
+                        // nothing (the StructuresResolved precedent). The write
+                        // may well have succeeded in EVE for the original
+                        // character; switching back and refreshing shows truth.
                         tracing::info!(
-                            "[FITTING] stale write result dropped character_id={} kind={}",
+                            "[FITTING] stale write result dropped character_id={} kind={} generation={}",
                             character_id,
-                            kind.label()
+                            kind.label(),
+                            generation
                         );
                     } else {
                         if matches!(
@@ -2164,9 +2185,10 @@ impl MimirApp {
                             self.state.refresh_requested = true;
                         }
                         tracing::info!(
-                            "[FITTING] fitting write landed character_id={} kind={} outcome={:?}",
+                            "[FITTING] fitting write landed character_id={} kind={} generation={} outcome={:?}",
                             character_id,
                             kind.label(),
+                            generation,
                             outcome
                         );
                     }
@@ -2804,6 +2826,7 @@ impl MimirApp {
             region_id: self.state.market_region_id,
             character_id: self.state.active_character_id,
         };
+        self.state.market_generation = self.state.market_generation.wrapping_add(1);
         let generation = self.state.market_generation;
         let (Some(backends), Some(runtime)) = (self.backends.as_ref(), self.runtime.as_ref())
         else {
@@ -2954,6 +2977,7 @@ impl MimirApp {
             character_id,
             planet_id,
         };
+        self.state.planetary_generation = self.state.planetary_generation.wrapping_add(1);
         let generation = self.state.planetary_generation;
         if self.state.demo {
             let detail = self
@@ -3979,20 +4003,24 @@ impl MimirApp {
         }
         let esi = backends.esi.clone();
         let tx = self.tx.clone();
+        self.state.fittings_write_generation = self.state.fittings_write_generation.wrapping_add(1);
+        let generation = self.state.fittings_write_generation;
         match request {
             FittingWriteRequest::Save {
                 character_id,
                 request,
             } => {
                 tracing::info!(
-                    "[FITTING] write started character_id={} kind=save items={}",
+                    "[FITTING] write started character_id={} kind=save generation={} items={}",
                     character_id,
+                    generation,
                     request.items.len()
                 );
                 self.state.fittings_write_in_flight = Some(FittingWriteInFlight {
                     character_id,
                     kind: FittingWriteKind::Save,
                     fitting_id: None,
+                    generation,
                 });
                 runtime.spawn(async move {
                     let outcome =
@@ -4019,6 +4047,7 @@ impl MimirApp {
                         character_id,
                         kind: FittingWriteKind::Save,
                         outcome,
+                        generation,
                     });
                 });
             }
@@ -4027,13 +4056,15 @@ impl MimirApp {
                 fitting_id,
             } => {
                 tracing::info!(
-                    "[FITTING] write started character_id={} kind=delete",
-                    character_id
+                    "[FITTING] write started character_id={} kind=delete generation={}",
+                    character_id,
+                    generation
                 );
                 self.state.fittings_write_in_flight = Some(FittingWriteInFlight {
                     character_id,
                     kind: FittingWriteKind::Delete,
                     fitting_id: Some(fitting_id),
+                    generation,
                 });
                 runtime.spawn(async move {
                     let outcome =
@@ -4059,6 +4090,7 @@ impl MimirApp {
                         character_id,
                         kind: FittingWriteKind::Delete,
                         outcome,
+                        generation,
                     });
                 });
             }
@@ -4784,7 +4816,13 @@ mod tests {
         ];
         for outcome in outcomes {
             for kind in [FittingWriteKind::Save, FittingWriteKind::Delete] {
-                let landing = decide_fitting_write_landing(&state, 7, kind, &outcome);
+                let landing = decide_fitting_write_landing(
+                    &state,
+                    7,
+                    kind,
+                    state.fittings_write_generation,
+                    &outcome,
+                );
                 assert!(landing.stale, "mismatch drops whole");
                 assert_eq!(landing.status, None, "no status on a stale landing");
                 assert!(!landing.queue_refresh, "no refresh on a stale landing");
@@ -4792,17 +4830,31 @@ mod tests {
                 assert!(!landing.set_reauthorize);
             }
         }
+        // Generation mismatch with matching character also drops whole.
+        let landing = decide_fitting_write_landing(
+            &state,
+            42,
+            FittingWriteKind::Save,
+            state.fittings_write_generation.wrapping_add(1),
+            &FittingWriteOutcome::Saved { fitting_id: 7 },
+        );
+        assert!(landing.stale, "generation mismatch drops whole");
+        assert_eq!(landing.status, None);
+        assert!(!landing.queue_refresh);
+        assert_eq!(landing.record_pending, None);
     }
 
     #[test]
     fn fitting_write_landing_matrix_on_match() {
         let mut state = AppState::new(false);
         state.active_character_id = Some(42);
+        let gen = state.fittings_write_generation;
         // Saved: refresh queued, pending selection recorded.
         let landing = decide_fitting_write_landing(
             &state,
             42,
             FittingWriteKind::Save,
+            gen,
             &FittingWriteOutcome::Saved { fitting_id: 4242 },
         );
         assert!(!landing.stale);
@@ -4817,6 +4869,7 @@ mod tests {
             &state,
             42,
             FittingWriteKind::Delete,
+            gen,
             &FittingWriteOutcome::Deleted { fitting_id: 4242 },
         );
         assert_eq!(
@@ -4830,6 +4883,7 @@ mod tests {
             &state,
             42,
             FittingWriteKind::Save,
+            gen,
             &FittingWriteOutcome::Failed {
                 class: WriteFailureClass::Unknown,
                 needs_reauthorize: false,
@@ -4843,6 +4897,7 @@ mod tests {
             &state,
             42,
             FittingWriteKind::Save,
+            gen,
             &FittingWriteOutcome::Failed {
                 class: WriteFailureClass::Definitive,
                 needs_reauthorize: false,
@@ -4855,6 +4910,7 @@ mod tests {
             &state,
             42,
             FittingWriteKind::Save,
+            gen,
             &FittingWriteOutcome::Failed {
                 class: WriteFailureClass::Definitive,
                 needs_reauthorize: true,
@@ -4867,6 +4923,7 @@ mod tests {
             &state,
             42,
             FittingWriteKind::Save,
+            gen,
             &FittingWriteOutcome::Failed {
                 class: WriteFailureClass::NotSent,
                 needs_reauthorize: false,
@@ -4878,6 +4935,7 @@ mod tests {
             &state,
             42,
             FittingWriteKind::Delete,
+            gen,
             &FittingWriteOutcome::Failed {
                 class: WriteFailureClass::AlreadyGone,
                 needs_reauthorize: false,
@@ -4889,6 +4947,7 @@ mod tests {
             &state,
             42,
             FittingWriteKind::Save,
+            gen,
             &FittingWriteOutcome::Failed {
                 class: WriteFailureClass::RateLimited { reset_secs: 42 },
                 needs_reauthorize: false,
@@ -6020,10 +6079,12 @@ mod tests {
             .state
             .active_character_id
             .expect("demo active character");
+        app.state.fittings_write_generation = 1;
         app.state.fittings_write_in_flight = Some(FittingWriteInFlight {
             character_id: active_id,
             kind: FittingWriteKind::Save,
             fitting_id: None,
+            generation: 1,
         });
         let status_before = app.state.status_message.clone();
 
@@ -6053,6 +6114,7 @@ mod tests {
             character_id: active_id,
             kind: FittingWriteKind::Save,
             outcome: FittingWriteOutcome::Saved { fitting_id: 777 },
+            generation: 1,
         });
         app.drain_requests();
 
@@ -6361,5 +6423,234 @@ mod tests {
 
         assert_eq!(app.state.active_character_id, Some(777));
         assert_eq!(app.state.status_message, "Signed in. Refreshing...");
+    }
+
+    #[test]
+    fn fitting_write_survives_mode_switch_as_single_flight_and_drops_stale_landing() {
+        let mut app = MimirApp::new(false, Arc::new(Mutex::new(Vec::new())), None, None);
+        app.state.characters = vec![CharacterRow {
+            character_id: 90000001,
+            name: "Live Pilot".to_string(),
+            corporation_id: 1000166,
+            alliance_id: None,
+            is_active: true,
+        }];
+        app.state.set_active_character(90000001);
+        app.last_active_id = Some(90000001);
+        app.state.fittings_write_generation = 1;
+        app.state.fittings_write_in_flight = Some(FittingWriteInFlight {
+            character_id: 90000001,
+            kind: FittingWriteKind::Save,
+            fitting_id: None,
+            generation: 1,
+        });
+
+        // Toggle into Demo mode and back to live while Write 1 stays in flight.
+        crate::demo::data::seed_demo_state(&mut app.state);
+        app.drain_requests();
+        assert!(app.state.fittings_write_in_flight.is_some());
+        assert!(app.state.fittings_write_generation > 1);
+
+        app.state.clear_for_demo_exit();
+        app.state.characters = vec![CharacterRow {
+            character_id: 90000001,
+            name: "Live Pilot".to_string(),
+            corporation_id: 1000166,
+            alliance_id: None,
+            is_active: true,
+        }];
+        app.state.set_active_character(90000001);
+        app.last_active_id = Some(90000001);
+
+        // Returning to live mode keeps the global single-flight guard active.
+        assert_eq!(
+            decide_fitting_write_start(FittingWriteStart {
+                demo: app.state.demo,
+                auth_busy: false,
+                flight_active: app.state.fittings_write_in_flight.is_some(),
+                character_known: true,
+                is_active: true,
+                backends_wired: true,
+                scope_granted: true,
+            }),
+            Some(FittingWriteRefusal::FlightActive)
+        );
+
+        // A mismatched completion generation cannot unlock the active flight.
+        app.tx.send(BackendMsg::FittingWriteDone {
+            character_id: 90000001,
+            kind: FittingWriteKind::Save,
+            outcome: FittingWriteOutcome::Saved { fitting_id: 888 },
+            generation: 999,
+        });
+        app.drain_requests();
+        assert!(app.state.fittings_write_in_flight.is_some());
+
+        // Write 1's actual completion unlocks the flight but drops the stale outcome.
+        let status_before = app.state.status_message.clone();
+        app.tx.send(BackendMsg::FittingWriteDone {
+            character_id: 90000001,
+            kind: FittingWriteKind::Save,
+            outcome: FittingWriteOutcome::Saved { fitting_id: 777 },
+            generation: 1,
+        });
+        app.drain_requests();
+
+        assert!(app.state.fittings_write_in_flight.is_none());
+        assert_eq!(app.state.fittings_pending_selection, None);
+        assert!(!app.state.refresh_requested);
+        assert_eq!(app.state.status_message, status_before);
+    }
+
+    #[test]
+    fn market_and_planetary_refetches_bump_generation_and_drop_older_results() {
+        let mut app = MimirApp::new(false, Arc::new(Mutex::new(Vec::new())), None, None);
+        app.state.active_character_id = Some(42);
+        app.last_active_id = Some(42);
+
+        app.state.set_market_selection(34, "Tritanium".to_string());
+        let before_first = app.state.market_generation;
+        app.state.market_fetch_requested = true;
+        app.drain_requests();
+        let gen_1 = app.state.market_generation;
+        assert!(gen_1 > before_first);
+
+        app.state.market_fetch_requested = true;
+        app.drain_requests();
+        let gen_2 = app.state.market_generation;
+        assert!(gen_2 > gen_1);
+
+        app.tx.send(BackendMsg::MarketFetched {
+            generation: gen_2,
+            data: Box::new(MarketData {
+                selection: MarketSelection {
+                    type_id: 34,
+                    type_name: "Tritanium".to_string(),
+                    region_id: app.state.market_region_id,
+                    character_id: Some(42),
+                },
+                public_orders: Ok(PublicOrdersData::default()),
+                history: Ok(Vec::new()),
+                character_orders: Ok(CharacterOrdersData::default()),
+            }),
+        });
+        app.drain_requests();
+        assert!(matches!(
+            &app.state.market,
+            LoadState::Ready(bundle) if bundle.character_orders.is_ok()
+        ));
+
+        app.tx.send(BackendMsg::MarketFetched {
+            generation: gen_1,
+            data: Box::new(MarketData {
+                selection: MarketSelection {
+                    type_id: 34,
+                    type_name: "Tritanium".to_string(),
+                    region_id: app.state.market_region_id,
+                    character_id: Some(42),
+                },
+                public_orders: Err(crate::app::state::SectionError {
+                    message: "public orders request failed".to_string(),
+                    needs_reauthorize: false,
+                }),
+                history: Ok(Vec::new()),
+                character_orders: Err(crate::app::state::SectionError {
+                    message: "character orders request failed".to_string(),
+                    needs_reauthorize: true,
+                }),
+            }),
+        });
+        app.drain_requests();
+        assert!(
+            matches!(
+                &app.state.market,
+                LoadState::Ready(bundle) if bundle.character_orders.is_ok() && bundle.public_orders.is_ok()
+            ),
+            "older market fetch must not overwrite newer authorized data"
+        );
+
+        app.state.planetary = LoadState::Ready(crate::app::state::PlanetaryData {
+            colonies: Ok(Vec::new()),
+            detail: None,
+        });
+        app.state.set_planetary_selection(40000001);
+        let p_before = app.state.planetary_generation;
+        app.state.planetary_detail_fetch_requested = true;
+        app.drain_requests();
+        let p_gen_1 = app.state.planetary_generation;
+        assert!(p_gen_1 > p_before);
+
+        app.state.planetary_detail_fetch_requested = true;
+        app.drain_requests();
+        let p_gen_2 = app.state.planetary_generation;
+        assert!(p_gen_2 > p_gen_1);
+
+        let selection = PlanetSelection {
+            character_id: 42,
+            planet_id: 40000001,
+        };
+        app.tx.send(BackendMsg::PlanetaryDetailFetched {
+            generation: p_gen_2,
+            selection,
+            result: Ok(crate::esi::models::PlanetColonyDetail {
+                pins: Vec::new(),
+                links: Vec::new(),
+                routes: Vec::new(),
+            }),
+        });
+        app.drain_requests();
+        assert!(matches!(
+            &app.state.planetary,
+            LoadState::Ready(bundle) if bundle.detail.as_ref().is_some_and(|d| d.result.is_ok())
+        ));
+
+        app.tx.send(BackendMsg::PlanetaryDetailFetched {
+            generation: p_gen_1,
+            selection,
+            result: Err(crate::app::state::SectionError {
+                message: "colony detail request failed".to_string(),
+                needs_reauthorize: true,
+            }),
+        });
+        app.drain_requests();
+        assert!(
+            matches!(
+                &app.state.planetary,
+                LoadState::Ready(bundle) if bundle.detail.as_ref().is_some_and(|d| d.result.is_ok())
+            ),
+            "older planetary detail fetch must not overwrite newer result"
+        );
+    }
+
+    #[test]
+    fn stepup_for_non_active_character_sets_truthful_status_without_refresh() {
+        let mut app = MimirApp::new(false, Arc::new(Mutex::new(Vec::new())), None, None);
+        app.state.characters = vec![
+            CharacterRow {
+                character_id: 1,
+                name: "One".to_string(),
+                corporation_id: 1000166,
+                alliance_id: None,
+                is_active: false,
+            },
+            CharacterRow {
+                character_id: 2,
+                name: "Two".to_string(),
+                corporation_id: 1000166,
+                alliance_id: None,
+                is_active: true,
+            },
+        ];
+        app.state.set_active_character(2);
+        app.last_active_id = Some(2);
+        app.last_active_generation = app.state.active_character_generation;
+
+        app.tx.send(BackendMsg::StepUpLoggedIn { character_id: 1 });
+        app.drain_requests();
+
+        assert_eq!(app.state.status_message, "Permission granted.");
+        assert!(!app.state.refresh_requested);
+        assert!(!app.state.market_fetch_requested);
+        assert!(!app.state.planetary_detail_fetch_requested);
     }
 }
