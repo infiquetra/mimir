@@ -1544,12 +1544,12 @@ impl AppState {
         }
     }
 
-    /// Reset all demo characters, per-character caches, and drafts when
-    /// toggling demo mode off cleanly while preserving character-independent
-    /// static reference data (`exploration`, `skill_catalogue_type_ids`).
-    pub fn clear_for_demo_exit(&mut self) {
-        tracing::info!("[DEMO] clearing demo state on demo exit");
-        self.demo = false;
+    /// Reset all mode-scoped characters, per-character caches, in-flight guards,
+    /// and drafts when switching between live and demo modes while preserving
+    /// character-independent static reference data (`exploration`,
+    /// `skill_catalogue_type_ids`).
+    pub fn reset_for_mode_switch(&mut self) {
+        tracing::debug!("[DEMO] reset_for_mode_switch");
         self.auth = AuthState::Idle;
         self.characters.clear();
         self.active_character_id = None;
@@ -1602,6 +1602,7 @@ impl AppState {
         self.fittings_write_needs_reauthorize = false;
         self.fittings_write_confirm = None;
         self.fittings_write_requested = None;
+        self.fittings_write_in_flight = None;
         self.fittings_pending_selection = None;
         self.skill_plans = LoadState::Empty;
         self.skill_plans_owner = None;
@@ -1623,6 +1624,15 @@ impl AppState {
         self.market_fetch_requested = false;
         self.market_lookup_requested = None;
         self.focus_search = false;
+    }
+
+    /// Reset all demo characters, per-character caches, and drafts when
+    /// toggling demo mode off cleanly while preserving character-independent
+    /// static reference data (`exploration`, `skill_catalogue_type_ids`).
+    pub fn clear_for_demo_exit(&mut self) {
+        tracing::info!("[DEMO] clearing demo state on demo exit");
+        self.demo = false;
+        self.reset_for_mode_switch();
         self.status_message = "Demo off. Live characters load after sign-in/refresh.".to_string();
     }
 
