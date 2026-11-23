@@ -81,7 +81,7 @@ Known flake: `Skills Screen renders correctly (Compact)` golden fails
 intermittently (~3px starfield snapping); passes in isolation; CI retries the
 suite once. Do not "fix" it by loosening the comparator (tried, reverted).
 
-## Repo rules (from AGENTS.md)
+## Repo rules (from AGENTS.md/CLAUDE.md)
 
 - Every code change adds debug logging via `package:mimir/core/logging/logger.dart`
   with a `[FEATURE]` tag (existing tags: `[DOGMA]`, `[SDE]`, `[STARTUP]`).
