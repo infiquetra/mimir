@@ -816,7 +816,7 @@ follow-up.
 
 ## 13. Test plan and gates
 
-Repo gates (`.github/workflows/ci.yml`, `CLAUDE.md` commands) must all
+Repo gates (`.github/workflows/ci.yml`, `AGENTS.md` commands) must all
 pass on the integrated branch: `cargo fmt --check`,
 `cargo clippy --all-targets -- -D warnings`, `cargo test`, `cargo build`.
 Builder unit tests live in the files they cover, matching how the repo
