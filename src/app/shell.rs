@@ -407,7 +407,7 @@ impl FittingWriteRefusal {
                 "A fitting change is already in progress. Wait for it to finish."
             }
             FittingWriteRefusal::UnknownCharacter => {
-                "That character is no longer in Mimir. Nothing was sent to EVE."
+                "That character is no longer in Alidade. Nothing was sent to EVE."
             }
             FittingWriteRefusal::NotActive => {
                 "The active character changed. Nothing was sent to EVE."
@@ -3702,7 +3702,7 @@ impl MimirApp {
                 request.character_id
             );
             self.state.status_message =
-                "Step-up sign-in skipped: that character is no longer in Mimir.".to_string();
+                "Step-up sign-in skipped: that character is no longer in Alidade.".to_string();
             return;
         }
         let granted: Vec<String> = match backends.db.lock() {
@@ -4178,7 +4178,7 @@ impl MimirApp {
     }
 
     fn collect_keys(&self, ctx: &egui::Context) -> KeyActions {
-        let typing = self.state.text_input_focused || ctx.wants_keyboard_input();
+        let typing = self.state.text_input_focused || ctx.egui_wants_keyboard_input();
         ctx.input(|i| {
             let mut actions = KeyActions::default();
             let command_r =
@@ -4344,13 +4344,14 @@ fn queue_has_unfinished_skill(
 }
 
 impl eframe::App for MimirApp {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        self.tx.attach_ctx_if_unset(ctx);
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        let ctx = ui.ctx().clone();
+        self.tx.attach_ctx_if_unset(&ctx);
         self.drain_requests();
         // Persist startup-view choice only when it actually changed since
         // the last write (settings view edits it); no per-frame DB reads.
         self.persist_startup_view_if_changed();
-        let actions = self.collect_keys(ctx);
+        let actions = self.collect_keys(&ctx);
         self.apply_keys(actions);
         // Reset after key handling; views re-set it while rendering so the
         // next frame knows whether a text box owns the keyboard.
@@ -4365,65 +4366,59 @@ impl eframe::App for MimirApp {
             self.state.log_lines.clone_from(&buf);
         }
 
-        let bar_frame = egui::Frame::none()
+        let bar_frame = egui::Frame::new()
             .fill(ui::theme::BG_PANEL)
             .stroke(egui::Stroke::new(1.0_f32, ui::theme::BORDER_SUBTLE))
-            .inner_margin(egui::Margin::symmetric(14.0, 8.0));
+            .inner_margin(egui::Margin::symmetric(14, 8));
 
-        egui::TopBottomPanel::top("top_bar")
-            .frame(bar_frame)
-            .show(ctx, |ui| {
-                ui.horizontal(|ui| {
-                    ui.label(
-                        egui::RichText::new("MIMIR")
-                            .size(17.0)
-                            .strong()
-                            .color(ui::theme::ACCENT_CYAN),
+        egui::Panel::top("top_bar").frame(bar_frame).show(ui, |ui| {
+            ui.horizontal(|ui| {
+                ui.add_space(ui::theme::traffic_light_inset());
+                ui.label(
+                    egui::RichText::new("ALIDADE")
+                        .size(17.0)
+                        .strong()
+                        .color(ui::theme::ACCENT_CYAN),
+                );
+                if self.state.demo {
+                    ui::widgets::badge(ui, "DEMO", ui::theme::WARNING_BG, ui::theme::WARNING);
+                }
+                if self.state.offline {
+                    ui::widgets::badge(ui, "OFFLINE", ui::theme::NEGATIVE_BG, ui::theme::NEGATIVE);
+                }
+                if let Some(active) = self.state.active_character() {
+                    ui::widgets::badge(
+                        ui,
+                        &format!("Active: {}", active.name),
+                        ui::theme::BG_CARD_ALT,
+                        ui::theme::TEXT_PRIMARY,
                     );
-                    if self.state.demo {
-                        ui::widgets::badge(ui, "DEMO", ui::theme::WARNING_BG, ui::theme::WARNING);
+                }
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if ui.button("Refresh (Ctrl+R)").clicked() {
+                        self.state.request_refresh("top-bar button");
                     }
-                    if self.state.offline {
-                        ui::widgets::badge(
-                            ui,
-                            "OFFLINE",
-                            ui::theme::NEGATIVE_BG,
-                            ui::theme::NEGATIVE,
+                    if !self.state.status_message.is_empty() {
+                        ui.label(
+                            egui::RichText::new(&self.state.status_message)
+                                .size(12.0)
+                                .color(ui::theme::TEXT_SECONDARY),
                         );
                     }
-                    if let Some(active) = self.state.active_character() {
-                        ui::widgets::badge(
-                            ui,
-                            &format!("Active: {}", active.name),
-                            ui::theme::BG_CARD_ALT,
-                            ui::theme::TEXT_PRIMARY,
-                        );
-                    }
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        if ui.button("Refresh (Ctrl+R)").clicked() {
-                            self.state.request_refresh("top-bar button");
-                        }
-                        if !self.state.status_message.is_empty() {
-                            ui.label(
-                                egui::RichText::new(&self.state.status_message)
-                                    .size(12.0)
-                                    .color(ui::theme::TEXT_SECONDARY),
-                            );
-                        }
-                    });
                 });
             });
+        });
 
-        let sidebar_frame = egui::Frame::none()
+        let sidebar_frame = egui::Frame::new()
             .fill(ui::theme::BG_PANEL)
             .stroke(egui::Stroke::new(1.0_f32, ui::theme::BORDER_SUBTLE))
-            .inner_margin(egui::Margin::symmetric(12.0, 12.0));
+            .inner_margin(egui::Margin::symmetric(12, 12));
 
-        egui::SidePanel::left("character_rail")
-            .default_width(210.0)
+        egui::Panel::left("character_rail")
+            .default_size(210.0)
             .resizable(false)
             .frame(sidebar_frame)
-            .show(ctx, |ui| {
+            .show(ui, |ui| {
                 ui.label(
                     egui::RichText::new("CHARACTERS")
                         .size(11.0)
@@ -4496,14 +4491,14 @@ impl eframe::App for MimirApp {
                 });
             });
 
-        let status_frame = egui::Frame::none()
+        let status_frame = egui::Frame::new()
             .fill(ui::theme::BG_PANEL)
             .stroke(egui::Stroke::new(1.0_f32, ui::theme::BORDER_SUBTLE))
-            .inner_margin(egui::Margin::symmetric(14.0, 6.0));
+            .inner_margin(egui::Margin::symmetric(14, 6));
 
-        egui::TopBottomPanel::bottom("status_bar")
+        egui::Panel::bottom("status_bar")
             .frame(status_frame)
-            .show(ctx, |ui| {
+            .show(ui, |ui| {
                 ui.horizontal(|ui| {
                     ui.label(
                         egui::RichText::new(format!("View: {}", self.state.view.label()))
@@ -4538,13 +4533,13 @@ impl eframe::App for MimirApp {
                 });
             });
 
-        let canvas_frame = egui::Frame::none()
+        let canvas_frame = egui::Frame::new()
             .fill(ui::theme::BG_CANVAS)
-            .inner_margin(egui::Margin::same(16.0));
+            .inner_margin(egui::Margin::same(16));
 
         egui::CentralPanel::default()
             .frame(canvas_frame)
-            .show(ctx, |ui| {
+            .show(ui, |ui| {
                 egui::ScrollArea::vertical().show(ui, |ui| match self.state.view {
                     View::Dashboard => ui::dashboard::show(
                         ui,

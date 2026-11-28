@@ -287,11 +287,11 @@ pub fn operations_snapshot(state: &AppState, now: chrono::DateTime<Utc>) -> Oper
 
 fn render_ops_tile(ui: &mut egui::Ui, label: &str, metric: &OpsMetric, button_label: &str) -> bool {
     let mut clicked = false;
-    egui::Frame::none()
+    egui::Frame::new()
         .fill(theme::BG_CARD_ALT)
         .stroke(egui::Stroke::new(1.0_f32, theme::BORDER_SUBTLE))
-        .rounding(egui::Rounding::same(6.0))
-        .inner_margin(egui::Margin::symmetric(10.0, 8.0))
+        .corner_radius(egui::CornerRadius::same(6))
+        .inner_margin(egui::Margin::symmetric(10, 8))
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
             ui.label(

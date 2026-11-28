@@ -1077,11 +1077,12 @@ mod tests {
         let resolver = NameResolver::new();
         let mut cache = PortraitImageCache::new();
 
-        let _ = ctx.run(egui::RawInput::default(), |ctx| {
-            egui::CentralPanel::default().show(ctx, |ui| {
+        let mut full_output = ctx.run_ui(egui::RawInput::default(), |ui| {
+            egui::CentralPanel::default().show(ui, |ui| {
                 show(ui, &mut state, &resolver, &mut cache);
             });
         });
+        full_output.textures_delta.clear();
         // Exactly one queued request for the selected type, and
         // the blank-box path uploads nothing.
         assert_eq!(state.portrait_requests, vec![(ImageKind::Type, 3300)]);
@@ -1092,21 +1093,23 @@ mod tests {
         assert!(cache.is_empty(), "no Ready image means no texture upload");
 
         // A second frame queues nothing new (already Loading).
-        let _ = ctx.run(egui::RawInput::default(), |ctx| {
-            egui::CentralPanel::default().show(ctx, |ui| {
+        let mut full_output = ctx.run_ui(egui::RawInput::default(), |ui| {
+            egui::CentralPanel::default().show(ui, |ui| {
                 show(ui, &mut state, &resolver, &mut cache);
             });
         });
+        full_output.textures_delta.clear();
         assert_eq!(state.portrait_requests, vec![(ImageKind::Type, 3300)]);
 
         // With no selection the header queues nothing at all.
         let mut unselected = AppState::new(false);
         assert_eq!(unselected.market_selected_type_id, None);
-        let _ = ctx.run(egui::RawInput::default(), |ctx| {
-            egui::CentralPanel::default().show(ctx, |ui| {
+        let mut full_output = ctx.run_ui(egui::RawInput::default(), |ui| {
+            egui::CentralPanel::default().show(ui, |ui| {
                 show(ui, &mut unselected, &resolver, &mut cache);
             });
         });
+        full_output.textures_delta.clear();
         assert!(unselected.portrait_requests.is_empty());
         assert!(cache.is_empty());
     }

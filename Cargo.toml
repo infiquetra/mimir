@@ -4,9 +4,15 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-eframe = "0.29"
-egui = "0.29"
-egui_extras = { version = "0.29", features = ["image"] }
+# `wgpu_no_default_features` instead of `wgpu`: eframe's `wgpu` feature
+# enables egui-wgpu/default -> wgpu/default -> `gles`, which pulls the
+# `glow` OpenGL crate into the tree (card #651 forbids any glow).
+# The direct `wgpu` dep below pins wgpu/default minus `gles`
+# (Metal on macOS, Vulkan on Linux, DX12 on Windows).
+eframe = { version = "0.37", default-features = false, features = ["wgpu_no_default_features", "accesskit", "clipboard", "default_fonts", "links", "persistence", "system_fonts", "wayland", "x11"] }
+egui = "0.37"
+egui_extras = { version = "0.37", features = ["image"] }
+wgpu = { version = "30", default-features = false, features = ["std", "parking_lot", "dx12", "metal", "vulkan", "wgsl", "webgpu"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time", "net"] }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 serde = { version = "1", features = ["derive"] }

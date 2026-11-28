@@ -226,22 +226,22 @@ pub fn isk_color(amount: f64) -> egui::Color32 {
 
 /// Framed card container using Mimir's EVE dark theme tokens.
 pub fn card(ui: &mut egui::Ui, add_contents: impl FnOnce(&mut egui::Ui)) {
-    egui::Frame::none()
+    egui::Frame::new()
         .fill(theme::BG_CARD)
         .stroke(egui::Stroke::new(1.0_f32, theme::BORDER_SUBTLE))
-        .rounding(egui::Rounding::same(8.0))
-        .inner_margin(egui::Margin::symmetric(14.0, 10.0))
-        .outer_margin(egui::Margin::symmetric(0.0, 4.0))
+        .corner_radius(egui::CornerRadius::same(8))
+        .inner_margin(egui::Margin::symmetric(14, 10))
+        .outer_margin(egui::Margin::symmetric(0, 4))
         .show(ui, add_contents);
 }
 
 /// Compact KPI tile with a muted uppercase-style label and large colored value.
 pub fn metric_tile(ui: &mut egui::Ui, label: &str, value: &str, value_color: egui::Color32) {
-    egui::Frame::none()
+    egui::Frame::new()
         .fill(theme::BG_CARD_ALT)
         .stroke(egui::Stroke::new(1.0_f32, theme::BORDER_SUBTLE))
-        .rounding(egui::Rounding::same(8.0))
-        .inner_margin(egui::Margin::symmetric(14.0, 10.0))
+        .corner_radius(egui::CornerRadius::same(8))
+        .inner_margin(egui::Margin::symmetric(14, 10))
         .show(ui, |ui| {
             ui.set_min_width(180.0);
             ui.vertical(|ui| {
@@ -263,11 +263,11 @@ pub fn metric_tile(ui: &mut egui::Ui, label: &str, value: &str, value_color: egu
 
 /// Rounded status or tag pill.
 pub fn badge(ui: &mut egui::Ui, text: &str, bg: egui::Color32, fg: egui::Color32) {
-    egui::Frame::none()
+    egui::Frame::new()
         .fill(bg)
         .stroke(egui::Stroke::new(1.0_f32, fg.gamma_multiply(0.45)))
-        .rounding(egui::Rounding::same(10.0))
-        .inner_margin(egui::Margin::symmetric(8.0, 2.0))
+        .corner_radius(egui::CornerRadius::same(10))
+        .inner_margin(egui::Margin::symmetric(8, 2))
         .show(ui, |ui| {
             ui.label(egui::RichText::new(text).size(11.5).strong().color(fg));
         });
@@ -343,12 +343,12 @@ pub fn mode_notice(ui: &mut egui::Ui, demo: bool, offline: bool) {
         None
     };
     if let Some((tag, text, bg, fg)) = message {
-        egui::Frame::none()
+        egui::Frame::new()
             .fill(bg)
             .stroke(egui::Stroke::new(1.0_f32, fg.gamma_multiply(0.45)))
-            .rounding(egui::Rounding::same(6.0))
-            .inner_margin(egui::Margin::symmetric(10.0, 6.0))
-            .outer_margin(egui::Margin::symmetric(0.0, 4.0))
+            .corner_radius(egui::CornerRadius::same(6))
+            .inner_margin(egui::Margin::symmetric(10, 6))
+            .outer_margin(egui::Margin::symmetric(0, 4))
             .show(ui, |ui| {
                 ui.horizontal(|ui| {
                     badge(ui, tag, bg, fg);
