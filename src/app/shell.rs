@@ -38,6 +38,7 @@ use crate::names::sde::Sde;
 use crate::portraits::{
     ImageKind, PortraitError, PortraitService, LOGO_SIZE, PORTRAIT_SIZE, TYPE_ICON_SIZE,
 };
+use crate::sde::{ensure_embedded_baseline, local_build_number, SdeSync, SyncOutcome};
 use crate::skills::plans::{apply_demo_action, DemoApplyOutcome, SkillPlan, SkillPlanAction};
 use crate::storage::db;
 use crate::storage::repositories::{self, CharacterRow, TokenMetaRow};
@@ -210,6 +211,23 @@ enum BackendMsg {
         id: i64,
         image: Result<Arc<image::DynamicImage>, PortraitError>,
     },
+    SdeSynced {
+        summary: Result<SdeSyncSummary, String>,
+    },
+}
+
+/// Outcome of one background SDE sync, carried by `BackendMsg::SdeSynced`.
+#[derive(Debug, Clone, PartialEq)]
+struct SdeSyncSummary {
+    build_number: i64,
+    detail: String,
+}
+
+/// Whether a background SDE sync may spawn: never in demo mode (zero
+/// HTTP by construction), never without an operator-configured base
+/// URL, and never while another sync is already in flight.
+fn should_spawn_sde_sync(demo: bool, base_url: &str, in_flight: bool) -> bool {
+    !demo && !base_url.trim().is_empty() && !in_flight
 }
 
 /// Fixed lookup outcome lines (design section 6.1): the submitted text
@@ -244,6 +262,7 @@ pub struct MimirApp {
     rx: Receiver<BackendMsg>,
     demo_names_loaded: bool,
     persisted_startup_view: Option<String>,
+    persisted_sde_base_url: Option<String>,
     /// Handle to an in-flight EVE SSO login or step-up callback task so demo
     /// entry can abort it promptly and release `127.0.0.1:54321`.
     auth_task: Option<tokio::task::JoinHandle<()>>,
@@ -1078,6 +1097,7 @@ impl MimirApp {
         };
         let mut demo_bundle = None;
         let mut persisted_startup_view: Option<String> = None;
+        let mut persisted_sde_base_url: Option<String> = None;
         if let Some(b) = &backends {
             if let Ok(conn) = b.db.lock() {
                 // Demo data stays in memory from the bundled fixtures; it is
@@ -1153,6 +1173,36 @@ impl MimirApp {
                     state.startup_view = view;
                     state.view = view;
                 }
+                if !demo {
+                    if let Ok(saved) = repositories::get_setting(&conn, "sde_base_url") {
+                        persisted_sde_base_url = saved.clone();
+                        if let Some(saved) = saved {
+                            tracing::info!("[SDE] applying saved SDE base URL from settings");
+                            state.sde_base_url = saved;
+                        }
+                    }
+                }
+            }
+            if !demo {
+                if let Ok(mut conn) = b.db.lock() {
+                    match ensure_embedded_baseline(&mut conn) {
+                        Ok(_) => match local_build_number(&conn) {
+                            Ok(build) => {
+                                state.sde_build_number = build;
+                                if state.sde_base_url.trim().is_empty() {
+                                    state.sde_status = "SDE not configured: set a base URL in Settings to enable sync (embedded baseline only).".to_string();
+                                } else {
+                                    state.sde_status =
+                                        format!("SDE build {build} loaded; sync pending.");
+                                }
+                            }
+                            Err(e) => {
+                                tracing::warn!("[SDE] local build read failed: {}", e)
+                            }
+                        },
+                        Err(e) => tracing::warn!("[SDE] embedded baseline seed failed: {}", e),
+                    }
+                }
             }
             resolver.attach(b.esi.clone(), b.db.clone());
         }
@@ -1186,6 +1236,7 @@ impl MimirApp {
             rx,
             demo_names_loaded: false,
             persisted_startup_view,
+            persisted_sde_base_url,
             auth_task: None,
             portrait_textures: ui::portraits::PortraitImageCache::new(),
         };
@@ -1197,6 +1248,13 @@ impl MimirApp {
         app.load_skill_plans_into_state();
         if !demo && app.state.active_character_id.is_some() {
             app.state.request_refresh("startup");
+        }
+        if app.backends.is_some()
+            && app.runtime.is_some()
+            && should_spawn_sde_sync(demo, &app.state.sde_base_url, app.state.sde_sync_in_flight)
+        {
+            tracing::info!("[SDE] startup sync queued");
+            app.state.sde_sync_requested = true;
         }
         app
     }
@@ -2245,6 +2303,34 @@ impl MimirApp {
                         );
                     }
                 }
+                BackendMsg::SdeSynced { summary } => {
+                    self.state.sde_sync_in_flight = false;
+                    if self.state.demo {
+                        tracing::warn!("[SDE] dropping sync result in demo mode");
+                        self.state.sde_status =
+                            "Demo mode: SDE sync disabled (embedded baseline only, no network)."
+                                .to_string();
+                        continue;
+                    }
+                    match summary {
+                        Ok(summary) => {
+                            tracing::info!(
+                                "[SDE] sync landed build={} detail={}",
+                                summary.build_number,
+                                summary.detail
+                            );
+                            self.state.sde_build_number = summary.build_number;
+                            self.state.sde_status = summary.detail;
+                        }
+                        Err(message) => {
+                            tracing::warn!("[SDE] sync failed: {}", message);
+                            self.state.sde_status = format!(
+                                "SDE sync failed; embedded baseline still serving (build {}).",
+                                self.state.sde_build_number
+                            );
+                        }
+                    }
+                }
             }
         }
         // Drain logout/delete FIRST so any active-character promotion runs
@@ -2322,6 +2408,20 @@ impl MimirApp {
                                 self.state.startup_view = View::Dashboard;
                             }
                             Err(_) => {}
+                        }
+                        if let Ok(saved) = repositories::get_setting(&conn, "sde_base_url") {
+                            self.persisted_sde_base_url = saved.clone();
+                            self.state.sde_base_url = saved.unwrap_or_default();
+                        }
+                        if let Ok(build) = local_build_number(&conn) {
+                            self.state.sde_build_number = build;
+                        }
+                        if should_spawn_sde_sync(
+                            self.state.demo,
+                            &self.state.sde_base_url,
+                            self.state.sde_sync_in_flight,
+                        ) {
+                            self.state.sde_sync_requested = true;
                         }
                         match repositories::list_characters(&conn) {
                             Ok(rows) => {
@@ -2426,6 +2526,121 @@ impl MimirApp {
         }
         if !self.state.portrait_requests.is_empty() {
             self.start_portrait_fetches();
+        }
+        if self.state.sde_sync_requested {
+            self.try_spawn_sde_sync();
+        }
+    }
+
+    /// Spawn the background SDE sync when the decision helper allows
+    /// it; otherwise settle the request flag with an honest status.
+    /// Never panics and never blocks startup: every failure lands in
+    /// `sde_status` and clears `sde_sync_in_flight` on completion.
+    // Holding the DB lock across the sync awaits is intentional: the
+    // atomic swap needs one connection for the whole fetch-and-apply,
+    // and this runs on a blocking thread, never the UI/async path.
+    #[allow(clippy::await_holding_lock)]
+    fn try_spawn_sde_sync(&mut self) {
+        self.state.sde_sync_requested = false;
+        if self.state.demo {
+            tracing::info!("[SDE] sync spawn skipped: demo mode");
+            self.state.sde_status =
+                "Demo mode: SDE sync disabled (embedded baseline only, no network).".to_string();
+            return;
+        }
+        if self.state.sde_base_url.trim().is_empty() {
+            tracing::info!("[SDE] sync spawn skipped: no base URL configured");
+            self.state.sde_status = "SDE not configured: set a base URL in Settings to enable sync (embedded baseline only).".to_string();
+            return;
+        }
+        if self.state.sde_sync_in_flight {
+            tracing::debug!("[SDE] sync spawn skipped: already in flight");
+            return;
+        }
+        let (Some(backends), Some(runtime)) = (self.backends.as_ref(), self.runtime.as_ref())
+        else {
+            tracing::warn!("[SDE] sync skipped: no backend/runtime");
+            self.state.sde_status =
+                "SDE sync unavailable (no backend); embedded baseline only.".to_string();
+            return;
+        };
+        let base_url = self.state.sde_base_url.trim().to_string();
+        let db = backends.db.clone();
+        let tx = self.tx.clone();
+        self.state.sde_sync_in_flight = true;
+        self.state.sde_status = "SDE sync in progress...".to_string();
+        tracing::info!("[SDE] background sync spawned");
+        // `MutexGuard<Connection>` is not `Send`, so the guard cannot
+        // cross an `.await` on the main runtime: run the sync on a
+        // blocking thread with its own current-thread runtime. The
+        // result still returns through the BackendMsg channel (whose
+        // send requests a repaint), exactly like every other worker.
+        runtime.spawn_blocking(move || {
+            let summary: Result<SdeSyncSummary, String> = (|| {
+                let rt = tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                    .map_err(|e| e.to_string())?;
+                rt.block_on(async {
+                    let sync = SdeSync::new(base_url).map_err(|e| e.to_string())?;
+                    let mut conn = db
+                        .lock()
+                        .map_err(|_| "database lock poisoned".to_string())?;
+                    ensure_embedded_baseline(&mut conn).map_err(|e| e.to_string())?;
+                    let outcome = sync
+                        .sync_if_allowed(&mut conn, false)
+                        .await
+                        .map_err(|e| e.to_string())?;
+                    let build_number =
+                        local_build_number(&conn).map_err(|e| e.to_string())?;
+                    let detail = match outcome {
+                        SyncOutcome::NotModified { build_number } => {
+                            format!("SDE up to date (build {build_number}).")
+                        }
+                        SyncOutcome::Updated {
+                            build_number,
+                            types,
+                            solar_systems,
+                            stargates,
+                        } => format!(
+                            "SDE updated to build {build_number} ({types} types, {solar_systems} systems, {stargates} stargates)."
+                        ),
+                        SyncOutcome::SkippedDemo => {
+                            "Demo mode: SDE sync disabled (embedded baseline only, no network)."
+                                .to_string()
+                        }
+                    };
+                    Ok(SdeSyncSummary {
+                        build_number,
+                        detail,
+                    })
+                })
+            })();
+            tx.send(BackendMsg::SdeSynced { summary });
+        });
+    }
+
+    fn persist_sde_base_url_if_changed(&mut self) {
+        if !self.state.demo
+            && !self.last_demo_mode
+            && self.persisted_sde_base_url.as_deref() != Some(self.state.sde_base_url.as_str())
+        {
+            // An empty field means "not configured": delete any stale
+            // saved URL so the next load reads as not configured.
+            if let Some(backends) = self.backends.as_ref() {
+                if let Ok(conn) = backends.db.lock() {
+                    let value = self.state.sde_base_url.trim();
+                    let result = if value.is_empty() {
+                        repositories::delete_setting(&conn, "sde_base_url")
+                    } else {
+                        repositories::set_setting(&conn, "sde_base_url", value)
+                    };
+                    if result.is_ok() {
+                        tracing::debug!("[SDE] persisted SDE base URL setting");
+                        self.persisted_sde_base_url = Some(self.state.sde_base_url.clone());
+                    }
+                }
+            }
         }
     }
 
@@ -4298,6 +4513,7 @@ impl MimirApp {
             || self.state.market_lookup_requested.is_some()
             || self.state.planetary_detail_fetch_requested
             || self.state.fittings_write_requested.is_some()
+            || self.state.sde_sync_requested
             || self.state.skill_plan_action.is_some()
             || self.state.demo != self.last_demo_mode
             || self.state.active_character_id != self.last_active_id
@@ -4353,6 +4569,7 @@ impl MimirApp {
         // Persist startup-view choice only when it actually changed since
         // the last write (settings view edits it); no per-frame DB reads.
         self.persist_startup_view_if_changed();
+        self.persist_sde_base_url_if_changed();
         let actions = self.collect_keys(&ctx);
         self.apply_keys(actions);
         // Reset after key handling; views re-set it while rendering so the
@@ -4624,6 +4841,7 @@ impl MimirApp {
         // wake egui immediately whenever view rendering or apply_keys queued work
         // after the top-of-frame drain_requests() pass.
         self.persist_startup_view_if_changed();
+        self.persist_sde_base_url_if_changed();
         if self.has_pending_work() {
             ctx.request_repaint();
         }
@@ -5228,6 +5446,54 @@ mod tests {
         hints.sort_unstable();
         hints.dedup();
         assert_eq!(hints.len(), 11, "every view hint is unique");
+    }
+
+    #[test]
+    fn sde_sync_spawn_decision_gates_demo_empty_url_and_in_flight() {
+        // Demo never spawns, even with a URL configured.
+        assert!(!should_spawn_sde_sync(
+            true,
+            "http://127.0.0.1:9/sde",
+            false
+        ));
+        // Empty or whitespace-only URL never spawns (not configured).
+        assert!(!should_spawn_sde_sync(false, "", false));
+        assert!(!should_spawn_sde_sync(false, "   ", false));
+        // Live with a configured URL spawns.
+        assert!(should_spawn_sde_sync(
+            false,
+            "http://127.0.0.1:9/sde",
+            false
+        ));
+        // An in-flight sync blocks a second spawn.
+        assert!(!should_spawn_sde_sync(
+            false,
+            "http://127.0.0.1:9/sde",
+            true
+        ));
+    }
+
+    #[test]
+    fn demo_app_state_defaults_cannot_trigger_sde_sync() {
+        let mut state = AppState::new(true);
+        assert!(state.demo);
+        assert!(!state.sde_sync_requested);
+        assert!(!state.sde_sync_in_flight);
+        // Even a URL typed into a demo session cannot trigger sync.
+        state.sde_base_url = "http://127.0.0.1:9/sde".to_string();
+        state.sde_sync_requested = true;
+        assert!(!should_spawn_sde_sync(
+            state.demo,
+            &state.sde_base_url,
+            state.sde_sync_in_flight
+        ));
+        // Live defaults with no URL configured cannot trigger sync.
+        let live = AppState::new(false);
+        assert!(!should_spawn_sde_sync(
+            live.demo,
+            &live.sde_base_url,
+            live.sde_sync_in_flight
+        ));
     }
 
     #[test]

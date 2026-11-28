@@ -4,9 +4,9 @@
 //! Boot never blocks on the network: `ensure_embedded_baseline` seeds
 //! a compact embedded slice into the `sde_*` tables synchronously,
 //! and `http_sync::SdeSync` runs only from a background task (and
-//! never in demo mode). All tracing here uses the `[SDE]` tag; the
-//! `LOG_TAGS` entry in `src/ui/settings.rs` is wired in the post-#651
-//! shell/settings phase.
+//! never in demo mode). All tracing here uses the `[SDE]` tag, which
+//! is registered in `LOG_TAGS` in `src/ui/settings.rs`; the shell
+//! wiring lives in `src/app/shell.rs`.
 
 pub mod http_sync;
 
@@ -35,7 +35,9 @@ const EMBEDDED_STARGATES_JSONL: &str = "\
 /// Seed the embedded baseline when no SDE rows exist yet. Returns
 /// `true` when the baseline was inserted, `false` when verified rows
 /// (baseline or synced) were already present. Synchronous and
-/// network-free by construction.
+/// network-free by construction. The shell wiring (`[SDE]` in
+/// `LOG_TAGS`, Settings base-URL field, background spawn) lives in
+/// `src/app/shell.rs` and `src/ui/settings.rs`.
 pub fn ensure_embedded_baseline(conn: &mut rusqlite::Connection) -> AppResult<bool> {
     let existing: i64 = conn.query_row("SELECT COUNT(*) FROM sde_types", [], |r| r.get(0))?;
     if existing > 0 {

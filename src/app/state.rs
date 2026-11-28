@@ -970,6 +970,18 @@ pub struct AppState {
     pub market_fetch_requested: bool,
     pub market_lookup_requested: Option<String>,
     pub planetary_detail_fetch_requested: bool,
+    // SDE over HTTP state (card #654 wiring). `sde_base_url` is the
+    // operator-configured sync base (empty = not configured, embedded
+    // baseline only); the contract pins no production URL, so sync
+    // stays disabled until the operator sets one. The shell persists
+    // it through the `app_settings` key/value store (key
+    // `sde_base_url`) in live mode only and never in demo mode; the
+    // remaining fields are session-only status, never persisted.
+    pub sde_base_url: String,
+    pub sde_build_number: i64,
+    pub sde_status: String,
+    pub sde_sync_requested: bool,
+    pub sde_sync_in_flight: bool,
 }
 
 impl AppState {
@@ -1021,6 +1033,13 @@ impl AppState {
                 "Demo mode: sample data, no network.".to_string()
             } else {
                 "No character yet. Add a character or try the demo.".to_string()
+            },
+            sde_status: if demo {
+                "Demo mode: SDE sync disabled (embedded baseline only, no network).".to_string()
+            } else {
+                "SDE not configured: set a base URL in Settings to enable sync \
+                 (embedded baseline only)."
+                    .to_string()
             },
             ..Self::default()
         }
@@ -1645,6 +1664,7 @@ impl AppState {
         self.delete_requested_id = None;
         self.market_fetch_requested = false;
         self.market_lookup_requested = None;
+        self.sde_sync_requested = false;
         self.focus_search = false;
     }
 

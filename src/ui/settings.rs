@@ -4,7 +4,7 @@
 use crate::app::state::{AppState, AuthState, View};
 
 /// Bracketed feature tags the log filter can select (design section 1).
-pub const LOG_TAGS: [&str; 17] = [
+pub const LOG_TAGS: [&str; 18] = [
     "[AUTH]",
     "[ESI]",
     "[ASSETS]",
@@ -22,6 +22,7 @@ pub const LOG_TAGS: [&str; 17] = [
     "[UI]",
     "[STARTUP]",
     "[PLANS]",
+    "[SDE]",
 ];
 
 /// Pure log filter: substring (case-insensitive) plus optional tag.
@@ -119,6 +120,46 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
             ui.label("Status: demo mode (no network).");
         } else {
             ui.label("Status: online mode (live data after sign-in).");
+        }
+    });
+
+    // --- Static data (SDE over HTTP) ---
+    super::widgets::card(ui, |ui| {
+        super::widgets::section_title(ui, "Static data (SDE)");
+        ui.label(format!(
+            "Local build: {}",
+            if state.sde_build_number == 0 {
+                "embedded baseline (build 0)".to_string()
+            } else {
+                format!("build {}", state.sde_build_number)
+            }
+        ));
+        ui.label(format!("Status: {}", state.sde_status));
+        ui.horizontal(|ui| {
+            ui.label("SDE base URL:");
+            let response = ui.text_edit_singleline(&mut state.sde_base_url);
+            state.text_input_focused |= response.has_focus();
+        });
+        ui.label(
+            egui::RichText::new(
+                "Operator-configured; no production URL is pinned yet. \
+                 Empty keeps the embedded baseline only.",
+            )
+            .color(super::theme::TEXT_SECONDARY),
+        );
+        let sync_enabled = !state.demo && !state.sde_sync_in_flight;
+        if ui
+            .add_enabled(sync_enabled, egui::Button::new("Sync now"))
+            .clicked()
+        {
+            tracing::info!("[SDE] sync requested from Settings view");
+            state.sde_sync_requested = true;
+            state.status_message = "SDE sync requested.".to_string();
+        }
+        if state.demo {
+            ui.label("Demo mode: SDE sync disabled (no network).");
+        } else if state.sde_sync_in_flight {
+            ui.label("SDE sync in progress...");
         }
     });
 
@@ -227,6 +268,7 @@ mod tests {
         assert!(LOG_TAGS.contains(&"[EXPLORE]"));
         assert!(LOG_TAGS.contains(&"[PORTRAIT]"));
         assert!(LOG_TAGS.contains(&"[PLANS]"));
-        assert_eq!(LOG_TAGS.len(), 17);
+        assert!(LOG_TAGS.contains(&"[SDE]"));
+        assert_eq!(LOG_TAGS.len(), 18);
     }
 }

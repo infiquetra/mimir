@@ -1017,3 +1017,12 @@ the provenance model. Do not collapse back to unstructured prompt-only evidence.
 **Revisit when.** CCP publishes the production SDE-over-HTTP base URL and exact JSONL field spellings; the parsers already accept the known spelling variants, so only the base URL wiring (post-#651 shell phase) should change.
 
 **Refs.** `src/sde/http_sync.rs`, `src/sde/mod.rs`, `src/storage/schema.sql`, `src/config.rs` (`ESI_COMPATIBILITY_DATE`), ADR-011.
+
+### SDE sync wiring is operator-configured and disabled until a base URL is set (#654 wiring, 2026-11-28)
+
+**Author.** Muse (card #654 wiring phase)
+**Decision.** Extends the SDE atomic-swap decision above. The production SDE-over-HTTP base URL is unpinned by the contract, so no URL is invented in code: `AppState::sde_base_url` starts empty, sync stays disabled (embedded baseline build 0 only) until the operator sets a base URL in Settings, and the shell spawns background sync only through the testable `should_spawn_sde_sync(demo, base_url, in_flight)` helper — demo never spawns (zero HTTP), empty URL never spawns, an in-flight sync blocks duplicates. The URL persists through the existing `app_settings` key/value store (`get_setting`/`set_setting`/`delete_setting`, key `sde_base_url`) in live mode only, mirroring `startup_view`; clearing the field deletes the saved value. Startup queues one sync via the same request-flag path as Settings "Sync now"; results land through `BackendMsg::SdeSynced` and always clear `sde_sync_in_flight`, with failures shown in `sde_status` while the baseline keeps serving.
+**Rejected alternatives.** Hardcoding a guessed CCP or mirror URL (the backend finding stands: the contract does not pin one); keeping the URL session-only (a clean free-form-string KV already exists, so persistence is honest and cheap); spawning directly from the Settings click instead of the drained request flag (breaks the shell's single drain discipline).
+**Rationale.** Operator configuration keeps the unpinned-URL disclosure truthful in the UI, and the pure decision helper makes the demo/empty/in-flight gates unit-testable without a window or network.
+**Revisit when.** CCP publishes the production SDE-over-HTTP base URL: then set it as the default (still operator-overridable) and re-check the JSONL field spellings.
+**Refs.** `src/app/shell.rs` (`should_spawn_sde_sync`, `try_spawn_sde_sync`, `persist_sde_base_url_if_changed`), `src/app/state.rs` (`sde_*` fields), `src/ui/settings.rs` (`[SDE]` in `LOG_TAGS`, Static data card), ADR-011.
