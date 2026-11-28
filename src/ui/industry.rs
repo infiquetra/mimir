@@ -5,8 +5,6 @@
 //! a fetched date, or a row count — never a raw numeric ID, and
 //! blueprint sentinel values render as words.
 
-use chrono::Utc;
-
 use super::widgets;
 use crate::app::state::{
     AppState, BlueprintKindFilter, BlueprintsData, IndustryData, IndustryJobsData, LoadState,
@@ -382,6 +380,7 @@ fn show_jobs_section(
     jobs: &crate::app::state::SectionResult<IndustryJobsData>,
     resolver: &NameResolver,
     panel_shown: bool,
+    now: chrono::DateTime<chrono::Utc>,
 ) {
     ui.heading("Industry jobs");
     match jobs {
@@ -400,7 +399,6 @@ fn show_jobs_section(
             if data.truncated {
                 ui.label("Showing the first pages of jobs only; counts cover the jobs loaded.");
             }
-            let now = Utc::now();
             for row in &rows {
                 ui.separator();
                 ui.label(format!("{} \u{2014} {}", row.type_name, row.activity_label));
@@ -1080,7 +1078,7 @@ pub fn show(
                     });
                 }
                 widgets::card(ui, |ui| {
-                    show_jobs_section(ui, &bundle.jobs, resolver, panel_shown);
+                    show_jobs_section(ui, &bundle.jobs, resolver, panel_shown, state.now_utc());
                 });
                 widgets::card(ui, |ui| {
                     show_blueprints_section(ui, state, &bundle.blueprints, resolver, panel_shown);

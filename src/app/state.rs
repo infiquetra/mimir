@@ -1734,6 +1734,25 @@ impl AppState {
         self.status_message = "Demo off. Live characters load after sign-in/refresh.".to_string();
     }
 
+    /// Wall-clock now for display derivations (30-day
+    /// windows, countdowns, relative ages). Demo mode is
+    /// pinned to a fixed anchor inside the demo fixtures'
+    /// window so demo rendering — including kittest pixel
+    /// goldens — never depends on when it runs; live mode
+    /// uses the real clock. Network/auth code must keep
+    /// using real time directly, never this helper.
+    pub fn now_utc(&self) -> chrono::DateTime<chrono::Utc> {
+        if self.demo {
+            use chrono::TimeZone;
+            chrono::Utc
+                .with_ymd_and_hms(2026, 11, 28, 12, 0, 0)
+                .single()
+                .expect("demo anchor is a valid UTC instant")
+        } else {
+            chrono::Utc::now()
+        }
+    }
+
     pub fn switch_view(&mut self, view: View) {
         if self.view != view {
             tracing::debug!("[UI] switch view to {}", view.label());
@@ -1983,6 +2002,23 @@ mod tests {
         assert_eq!(View::Fittings.previous(), View::Planets);
         assert_eq!(View::Planets.previous(), View::Industry);
         assert_eq!(View::Assets.previous(), View::Wallet);
+    }
+
+    #[test]
+    fn demo_now_is_wall_clock_independent() {
+        // Demo rendering (and therefore every kittest
+        // golden) must not depend on when it runs.
+        let demo = AppState::new(true);
+        let first = demo.now_utc();
+        let second = demo.now_utc();
+        assert_eq!(first, second);
+        assert_eq!(first.to_rfc3339(), "2026-11-28T12:00:00+00:00");
+        // Live mode tracks the real clock (within a minute
+        // of the test's own now; never the demo anchor
+        // unless the host clock genuinely is the anchor).
+        let live = AppState::new(false);
+        let drift = (chrono::Utc::now() - live.now_utc()).num_seconds().abs();
+        assert!(drift < 60, "live now drifted {drift}s");
     }
 
     #[test]

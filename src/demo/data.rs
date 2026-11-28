@@ -1277,6 +1277,10 @@ pub fn seed_demo_state(state: &mut AppState) {
     // Demo hard-off (invariant 5): no clipboard opt-in, no suggestion.
     state.clipboard_opt_in = false;
     state.clipboard_suggestion = None;
+    // Host-independent logs path in demo: the settings field
+    // must never render the host's expanded home directory
+    // (it leaks into screenshots and pixel goldens).
+    state.eve_logs_dir = "~/Documents/EVE/logs".to_string();
     state.offline = false;
     match load_demo_bundle() {
         Ok(bundle) => {
@@ -1300,7 +1304,7 @@ pub fn seed_demo_state(state: &mut AppState) {
             if let Err(e) = &resolver {
                 tracing::warn!("[DEMO] demo names unavailable for summaries: {}", e);
             }
-            let now = Utc::now();
+            let now = state.now_utc();
             state.summaries.clear();
             for character in &bundle.characters {
                 let Some(per) = bundle.data.get(&character.character_id) else {

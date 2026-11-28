@@ -29,6 +29,16 @@
 
 ---
 
+## 2026-11-28
+
+### Headless kittest finds real unlabeled inputs, and layout rects are not rendered rects (#653)
+
+**Author.** Muse (card #653)
+**Evidence.** First structural run failed on Settings: three `TextInput` nodes (SDE base URL, EVE logs directory, log filter) had no accessible name; fixed by tying each field to its visible label with `Response::labelled_by` in `src/ui/settings.rs`. Dashboard AccessKit bounds for journal amounts extend past 1440px inside the horizontal scroll area, and egui emits inverted clip rects for hidden tab panes; both are layout/clip facts, not rendered overflow. Glow provenance (corrected in repair): the shipped graph has zero glow, but `egui_kittest`'s `wgpu` feature turns on wgpu's `gles` backend, so `glow`/`khronos-egl` ARE compiled into Linux test builds only; `egui_glow` and `openssl-sys` remain absent everywhere. The first bounds check (clip rects inside screen) was vacuous — egui intersects clips with the screen by construction — and mutation probes (off-screen and cut-off buttons) passed it (review P1-3).
+**Mechanism.** egui AccessKit bounds are unclipped layout rects, while paint shapes carry both their visual bounding rect and the clip that bounds rendering. A real clipped-bounds proof compares the shape's own rect against its clip and the screen: visible shapes must lie inside the screen, and fully-clipped shapes are legitimate only behind interior scroll clips. Text fields get their screen-reader name from `labelled_by` (or a placeholder), never from a neighbouring label alone.
+**Generalizable rule.** In kittest suites, assert names and raw-id patterns on AccessKit labels AND painter text galleys, finite layout rects on all nodes, and shape-vs-clip-vs-screen containment at the paint layer; mutation-test every new checker with a deliberately broken widget, and treat every unnamed interactive widget the harness reports as a product bug to fix at the call site, not a test to relax.
+**Refs.** `tests/ui_kittest/harness.rs` (`assert_structural`), `src/ui/settings.rs`, `src/app/shell.rs` (`show_shell_for_kittest`).
+
 ## 2026-11-21
 
 ### Single-flight write locks, spawn-time refetch generations, and atomic compare-and-save token rotation

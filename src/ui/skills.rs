@@ -421,7 +421,7 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState, sde: &Sde, cache: &mut Port
     let snapshot = state.skills.clone();
     match snapshot {
         LoadState::Ready(data) => {
-            let now = Utc::now();
+            let now = state.now_utc();
             ui.label(format!(
                 "Total skill points: {} (unallocated: {})",
                 widgets::format_sp(data.skills.total_sp),

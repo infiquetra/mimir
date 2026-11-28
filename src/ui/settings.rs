@@ -137,8 +137,9 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
         ));
         ui.label(format!("Status: {}", state.sde_status));
         ui.horizontal(|ui| {
-            ui.label("SDE base URL:");
+            let label = ui.label("SDE base URL:");
             let response = ui.text_edit_singleline(&mut state.sde_base_url);
+            let response = response.labelled_by(label.id);
             state.text_input_focused |= response.has_focus();
             // Persist only on focus loss / Enter / Sync now, never per keystroke.
             let enter_pressed =
@@ -204,11 +205,12 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
             ui.label("Demo mode: log watcher and clipboard monitoring are off.");
         }
         ui.horizontal(|ui| {
-            ui.label("EVE logs directory:");
+            let label = ui.label("EVE logs directory:");
             let response = ui.add_enabled(
                 !state.demo,
                 egui::TextEdit::singleline(&mut state.eve_logs_dir),
             );
+            let response = response.labelled_by(label.id);
             state.text_input_focused |= response.has_focus();
             let enter_pressed =
                 response.has_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
@@ -262,8 +264,9 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
         super::widgets::section_title(ui, "Logs");
         ui.label("Structured tracing output (tokens are never logged).");
         ui.horizontal(|ui| {
-            ui.label("Filter:");
+            let label = ui.label("Filter:");
             let response = ui.text_edit_singleline(&mut state.log_filter);
+            let response = response.labelled_by(label.id);
             if state.focus_search && state.view == View::Settings {
                 response.request_focus();
                 state.focus_search = false;

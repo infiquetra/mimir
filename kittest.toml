@@ -1,0 +1,14 @@
+# egui_kittest 0.37 snapshot configuration.
+# Keys verified against egui_kittest 0.37.0 src/config.rs (deny_unknown_fields):
+# the macOS table is named "mac" in that source, not "macos".
+output_path = "tests/snapshots"
+threshold = 0.6
+max_failed_pixels = 0
+
+[linux]
+threshold = 0.6
+max_failed_pixels = 0
+
+[mac]
+threshold = 0.6
+max_failed_pixels = 0

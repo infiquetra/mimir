@@ -24,6 +24,17 @@
 
 ---
 
+## 2026-11-28
+
+### egui_kittest Tier 1 suite is one integration target with per-card snapshot prefixes (#653)
+
+**Author.** Muse (card #653)
+**Decision.** Tier 1 lives in `tests/ui_kittest/{main,harness,card_653}.rs` as a single integration target: downstream cards add one `mod <area>;` line and prefix snapshot names with their card folder (`tests/snapshots/card_653/`). Structural AccessKit/bounds/raw-id assertions run unconditionally on every OS for all 11 views at 1440x900 and 1280x800; pixel goldens are Linux-only, one per workspace preset per viewport (8 files, not one per view — repair). Determinism is end-to-end: fixed timestep, host-independent demo logs path (`~/Documents/EVE/logs` literal in demo), and the pinned `AppState::now_utc` demo anchor (2026-11-28T12:00:00Z) for every display derivation, so goldens cannot leak a home directory or rot with the wall clock (repair). NOTE on glow: `egui_kittest`'s `wgpu` feature enables wgpu's `gles` backend, so `glow`/`khronos-egl` ARE compiled into Linux TEST builds only (dev graph); the shipped runtime graph remains zero glow/egui_glow/openssl-sys — accepted as a dev-only cost of the snapshot renderer. `kittest.toml` uses only keys verified in egui_kittest 0.37.0 `src/config.rs` (`output_path`, `threshold`, `max_failed_pixels`, `[linux]`, `[mac]` — the source names the macOS table `mac`, not `macos`, and rejects unknown keys). The adapter policy is explicit: `CI=true` with no wgpu adapter fails loudly; locally with `CI` unset it prints the `[UI_KITTEST] no local wgpu adapter` line and skips only the pixel diff. Tier 2 stays in `scripts/qa/utm-smoke.sh` (allowlist `macos-test-02|macos-test-03`, localhost/`127.0.0.1`/`::1`/local hostname exits 2, guest lock + `Contents/MacOS/mimir` launch with liveness check + window-scoped `screencapture -x -o -l`, `--dry-run` prints the sequence) with `scripts/qa/utm-smoke-test.sh` pinning every refusal exit.
+**Rejected alternatives.** One test file per card (merge conflicts in a shared target); `[macos]` in `kittest.toml` (the 0.37 parser panics on it); asserting every AccessKit layout rect inside the screen (scroll-area and tile-pane layout rects legitimately extend past the screen — rendered clipping is proven at the paint layer by `check_paint_bounds`: visible shapes must lie inside the screen, fully-clipped shapes only behind interior scroll clips; mutation-tested with off-screen and cut-off probe buttons).
+**Rationale.** A single harness with fixed timestep (`1/60`), `RendererOptions::PREDICTABLE` (`msaa_samples = 1`), and demo-seeded `MimirApp::new(true, ..., None, None)` gives deterministic, disk-free, network-free frames that downstream cards reuse without renegotiating determinism.
+**Revisit when.** egui_kittest renames the `mac` config table, or a downstream card needs per-OS goldens beyond Linux.
+**Refs.** `tests/ui_kittest/`, `kittest.toml`, `scripts/qa/utm-smoke.sh`, `.github/workflows/ci.yml`, ADR-013.
+
 ## 2026-11-27
 
 ### Alidade product rebrand, `main` branch cutover, multi-agent UI/visualization/QA skills, and locked v1.0 architecture (`D-01`..`D-05`)
