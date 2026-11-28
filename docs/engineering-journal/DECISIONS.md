@@ -961,3 +961,29 @@ the provenance model. Do not collapse back to unstructured prompt-only evidence.
 `test/features/combat_analyzer/domain/combat_evidence_ledger_test.dart`;
 [LEARNINGS 2026-05-21](LEARNINGS.md#combat-logs-are-a-primary-source-but-not-a-complete-aar-evidence-source);
 [QUEUED AAR fit simulation](QUEUED.md#p1--aar-fit-simulation-and-defense-profile-derivation).
+
+### Dogma completion composes shipped blocks; unbaked operands stay explicit inputs (#639)
+
+**Decision.** The complete Dogma evaluator ships as a new pure pipeline (`src/fitting/dogma_pipeline.rs`: canonical nine-operator order, magnitude-sorted stacking only for module/rig/subsystem sources on non-stackable targets, `SkillContext::{Trained, AllFive, BaseOnly}`, `ModuleState`, `unapplied_effects` with named reasons) plus thin compositions over shipped blocks: `propulsion.rs` reuses bonused navigation mass/agility, `active_tank.rs` reuses `active_repair.rs` rates and bonused resistances (no second repair implementation), and `breacher_dot.rs` is the closed-form `min(flat, pct * total_hp)` / max-stream rule. SDE operands the bundled extract does not bake (propulsion thrust/boost, pod damage, per-level skill percents) are explicit caller inputs; existing `ship_*` pinned values are untouched.
+
+**Rejected alternatives.**
+- Rewriting the `ship_*` blocks onto the new pipeline in the same change. That risks every pinned category-7 value for zero user-visible gain; migration can happen family by family behind the same oracle tests.
+- Embedding a private copy of thrust/pod tables in Rust. That forks the SDE and goes stale silently; explicit inputs keep one source of truth and an honest disclosure path.
+- Reading `dogma.json` at runtime for the missing attributes. The codebase explicitly forbids it, and its pod values already diverge from the CSV cache.
+
+**Revisit when.** The generator (`scripts/sde/generate_fitting_types_sde.py`) bakes attributes 20/567/796/5736/5737 and subsystem modifiers into `fitting_types.json` (or SDE-over-HTTP #654 serves them): then `fitting_propulsion`, pod resolution, and hull/skill modifier construction should read the catalogue directly and the explicit-input structs retire.
+
+**Refs.** `tests/dogma_pyfa_oracles.rs` (30 SDE-derived fixtures); [LEARNINGS 2026-11-28](LEARNINGS.md).
+
+### Dogma fitting evaluation reads the bundled Dogma extracts; per-layer repair scoping (#639 repair)
+
+**Decision.** Supersedes the explicit-inputs half of the #639 decision above. A new `src/fitting/dogma_catalogue.rs` loads the bundled generated extracts `assets/sde/dogma.json` + `assets/sde/effect_modifiers.json` and builds real fitting modifiers (hull traits cat 6, modules/rigs cat 7, charges cat 8, skills cat 16, implants cat 20, subsystems cat 32, overheated rows for caller-named types) for `fitting_propulsion`, `fitting_active_tank_with_catalogue`, and `evaluate_ship_attribute`. Per-level scaling is proven from the SDE level chain (a skill modifier with `modifying == 280`) gated to the owner itself or its required skills (182/183), so rigs reusing bonus attribute ids stay flat. Repair scaling is keyed to the real per-layer amount attributes (68/84/83) plus uniform-skill cycle-duration scaling, so Repair Systems can never inflate shield boosting. The shipped `ship_*` blocks and every pinned category-7 value remain untouched; the `resources.rs` no-runtime-read rule stays scoped to its hand-pinned need-reduction table, whose double-scaling rationale does not extend to general evaluation.
+
+**Rejected alternatives.**
+- Baking new families into `fitting_types.json` via the generator in the same repair. The generator and asset are outside this card's owned files, and a regenerated 3.8 MB asset would bury the repair diff; the Dogma extracts are already generated, bundled, and complete.
+- Keeping explicit caller operands for velocity/repair. That is exactly what left fitted velocity modules silently dropped and hull/skill evaluation unwired (review findings 3 and 5).
+- Rerouting `ship_*` blocks through the corrected pipeline now. Their shipped single-chain percent semantics are pinned by hundreds of tests; migration stays a family-by-family follow-up behind the literal oracle suite.
+
+**Revisit when.** SDE-over-HTTP (#654) can serve type attributes/effects and per-attribute `stackable` metadata: then `DogmaCatalogue` should source from the synced tables (retiring the non-stackable assumption) and the generator-baked families can converge onto the pipeline.
+
+**Refs.** PR #657 repair commit; `/tmp/alidade-review-639.md`; [LEARNINGS 2026-11-28 stacking entry](LEARNINGS.md).
