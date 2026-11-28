@@ -9,4 +9,5 @@ mod harness;
 
 mod card_653;
 mod exploration;
+mod mining_hud;
 mod pantry;

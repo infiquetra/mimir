@@ -18,6 +18,26 @@ pub async fn get_character(
         .await
 }
 
+/// The character's mining ledger. Requires scope
+/// `esi-industry.read_character_mining.v1` (step-up only, never
+/// first-auth); a missing scope surfaces as 401/403 via
+/// `endpoints::needs_reauthorize`. Goes through `EsiClient` only.
+pub async fn get_character_mining(
+    client: &EsiClient,
+    character_id: i64,
+) -> AppResult<Vec<CharacterMiningEntry>> {
+    tracing::debug!("[MINING] GET /characters/{}/mining/", character_id);
+    let rows: Vec<CharacterMiningEntry> = client
+        .auth_get(&format!("/characters/{character_id}/mining/"), character_id)
+        .await?;
+    tracing::info!(
+        "[MINING] mining ledger fetched character_id={} rows={}",
+        character_id,
+        rows.len()
+    );
+    Ok(rows)
+}
+
 pub async fn get_skills(client: &EsiClient, character_id: i64) -> AppResult<CharacterSkills> {
     tracing::debug!("[SKILLS] GET /characters/{}/skills/", character_id);
     client

@@ -20,6 +20,7 @@ pub mod esi;
 pub mod exploration;
 pub mod fitting;
 pub mod invention_calculator;
+pub mod mining;
 pub mod names;
 pub mod pantry;
 pub mod portraits;

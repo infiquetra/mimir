@@ -10,7 +10,7 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use crate::daemon::{ClipboardKind, LogEvent};
+use crate::daemon::{ClipboardKind, LogEvent, LogEventKind};
 use crate::esi::endpoints::WriteFailureClass;
 use crate::esi::models::*;
 use crate::fitting::editor::{BrowserRow, ShipRow};
@@ -18,6 +18,7 @@ use crate::fitting::eft::{ImportSection, ImportedFitting};
 use crate::invention_calculator::{
     DEFAULT_BASE_PROBABILITY, DEFAULT_DECRYPTOR_MULTIPLIER, DEFAULT_SKILL_LEVEL,
 };
+use crate::mining::survey_scanner::SurveyParse;
 use crate::names::exploration_ref::{EffectFamily, ExplorationRef};
 use crate::names::sde::Sde;
 use crate::portraits::ImageKind;
@@ -46,10 +47,11 @@ pub enum View {
     Settings,
     Exploration,
     Pantry,
+    Mining,
 }
 
 impl View {
-    pub const ALL: [View; 12] = [
+    pub const ALL: [View; 13] = [
         View::Dashboard,
         View::Characters,
         View::Skills,
@@ -62,6 +64,7 @@ impl View {
         View::Settings,
         View::Exploration,
         View::Pantry,
+        View::Mining,
     ];
 
     pub fn label(&self) -> &'static str {
@@ -78,6 +81,7 @@ impl View {
             View::Settings => "Settings",
             View::Exploration => "Exploration",
             View::Pantry => "Pantry",
+            View::Mining => "Mining",
         }
     }
 
@@ -115,6 +119,7 @@ impl View {
             "fit" | "fitting" => Some(View::Fittings),
             "setting" => Some(View::Settings),
             "explore" => Some(View::Exploration),
+            "mine" | "mining" => Some(View::Mining),
             _ => None,
         }
     }
@@ -495,6 +500,19 @@ pub struct IndustryData {
     pub blueprints: SectionResult<BlueprintsData>,
 }
 
+/// Mining bundle for the active character (card #648).
+#[derive(Debug, Clone, Default)]
+pub struct MiningData {
+    pub entries: Vec<CharacterMiningEntry>,
+    pub needs_reauthorize: bool,
+}
+
+impl MiningData {
+    pub fn needs_mining_stepup(&self) -> bool {
+        self.needs_reauthorize
+    }
+}
+
 impl IndustryData {
     /// True when either section failed for scope reasons.
     pub fn needs_industry_stepup(&self) -> bool {
@@ -786,6 +804,7 @@ pub struct AppState {
     /// frame never rebuilds or re-sorts (card #642 repair).
     pub pantry_cache: crate::pantry::indexer::PantryCache,
     pub pantry_search: String,
+    pub mining: LoadState<MiningData>,
     pub log_lines: Vec<String>,
     pub status_message: String,
 
@@ -1028,6 +1047,22 @@ pub struct AppState {
     pub exploration_route_request: Option<ExplorationRouteRequest>,
     pub exploration_loaded_for: Option<i64>,
     pub exploration_load_requested: bool,
+    // View-local mining state (card #648): session-only survey text,
+    // never persisted or logged.
+    pub mining_needs_reauthorize: bool,
+    pub mining_fetch_requested: bool,
+    pub mining_generation: u64,
+    pub mining_survey_text: String,
+    /// Session start stamped via `now_utc()` when the first mining
+    /// event lands (#648 repair); rate math never uses a raw clock.
+    pub mining_session_started_unix: Option<i64>,
+    /// Survey parse cache keyed by (hash, len) of the paste text.
+    pub mining_survey_cache_key: Option<(u64, usize)>,
+    pub mining_survey_cached: SurveyParse,
+    /// Cached per-unit ore hub quotes keyed by ore name. Demo seeds
+    /// these in memory only; live entries come only from a market
+    /// history whose selected type is that ore itself.
+    pub mining_ore_price_per_unit: std::collections::HashMap<String, f64>,
 
     // Request flags for the integrator to drain (set by views, never faked
     // as completed work). See the module comment.
@@ -1315,6 +1350,16 @@ impl AppState {
                     character_id
                 );
                 self.industry = LoadState::Loading;
+                tracing::debug!(
+                    "[MINING] clearing mining on character switch from={} to={}",
+                    previous_id,
+                    character_id
+                );
+                self.mining = LoadState::Loading;
+                self.mining_needs_reauthorize = false;
+                self.mining_fetch_requested = false;
+                self.mining_generation = self.mining_generation.wrapping_add(1);
+                self.clear_mining_view_state();
                 // Same ownership argument: colonies are fetched
                 // tolerantly and detail is identity-stamped, so
                 // reset at the switch boundary.
@@ -1556,6 +1601,12 @@ impl AppState {
             self.market_generation = self.market_generation.wrapping_add(1);
             tracing::debug!("[INDUSTRY] clearing industry of removed active character");
             self.industry = LoadState::Loading;
+            tracing::debug!("[MINING] clearing mining of removed active character");
+            self.mining = LoadState::Loading;
+            self.mining_needs_reauthorize = false;
+            self.mining_fetch_requested = false;
+            self.mining_generation = self.mining_generation.wrapping_add(1);
+            self.clear_mining_view_state();
             tracing::debug!("[PI] clearing planetary of removed active character");
             self.planetary = LoadState::Loading;
             self.planetary_selected_planet_id = None;
@@ -1649,6 +1700,11 @@ impl AppState {
             self.clear_market_lookup();
             self.market_generation = self.market_generation.wrapping_add(1);
             self.industry = LoadState::Empty;
+            self.mining = LoadState::Empty;
+            self.mining_needs_reauthorize = false;
+            self.mining_fetch_requested = false;
+            self.mining_generation = self.mining_generation.wrapping_add(1);
+            self.clear_mining_view_state();
             self.planetary = LoadState::Empty;
             self.planetary_selected_planet_id = None;
             self.planetary_detail_fetch_requested = false;
@@ -1757,6 +1813,11 @@ impl AppState {
         self.clear_market_lookup();
         self.market_generation = self.market_generation.wrapping_add(1);
         self.industry = LoadState::Empty;
+        self.mining = LoadState::Empty;
+        self.mining_needs_reauthorize = false;
+        self.mining_fetch_requested = false;
+        self.mining_generation = self.mining_generation.wrapping_add(1);
+        self.clear_mining_view_state();
         self.planetary = LoadState::Empty;
         self.planetary_selected_planet_id = None;
         self.planetary_detail_fetch_requested = false;
@@ -1821,9 +1882,25 @@ impl AppState {
         self.reset_exploration_domain();
     }
 
+    /// Clear session-only mining view state (survey, cache, quotes,
+    /// session stamp). Called at every mining reset site.
+    pub fn clear_mining_view_state(&mut self) {
+        self.mining_survey_text.clear();
+        self.mining_session_started_unix = None;
+        self.mining_survey_cache_key = None;
+        self.mining_survey_cached = SurveyParse::default();
+        self.mining_ore_price_per_unit.clear();
+    }
+
     /// Record one daemon log event in the capped session-only ring.
     /// Counts and variants only are ever logged by callers.
     pub fn push_log_event(&mut self, event: LogEvent) {
+        if event.kind == LogEventKind::Mining && self.mining_session_started_unix.is_none() {
+            // Receipt stamp from the injected clock (demo anchor in
+            // demo), never a raw Utc::now in demo paths.
+            self.mining_session_started_unix = Some(self.now_utc().timestamp());
+            tracing::debug!("[MINING] mining session start stamped");
+        }
         self.daemon_event_count = self.daemon_event_count.saturating_add(1);
         self.recent_log_events.push(event);
         if self.recent_log_events.len() > RECENT_LOG_EVENTS_CAP {
@@ -2079,14 +2156,16 @@ mod tests {
         // every index 0-9 is unchanged, Settings.next() is now
         // Exploration and Exploration wraps back to Dashboard.
         assert_eq!(View::Settings.next(), View::Exploration);
-        // Pantry is appended after Exploration (card #642):
-        // indices 0-10 are unchanged and Pantry wraps around.
+        // Pantry (#642) then Mining (#648) append after
+        // Exploration: indices 0-10 unchanged, Mining wraps.
         assert_eq!(View::Exploration.next(), View::Pantry);
-        assert_eq!(View::Pantry.next(), View::Dashboard);
-        assert_eq!(View::Dashboard.previous(), View::Pantry);
+        assert_eq!(View::Pantry.next(), View::Mining);
+        assert_eq!(View::Mining.next(), View::Dashboard);
+        assert_eq!(View::Dashboard.previous(), View::Mining);
+        assert_eq!(View::Mining.previous(), View::Pantry);
         assert_eq!(View::Pantry.previous(), View::Exploration);
         assert_eq!(View::Exploration.previous(), View::Settings);
-        assert_eq!(View::ALL.len(), 12);
+        assert_eq!(View::ALL.len(), 13);
         assert_eq!(View::from_index(3), Some(View::Wallet));
         assert_eq!(View::from_index(4), Some(View::Assets));
         assert_eq!(View::from_index(5), Some(View::Market));
@@ -2096,7 +2175,8 @@ mod tests {
         assert_eq!(View::from_index(9), Some(View::Settings));
         assert_eq!(View::from_index(10), Some(View::Exploration));
         assert_eq!(View::from_index(11), Some(View::Pantry));
-        assert_eq!(View::from_index(12), None);
+        assert_eq!(View::from_index(12), Some(View::Mining));
+        assert_eq!(View::from_index(13), None);
         assert_eq!(View::Wallet.index(), 3);
         assert_eq!(View::Assets.index(), 4);
         assert_eq!(View::Market.index(), 5);
@@ -2105,6 +2185,7 @@ mod tests {
         assert_eq!(View::Fittings.index(), 8);
         assert_eq!(View::Settings.index(), 9);
         assert_eq!(View::Exploration.index(), 10);
+        assert_eq!(View::Mining.index(), 12);
         assert_eq!(View::Wallet.next(), View::Assets);
         assert_eq!(View::Assets.next(), View::Market);
         assert_eq!(View::Market.next(), View::Industry);
