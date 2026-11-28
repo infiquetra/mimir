@@ -987,3 +987,10 @@ the provenance model. Do not collapse back to unstructured prompt-only evidence.
 **Revisit when.** SDE-over-HTTP (#654) can serve type attributes/effects and per-attribute `stackable` metadata: then `DogmaCatalogue` should source from the synced tables (retiring the non-stackable assumption) and the generator-baked families can converge onto the pipeline.
 
 **Refs.** PR #657 repair commit; `/tmp/alidade-review-639.md`; [LEARNINGS 2026-11-28 stacking entry](LEARNINGS.md).
+## 2026-11-28 — eframe `wgpu_no_default_features` + pinned wgpu backends keep glow out of the tree (#651)
+
+**Decision.** `Cargo.toml` enables eframe's `wgpu_no_default_features` (not `wgpu`) and adds a direct `wgpu = "30"` dependency with `default-features = false` and features `std, parking_lot, dx12, metal, vulkan, wgsl, webgpu` — wgpu/default minus `gles`.
+**Rationale.** eframe's `wgpu` feature enables `egui-wgpu/default`, which enables `wgpu/default`, whose `gles` backend pulls `glow v0.17` (verified with `cargo tree -i glow -e features`). Card #651 acceptance requires zero `glow`/`egui_glow`/`openssl-sys` matches; with the pinned set `cargo tree` and `cargo tree -e features` both report 0, and all 1,316 tests pass.
+**Rejected alternatives.** Literal `features = ["wgpu", ...]` as first drafted (leaves `glow` in the tree via wgpu's GLES backend — fails acceptance). Patching or vendoring wgpu (maintenance burden for zero gain).
+**Revisit when.** A future eframe/wgpu release drops `gles` from wgpu/default or offers a first-class Metal-only feature path; then collapse back to the plain `wgpu` feature and delete the direct `wgpu` pin.
+**Refs.** `Cargo.toml`; `cargo tree -i glow -e features` output recorded in the #651 PR description.
