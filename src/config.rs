@@ -123,6 +123,11 @@ impl EveConfig {
     /// step-up, never at first auth.
     pub const STRUCTURE_SCOPES: &[&str] = &["esi-universe.read_structures.v1"];
 
+    /// Mining ledger step-up scope: read the character's mining
+    /// history. Granted after first sign-in via step-up, never at
+    /// first auth (card #648 guardrail).
+    pub const MINING_SCOPES: &[&str] = &["esi-industry.read_character_mining.v1"];
+
     /// Scopes the Phase-1 Rust endpoint set actually needs, beyond the
     /// first-auth set (location/ship/online/clones/standings/loyalty).
     pub const PHASE1_ENDPOINT_SCOPES: &[&str] = &[

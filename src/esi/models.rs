@@ -201,6 +201,19 @@ pub struct CharacterShip {
     pub ship_type_id: i64,
 }
 
+/// One ESI character mining ledger row (`GET /characters/{id}/mining/`).
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+pub struct CharacterMiningEntry {
+    #[serde(default)]
+    pub date: String,
+    #[serde(default)]
+    pub quantity: i64,
+    #[serde(default)]
+    pub solar_system_id: i64,
+    #[serde(default)]
+    pub type_id: i64,
+}
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct CharacterOnline {
     #[serde(default)]
