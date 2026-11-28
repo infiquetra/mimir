@@ -4,7 +4,7 @@
 use crate::app::state::{AppState, AuthState, View};
 
 /// Bracketed feature tags the log filter can select (design section 1).
-pub const LOG_TAGS: [&str; 18] = [
+pub const LOG_TAGS: [&str; 19] = [
     "[AUTH]",
     "[ESI]",
     "[ASSETS]",
@@ -23,6 +23,7 @@ pub const LOG_TAGS: [&str; 18] = [
     "[STARTUP]",
     "[PLANS]",
     "[SDE]",
+    "[DAEMON]",
 ];
 
 /// Pure log filter: substring (case-insensitive) plus optional tag.
@@ -181,6 +182,75 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
         }
     });
 
+    // --- Local telemetry (daemon, card #655) ---
+    super::widgets::card(ui, |ui| {
+        super::widgets::section_title(ui, "Local telemetry");
+        let mut logs_enabled = state.daemon_logs_enabled;
+        if ui
+            .add_enabled(
+                !state.demo,
+                egui::Checkbox::new(&mut logs_enabled, "Watch EVE logs (Gamelogs / Chatlogs)"),
+            )
+            .changed()
+        {
+            tracing::info!(
+                "[DAEMON] logs watch toggle changed enabled={}",
+                logs_enabled
+            );
+            state.daemon_logs_enabled = logs_enabled;
+            state.daemon_logs_enabled_persist_requested = true;
+        }
+        if state.demo {
+            ui.label("Demo mode: log watcher and clipboard monitoring are off.");
+        }
+        ui.horizontal(|ui| {
+            ui.label("EVE logs directory:");
+            let response = ui.add_enabled(
+                !state.demo,
+                egui::TextEdit::singleline(&mut state.eve_logs_dir),
+            );
+            state.text_input_focused |= response.has_focus();
+            let enter_pressed =
+                response.has_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
+            if response.lost_focus() || enter_pressed {
+                tracing::debug!("[DAEMON] EVE logs directory edit finished; persist requested");
+                state.eve_logs_dir_persist_requested = true;
+            }
+        });
+        ui.label(format!("Status: {}", state.daemon_status));
+        ui.label(format!(
+            "Log events this session: {} ({} recent kept)",
+            state.daemon_event_count,
+            state.recent_log_events.len()
+        ));
+        let mut opt_in = state.clipboard_opt_in;
+        if ui
+            .add_enabled(
+                !state.demo,
+                egui::Checkbox::new(
+                    &mut opt_in,
+                    "Clipboard recognition (opt-in, off by default)",
+                ),
+            )
+            .changed()
+        {
+            tracing::info!("[DAEMON] clipboard opt-in changed enabled={}", opt_in);
+            state.clipboard_opt_in = opt_in;
+            if !opt_in {
+                state.clipboard_suggestion = None;
+            }
+        }
+        ui.label(
+            egui::RichText::new(
+                "Privacy: clipboard text is classified in memory only. It is never \
+                 logged, never saved, and only a recognized fit/scan shows as a \
+                 dismissible suggestion - it never overwrites an open fitting. \
+                 The Watch EVE logs choice is saved; clipboard opt-in is session-only.",
+            )
+            .color(super::theme::TEXT_SECONDARY),
+        );
+    });
+
     // --- Keyboard help ---
     super::widgets::card(ui, |ui| {
         super::widgets::section_title(ui, "Keyboard");
@@ -287,6 +357,7 @@ mod tests {
         assert!(LOG_TAGS.contains(&"[PORTRAIT]"));
         assert!(LOG_TAGS.contains(&"[PLANS]"));
         assert!(LOG_TAGS.contains(&"[SDE]"));
-        assert_eq!(LOG_TAGS.len(), 18);
+        assert!(LOG_TAGS.contains(&"[DAEMON]"));
+        assert_eq!(LOG_TAGS.len(), 19);
     }
 }

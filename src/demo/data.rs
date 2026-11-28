@@ -1274,6 +1274,9 @@ pub fn seed_demo_state(state: &mut AppState) {
     tracing::info!("[DEMO] seed_demo_state entry");
     state.reset_for_mode_switch();
     state.demo = true;
+    // Demo hard-off (invariant 5): no clipboard opt-in, no suggestion.
+    state.clipboard_opt_in = false;
+    state.clipboard_suggestion = None;
     state.offline = false;
     match load_demo_bundle() {
         Ok(bundle) => {
