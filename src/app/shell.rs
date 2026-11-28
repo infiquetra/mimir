@@ -38,7 +38,10 @@ use crate::names::sde::Sde;
 use crate::portraits::{
     ImageKind, PortraitError, PortraitService, LOGO_SIZE, PORTRAIT_SIZE, TYPE_ICON_SIZE,
 };
-use crate::sde::{ensure_embedded_baseline, local_build_number, SdeSync, SyncOutcome};
+use crate::sde::{
+    commit_fetched_build, ensure_embedded_baseline, local_build_number, read_snapshot,
+    FetchOutcome, SdeSync, SyncOutcome,
+};
 use crate::skills::plans::{apply_demo_action, DemoApplyOutcome, SkillPlan, SkillPlanAction};
 use crate::storage::db;
 use crate::storage::repositories::{self, CharacterRow, TokenMetaRow};
@@ -2325,7 +2328,7 @@ impl MimirApp {
                         Err(message) => {
                             tracing::warn!("[SDE] sync failed: {}", message);
                             self.state.sde_status = format!(
-                                "SDE sync failed; embedded baseline still serving (build {}).",
+                                "SDE sync failed: {message} (embedded baseline still serving, build {}).",
                                 self.state.sde_build_number
                             );
                         }
@@ -2370,6 +2373,10 @@ impl MimirApp {
         let mut demo_mode_changed = false;
         if self.state.demo != self.last_demo_mode {
             demo_mode_changed = true;
+            // Atomic mode transition: cached ESI bodies never cross it.
+            if let Some(b) = &self.backends {
+                b.esi.clear_etag_cache();
+            }
             if let Some(handle) = self.auth_task.take() {
                 tracing::info!("[AUTH] aborting in-flight sign-in task on demo mode change");
                 handle.abort();
@@ -2386,6 +2393,7 @@ impl MimirApp {
                 self.resolver = NameResolver::new();
                 self.demo_names_loaded = false;
                 if let Some(b) = &self.backends {
+                    b.esi.clear_etag_cache();
                     self.resolver.attach(b.esi.clone(), b.db.clone());
                     if let Ok(conn) = b.db.lock() {
                         match self.resolver.hydrate_from_db(&conn) {
@@ -2536,10 +2544,9 @@ impl MimirApp {
     /// it; otherwise settle the request flag with an honest status.
     /// Never panics and never blocks startup: every failure lands in
     /// `sde_status` and clears `sde_sync_in_flight` on completion.
-    // Holding the DB lock across the sync awaits is intentional: the
-    // atomic swap needs one connection for the whole fetch-and-apply,
-    // and this runs on a blocking thread, never the UI/async path.
-    #[allow(clippy::await_holding_lock)]
+    /// The DB mutex is never held across `.await`: Step A reads a
+    /// snapshot under a short lock, Step B fetches lock-free, Step C
+    /// re-locks only to commit (see `commit_fetched_build`).
     fn try_spawn_sde_sync(&mut self) {
         self.state.sde_sync_requested = false;
         if self.state.demo {
@@ -2565,62 +2572,98 @@ impl MimirApp {
             return;
         };
         let base_url = self.state.sde_base_url.trim().to_string();
+        // Construction validates the URL; the error surfaces via sde_status.
+        let sync = match SdeSync::new(base_url) {
+            Ok(sync) => sync,
+            Err(e) => {
+                tracing::warn!("[SDE] invalid SDE base URL: {}", e);
+                self.state.sde_status = format!("SDE base URL invalid: {e}");
+                return;
+            }
+        };
         let db = backends.db.clone();
         let tx = self.tx.clone();
         self.state.sde_sync_in_flight = true;
         self.state.sde_status = "SDE sync in progress...".to_string();
         tracing::info!("[SDE] background sync spawned");
-        // `MutexGuard<Connection>` is not `Send`, so the guard cannot
-        // cross an `.await` on the main runtime: run the sync on a
-        // blocking thread with its own current-thread runtime. The
-        // result still returns through the BackendMsg channel (whose
-        // send requests a repaint), exactly like every other worker.
-        runtime.spawn_blocking(move || {
-            let summary: Result<SdeSyncSummary, String> = (|| {
-                let rt = tokio::runtime::Builder::new_current_thread()
-                    .enable_all()
-                    .build()
-                    .map_err(|e| e.to_string())?;
-                rt.block_on(async {
-                    let sync = SdeSync::new(base_url).map_err(|e| e.to_string())?;
+        runtime.spawn(async move {
+            let summary: Result<SdeSyncSummary, String> = async {
+                // Step A: short lock — baseline + snapshot, then drop.
+                let snapshot = {
                     let mut conn = db
                         .lock()
                         .map_err(|_| "database lock poisoned".to_string())?;
                     ensure_embedded_baseline(&mut conn).map_err(|e| e.to_string())?;
-                    let outcome = sync
-                        .sync_if_allowed(&mut conn, false)
-                        .await
-                        .map_err(|e| e.to_string())?;
-                    let build_number =
-                        local_build_number(&conn).map_err(|e| e.to_string())?;
-                    let detail = match outcome {
-                        SyncOutcome::NotModified { build_number } => {
-                            format!("SDE up to date (build {build_number}).")
-                        }
-                        SyncOutcome::Updated {
-                            build_number,
-                            types,
-                            solar_systems,
-                            stargates,
-                        } => format!(
-                            "SDE updated to build {build_number} ({types} types, {solar_systems} systems, {stargates} stargates)."
-                        ),
-                        SyncOutcome::SkippedDemo => {
-                            "Demo mode: SDE sync disabled (embedded baseline only, no network)."
-                                .to_string()
-                        }
-                    };
-                    Ok(SdeSyncSummary {
+                    read_snapshot(&conn).map_err(|e| e.to_string())?
+                };
+                // Step B: all HTTP + parsing with zero DB lock held.
+                let fetched = sync
+                    .fetch_if_allowed(&snapshot, false)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                // Step C: re-lock only around the commit.
+                let (outcome, build_number) = match fetched {
+                    FetchOutcome::SkippedDemo => (
+                        SyncOutcome::SkippedDemo,
+                        snapshot.build_number,
+                    ),
+                    FetchOutcome::NotModified { build_number } => (
+                        SyncOutcome::NotModified { build_number },
                         build_number,
-                        detail,
-                    })
+                    ),
+                    FetchOutcome::Ready(fetched) => {
+                        let mut conn = db
+                            .lock()
+                            .map_err(|_| "database lock poisoned".to_string())?;
+                        // Baseline only if still needed (no rows yet).
+                        let type_count: i64 = conn
+                            .query_row("SELECT COUNT(*) FROM sde_types", [], |r| r.get(0))
+                            .map_err(|e| e.to_string())?;
+                        if type_count == 0 {
+                            ensure_embedded_baseline(&mut conn)
+                                .map_err(|e| e.to_string())?;
+                        }
+                        let outcome = commit_fetched_build(&mut conn, &snapshot, *fetched)
+                            .map_err(|e| e.to_string())?;
+                        let build =
+                            local_build_number(&conn).map_err(|e| e.to_string())?;
+                        (outcome, build)
+                    }
+                };
+                let detail = match outcome {
+                    SyncOutcome::NotModified { build_number } => {
+                        format!("SDE up to date (build {build_number}).")
+                    }
+                    SyncOutcome::Updated {
+                        build_number,
+                        types,
+                        solar_systems,
+                        stargates,
+                    } => format!(
+                        "SDE updated to build {build_number} ({types} types, {solar_systems} systems, {stargates} stargates)."
+                    ),
+                    SyncOutcome::SkippedDemo => {
+                        "Demo mode: SDE sync disabled (embedded baseline only, no network)."
+                            .to_string()
+                    }
+                };
+                Ok(SdeSyncSummary {
+                    build_number,
+                    detail,
                 })
-            })();
+            }
+            .await;
             tx.send(BackendMsg::SdeSynced { summary });
         });
     }
 
     fn persist_sde_base_url_if_changed(&mut self) {
+        // Only on an explicit edit-finished signal (lost focus / Enter /
+        // Sync now); typing alone never takes the DB lock.
+        if !self.state.sde_base_url_persist_requested {
+            return;
+        }
+        self.state.sde_base_url_persist_requested = false;
         if !self.state.demo
             && !self.last_demo_mode
             && self.persisted_sde_base_url.as_deref() != Some(self.state.sde_base_url.as_str())
@@ -4338,6 +4381,9 @@ impl MimirApp {
 
     fn logout(&mut self, character_id: i64) {
         tracing::info!("[AUTH] logout character_id={}", character_id);
+        if let Some(backends) = self.backends.as_ref() {
+            backends.esi.clear_etag_cache();
+        }
         if !self.state.demo {
             if let Some(backends) = self.backends.as_ref() {
                 if let Some(runtime) = self.runtime.as_ref() {
@@ -4360,6 +4406,9 @@ impl MimirApp {
 
     fn delete_character(&mut self, character_id: i64) {
         tracing::info!("[CHAR] delete character_id={}", character_id);
+        if let Some(backends) = self.backends.as_ref() {
+            backends.esi.clear_etag_cache();
+        }
         if !self.state.demo {
             if let Some(backends) = self.backends.as_ref() {
                 let _ = backends.token_store.delete(character_id);

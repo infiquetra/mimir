@@ -982,6 +982,10 @@ pub struct AppState {
     pub sde_status: String,
     pub sde_sync_requested: bool,
     pub sde_sync_in_flight: bool,
+    /// Set only when the URL field loses focus, Enter is pressed, or
+    /// Sync now is clicked; the shell persists only then, so typing
+    /// never takes the DB lock per keystroke.
+    pub sde_base_url_persist_requested: bool,
 }
 
 impl AppState {

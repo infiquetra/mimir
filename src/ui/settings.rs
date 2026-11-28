@@ -139,7 +139,24 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
             ui.label("SDE base URL:");
             let response = ui.text_edit_singleline(&mut state.sde_base_url);
             state.text_input_focused |= response.has_focus();
+            // Persist only on focus loss / Enter / Sync now, never per keystroke.
+            let enter_pressed =
+                response.has_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
+            if response.lost_focus() || enter_pressed {
+                tracing::debug!("[SDE] SDE base URL edit finished; persist requested");
+                state.sde_base_url_persist_requested = true;
+            }
         });
+        if state.sde_status.contains("invalid")
+            || state.sde_status.contains("must use https")
+            || state.sde_status.contains("not allowed")
+            || state.sde_status.contains("SDE sync failed")
+        {
+            ui.colored_label(
+                egui::Color32::LIGHT_RED,
+                format!("SDE URL/status: {}", state.sde_status),
+            );
+        }
         ui.label(
             egui::RichText::new(
                 "Operator-configured; no production URL is pinned yet. \
@@ -153,6 +170,7 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
             .clicked()
         {
             tracing::info!("[SDE] sync requested from Settings view");
+            state.sde_base_url_persist_requested = true;
             state.sde_sync_requested = true;
             state.status_message = "SDE sync requested.".to_string();
         }

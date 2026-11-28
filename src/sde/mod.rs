@@ -10,7 +10,10 @@
 
 pub mod http_sync;
 
-pub use http_sync::{local_build_number, SdeSync, SyncOutcome};
+pub use http_sync::{
+    commit_fetched_build, local_build_number, read_snapshot, FetchOutcome, FetchedBuild,
+    LocalSdeSnapshot, SdeSync, SyncOutcome,
+};
 
 use crate::error::AppResult;
 use http_sync::{parse_solar_systems_jsonl, parse_stargates_jsonl, parse_types_jsonl};
