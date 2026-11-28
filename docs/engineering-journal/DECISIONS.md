@@ -24,6 +24,22 @@
 
 ---
 
+## 2026-11-27
+
+### Alidade product rebrand, `main` branch cutover, multi-agent UI/visualization/QA skills, and locked v1.0 architecture (`D-01`..`D-05`)
+
+**Author.** Gemini / Operator architecture review
+**Decision.** Locked five foundational decisions (`D-01`..`D-05`) following the post-Flutter-to-Rust repository and context-library audit:
+1. **`D-01` (Cleanup & `main` cutover).** Purge untracked Flutter build trees and 175+ tracked legacy Dart/Flutter/scratchpad artifacts from `infiquetra/mimir`, cut the repository default branch over from `develop` to `main`, prune stale remote `origin/agent/*` benchmark branches, and retire legacy Flutter/benchmark issues `#38`–`#62` and `#502`.
+2. **`D-02` (Alidade product rebrand).** Rebrand the product and desktop UI to **Alidade** (astrometric sighting-arm instrument aesthetic, eliminating collisions with EVE Online's Minmatar Mimir Heavy Assault Cruiser, `infiquetra/team-mimir`, and Grafana Mimir) while keeping the `infiquetra/mimir` and `infiquetra/mimir-context-library` repository slugs unchanged.
+3. **`D-03` (UI stack & HTML prototype gate).** Upgrade in place from `egui 0.29` (`glow` OpenGL) to `egui` / `eframe 0.37` on native `wgpu` (Metal on macOS) with centralized `DesignTokens`, `egui_tiles` dockable workspaces, `egui-snarl` + `kurbo`/`lyon` Sankey-DAGs, and `egui_wgpu::CallbackTrait` custom spatial/polar canvases, gated upfront by interactive HTML/Canvas visual prototypes in `mimir-context-library` and multi-agent skills (`.agents/skills/` + `scripts/stage-muse-skills.py` for Muse, Claude, Codex, OpenCode, Cursor, Hermes, and Gemini).
+4. **`D-04` (Hybrid solver-grounded AI routing).** Layer AI workflows (revived Combat AAR v3/v4, Pantry Stockpile Planner, Industry Bottleneck Advisor, Mining/Intel Triage) strictly over deterministic Rust solvers (`src/fitting/`, `rusqlite`, `petgraph`), supporting both local OpenAI-compatible endpoints (Home Lab / Ollama / Colab) and OS keyring BYOK cloud keys without committing or logging secrets.
+5. **`D-05` (Six Project #16 Objectives).** Organize shaped SDLC capabilities across `ui-foundation-and-tooling`, `sde-http-and-log-daemon`, `visual-fitting-and-aar`, `pantry-and-industry-dag`, `starmap-3d-and-intel`, and `mining-corp-and-campaigns`.
+**Rejected alternatives.** Rewriting a third time onto `gpui` (lacks portable zero-copy `wgpu::Texture` and 3D render-pass callbacks needed for an 8,000-system 3D Star Map and WGSL polar damage envelopes); keeping `develop` as the default branch (diverges from Infiquetra repository standards); renaming GitHub repository slugs immediately (unnecessary churn across CI, git remotes, and Project #16 mappings); shipping prompt-only AI recommendations without deterministic Dogma/BOM solver grounding.
+**Rationale.** Preserves the 1,000+ oracle-pinned Rust fitting, ESI, JWT, and SQLite correctness guarantees built during the Nov 2026 conversion while replacing text-heavy `egui 0.29` forms with a 120fps visual-first native Metal instrument deck.
+**Revisit when.** Upstream `egui` / `wgpu` APIs change major versions or operator prioritizes cross-repository slug migration after v1.0 release.
+**Refs.** `STRATEGY.md`, `AGENTS.md`, `.agents/skills/{alidade-ui-design,alidade-wgpu-viz,alidade-visual-qa}/SKILL.md`, `scripts/stage-muse-skills.py`, `infiquetra/mimir-context-library` (`ADR-008`..`ADR-014`).
+
 ## 2026-11-21
 
 ### Self-contained macOS `.app` bundling via `scripts/bundle-macos.sh` and `macos/Info.plist.template` (`feat/macos-app-bundle`)

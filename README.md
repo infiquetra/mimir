@@ -1,6 +1,8 @@
-# Mimir
+# Alidade (`infiquetra/mimir`)
 
-A cross-platform EVE Online companion app that unifies character management, skill planning, market tools, and industry features into a single, modern application.
+> **Product Rebrand Note (2026-11-27):** This product is rebranding from **Mimir** to **Alidade** — a native Rust astrometric, industrial, and fitting instrument for EVE Online. The GitHub repository slug remains `infiquetra/mimir` (paired with [`infiquetra/mimir-context-library`](https://github.com/infiquetra/mimir-context-library) on GitHub Project #16); binary and `.app` bundle renaming to `Alidade.app` tracks under Objective `ui-foundation-and-tooling`.
+
+A native Rust desktop EVE Online companion unifying multi-character intelligence, visual ship fitting & engagement AARs, Pantry stockpile readiness, Sankey-DAG industry/PI pipelines, and 2D/3D star-map navigation.
 
 [![CI](https://github.com/infiquetra/mimir/actions/workflows/ci.yml/badge.svg)](https://github.com/infiquetra/mimir/actions/workflows/ci.yml)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)

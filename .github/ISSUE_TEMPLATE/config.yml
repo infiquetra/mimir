@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Alidade Context Library (Specifications & Prototypes)
+    url: https://github.com/infiquetra/mimir-context-library
+    about: Consult authoritative requirements, ADRs, Outcome Scorecards, and UI prototypes before filing cards.

@@ -1,49 +1,39 @@
-# Miscellaneous
-*.class
+# OS & Editor
+.DS_Store
+*.swp
 *.log
 *.pyc
-*.swp
-.DS_Store
-.atom/
-.build/
-.buildlog/
-.history
-.svn/
-.swiftpm/
-migrate_working_dir/
-
-# IntelliJ related
+__pycache__/
 *.iml
 *.ipr
 *.iws
 .idea/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
+# Rust build artifacts
+/target
+/build
 
-
-# Symbolication related
-app.*.symbols
-
-# SDE download caches used by scripts/sde generators
+# Temporary SDE download caches used by scripts/sde generators
 scripts/sde/*.bz2
 scripts/sde/*.csv
 scripts/sde/*.zip
 scripts/sde/*.md5
 
-# Golden-test failure diagnostics, regenerated on every mismatched run
-
-# Obfuscation related
-app.*.map.json
-
-# Android Studio will place build artifacts here
-.serena
-.neuralmind
-graphify-out
-.claude/
+# Agent runtime state & local scratchpads (keep shared .agents/skills, .claude/skills, .cursor/skills tracked)
+.serena/
+.neuralmind/
+graphify-out/
 .hermes/
-
-# Rust build output
-/target
+.remember/
+.codex/
+.gemini/
+.claude/*
+!.claude/skills
+!.claude/skills/**
+.agents/*
+!.agents/README.md
+!.agents/skills
+!.agents/skills/**
+.cursor/*
+!.cursor/skills
+!.cursor/skills/**

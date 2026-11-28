@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
   pull_request:
-    branches: [main, develop]
+    branches: [main]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   analyze:
-    # Job name must stay "Analyze": branch protection on develop requires
+    # Job name must stay "Analyze": branch protection on main requires
     # the Analyze and Test status contexts by name.
     name: Analyze
     runs-on: ubuntu-latest
