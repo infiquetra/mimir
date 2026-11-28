@@ -14,9 +14,18 @@
 //!
 //! Canonical operator order (EVE Dogma): `PreAssign`,
 //! `PreMul`, `PreDiv`, `ModAdd`, `ModSub`, `PostMul`,
-//! `PostDiv`, `PostPercent`, `PostAssign`. Stacking penalty
-//! `S(i) = exp(-(i / 2.67)^2)` over the 0-indexed penalized
-//! chain, sorted by magnitude descending, applies ONLY to
+//! `PostDiv`, `PostPercent`, `PostAssign`. `PostMul` and
+//! `PostPercent` share ONE stacking-penalty group (Pyfa's
+//! `boost` converts a percent to a multiplier and calls
+//! `multiply`, `eos/modifiedAttributeDict.py`): their
+//! factors enter a single chain, applied at the `PostMul`
+//! step (pure multiplication commutes with the `PostDiv`
+//! step between them). Inside the chain, penalized factors
+//! split by sign exactly as Pyfa does — bonuses (`> 1.0`)
+//! and penalties (`< 1.0`) penalize as separate chains,
+//! each sorted by `|factor - 1|` descending with stacking
+//! penalty `S(i) = exp(-(i / 2.67)^2)` over its own
+//! 0-indexed position. The penalty applies ONLY to
 //! module/rig/subsystem modifiers whose target attribute is
 //! non-stackable — never to hull traits or skills. Unknown
 //! or unusable operands land in `unapplied_effects` with a
@@ -218,6 +227,10 @@ pub enum UnappliedReason {
     /// Modifier targets an attribute with no base value in
     /// a multi-attribute evaluation.
     UnknownAttribute,
+    /// A location/required-skill modifier whose required
+    /// skill does not uniformly match the evaluated group
+    /// (for example a repair layer mixing repairer skills).
+    LayerSkillMismatch,
 }
 
 /// One disclosed unapplied effect: what was skipped and why.
@@ -264,22 +277,13 @@ struct Resolved {
     penalized: bool,
 }
 
-/// Product of one factor chain. Unpenalized factors multiply
-/// raw; penalized factors sort by `|factor - 1|` descending
-/// and the 0-indexed `i`-th contributes
-/// `1 + (factor - 1) * S(i)`.
-fn factor_chain(factors: &[(f64, bool)]) -> f64 {
+/// Product of one sign-homogeneous penalized chain:
+/// factors sort by `|factor - 1|` descending and the
+/// 0-indexed `i`-th contributes `1 + (factor - 1) * S(i)`.
+fn penalized_chain(factors: &mut [f64]) -> f64 {
+    factors.sort_by(|a, b| (b - 1.0).abs().total_cmp(&(a - 1.0).abs()));
     let mut product = 1.0;
-    let mut penalized: Vec<f64> = Vec::new();
-    for (factor, is_penalized) in factors {
-        if *is_penalized {
-            penalized.push(*factor);
-        } else {
-            product *= factor;
-        }
-    }
-    penalized.sort_by(|a, b| (b - 1.0).abs().total_cmp(&(a - 1.0).abs()));
-    for (i, factor) in penalized.iter().enumerate() {
+    for (i, factor) in factors.iter().enumerate() {
         let effectiveness = stacking_effectiveness(i);
         if effectiveness == 0.0 {
             break;
@@ -287,6 +291,29 @@ fn factor_chain(factors: &[(f64, bool)]) -> f64 {
         product *= 1.0 + (factor - 1.0) * effectiveness;
     }
     product
+}
+
+/// Product of the shared `PostMul`/`PostPercent` factor
+/// group. Unpenalized factors multiply raw. Penalized
+/// factors split into a bonus chain (`> 1.0`) and a penalty
+/// chain (`< 1.0`) that penalize independently (Pyfa
+/// `eos/modifiedAttributeDict.py` partitions
+/// `penalizedMultipliers` exactly this way); a factor of
+/// exactly `1.0` is neutral and multiplies raw.
+fn factor_chain(factors: &[(f64, bool)]) -> f64 {
+    let mut product = 1.0;
+    let mut bonuses: Vec<f64> = Vec::new();
+    let mut penalties: Vec<f64> = Vec::new();
+    for (factor, is_penalized) in factors {
+        if !*is_penalized || *factor == 1.0 {
+            product *= factor;
+        } else if *factor > 1.0 {
+            bonuses.push(*factor);
+        } else {
+            penalties.push(*factor);
+        }
+    }
+    product * penalized_chain(&mut bonuses) * penalized_chain(&mut penalties)
 }
 
 /// Evaluate one attribute: `base` under every modifier in
@@ -386,23 +413,25 @@ pub fn evaluate_attribute(
             value -= entry.operand;
         }
     }
-    let post_mul: Vec<(f64, bool)> = resolved
+    // PostMul and PostPercent share one penalty group:
+    // percents convert to factors and join the same chain
+    // (Pyfa `boost` -> `multiply`). The combined product
+    // applies at the PostMul step; multiplication commutes
+    // with the PostDiv step that follows.
+    let post_factors: Vec<(f64, bool)> = resolved
         .iter()
-        .filter(|e| e.operator == DogmaOperator::PostMul)
-        .map(|e| (e.operand, e.penalized))
+        .filter_map(|e| match e.operator {
+            DogmaOperator::PostMul => Some((e.operand, e.penalized)),
+            DogmaOperator::PostPercent => Some((1.0 + e.operand / 100.0, e.penalized)),
+            _ => None,
+        })
         .collect();
-    value *= factor_chain(&post_mul);
+    value *= factor_chain(&post_factors);
     for entry in &resolved {
         if entry.operator == DogmaOperator::PostDiv {
             value /= entry.operand;
         }
     }
-    let post_percent: Vec<(f64, bool)> = resolved
-        .iter()
-        .filter(|e| e.operator == DogmaOperator::PostPercent)
-        .map(|e| (1.0 + e.operand / 100.0, e.penalized))
-        .collect();
-    value *= factor_chain(&post_percent);
     for entry in &resolved {
         if entry.operator == DogmaOperator::PostAssign {
             value = entry.operand;
@@ -575,6 +604,53 @@ mod tests {
             value_of(&hull_result),
             expected,
             "hull escapes, subsystem penalizes",
+        );
+    }
+
+    #[test]
+    fn mixed_sign_penalized_factors_chain_separately() {
+        // Pyfa partitions penalized multipliers at 1.0: a
+        // module -50% and a module +10% on one non-stackable
+        // attribute are each first in their own chain, so
+        // neither is stacking-diluted: 0.5 x 1.1 = 0.55. A
+        // single mixed chain would wrongly give
+        // 0.5 x (1 + 0.1 * S(1)) = 0.5435.
+        let modifiers = vec![
+            modifier(
+                DogmaOperator::PostPercent,
+                Some(-50.0),
+                ModifierSource::Module,
+            ),
+            modifier(
+                DogmaOperator::PostPercent,
+                Some(10.0),
+                ModifierSource::Module,
+            ),
+        ];
+        let result = evaluate_attribute(1.0, &modifiers, &SkillContext::BaseOnly);
+        assert_close(value_of(&result), 0.55, "mixed-sign split chains");
+    }
+
+    #[test]
+    fn post_mul_and_post_percent_share_one_penalty_group() {
+        // Pyfa `boost` calls `multiply`: a module PostMul
+        // x1.1 and a module PostPercent +10% stack against
+        // each other in one bonus chain:
+        // 1.1 x (1 + 0.1 * S(1)), never 1.21.
+        let expected = 1.1 * (1.0 + 0.1 * stacking_effectiveness(1));
+        let modifiers = vec![
+            modifier(DogmaOperator::PostMul, Some(1.1), ModifierSource::Module),
+            modifier(
+                DogmaOperator::PostPercent,
+                Some(10.0),
+                ModifierSource::Module,
+            ),
+        ];
+        let result = evaluate_attribute(1.0, &modifiers, &SkillContext::BaseOnly);
+        assert_close(
+            value_of(&result),
+            expected,
+            "shared PostMul/PostPercent group",
         );
     }
 

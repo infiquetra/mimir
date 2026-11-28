@@ -7,6 +7,7 @@ pub mod bay_usage;
 pub mod breacher_dot;
 pub mod calibration;
 pub mod dna;
+pub mod dogma_catalogue;
 pub mod dogma_pipeline;
 pub mod dps;
 pub mod editor;
@@ -25,8 +26,9 @@ pub mod write_map;
 
 pub use active_repair::{fitting_active_repair, FittingActiveRepair};
 pub use active_tank::{
-    fitting_active_tank, ActiveTankLayer, FittingActiveTank, SustainedBasis,
-    REPAIR_AMOUNT_ATTRIBUTE_ID,
+    fitting_active_tank, fitting_active_tank_with_catalogue, ActiveTankLayer, AncillaryPasteState,
+    FittingActiveTank, SustainedBasis, ARMOR_REPAIR_ATTRIBUTE_ID, HULL_REPAIR_ATTRIBUTE_ID,
+    SHIELD_REPAIR_ATTRIBUTE_ID,
 };
 pub use bay_usage::{bay_usage, BayBudget, BayUsage, BayUsageOutcome};
 pub use breacher_dot::{
@@ -35,6 +37,14 @@ pub use breacher_dot::{
 };
 pub use calibration::{rig_calibration, CalibrationBudget, CalibrationOutcome};
 pub use dna::{parse_dna, parse_import, MAX_DNA_EXPANDED_ITEMS, MAX_DNA_SEGMENTS};
+pub use dogma_catalogue::{
+    evaluate_ship_attribute, fitting_location_skill_modifiers, fitting_ship_modifiers,
+    propulsion_inputs, scaled_speed_factor_percent, skill_location_modifiers, DogmaCatalogue,
+    DogmaType, EffectModifier, FittingShipModifiers, ShipAttributeEvaluation, UnsupportedModifier,
+    ACCELERATION_CONTROL_SKILL_ID, ATTR_ARMOR_DAMAGE_AMOUNT, ATTR_DURATION, ATTR_MASS_ADDITION,
+    ATTR_MAX_VELOCITY, ATTR_SHIELD_BONUS, ATTR_SPEED_FACTOR, ATTR_STRUCTURE_DAMAGE_AMOUNT,
+    ATTR_THRUST, REPAIR_SYSTEMS_SKILL_ID,
+};
 pub use dogma_pipeline::{
     evaluate_attribute, evaluate_attributes, stacking_effectiveness, DogmaModifier, DogmaOperator,
     EvaluatedAttribute, ModifierSource, ModuleState, OperandScaling, SkillContext, UnappliedEffect,

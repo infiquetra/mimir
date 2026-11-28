@@ -8,13 +8,27 @@
 //! fitting_active_repair`] (shield boosters, armor/hull
 //! repairers, ancillaries at dry amounts), bonused
 //! resistances from [`crate::fitting::ship_resistances::
-//! ship_resistances_with_module_bonuses`], and skill-driven
-//! repair-amount scaling from
-//! [`crate::fitting::dogma_pipeline`] modifiers the caller
-//! resolved from the SDE (for example a +5%-per-level
-//! repair skill), evaluated under
+//! ship_resistances_with_module_bonuses`], and repair
+//! scaling from [`crate::fitting::dogma_pipeline`]
+//! modifiers keyed to the REAL per-layer repair-amount
+//! attributes (shield bonus 68, armor damage amount 84,
+//! structure damage amount 83), evaluated per layer under
 //! [`SkillContext::Trained`], [`SkillContext::AllFive`], or
-//! [`SkillContext::BaseOnly`] with the tag disclosed.
+//! [`SkillContext::BaseOnly`] with the tag disclosed. A
+//! modifier scoped to one layer can therefore never
+//! inflate another: Repair Systems (3393), which shortens
+//! armor/hull repairer cycles, boosts armor and hull
+//! only.
+//!
+//! [`fitting_active_tank_with_catalogue`] builds those
+//! modifiers from bundled Dogma itself (hull repair
+//! traits, subsystem bonuses, implants, rigs, and repair
+//! skills via [`crate::fitting::dogma_catalogue`]) and
+//! additionally applies per-layer cycle-duration scaling:
+//! when every counted repairer in a layer requires the
+//! same skill, that skill's duration modifiers (Repair
+//! Systems: -5% cycle per level) divide into the layer's
+//! HP/s. Mixed-skill layers disclose instead of guessing.
 //!
 //! EHP/s uses the uniform damage profile: one layer's
 //! divisor is the mean resonance over its present damage
@@ -24,29 +38,60 @@
 //! fraction when one is given, and otherwise equals burst
 //! with [`SustainedBasis::WhileCyclingOnly`] disclosed, so
 //! a reload-limited fit is never silently presented as
-//! reload-modelled.
+//! reload-modelled. Ancillary armor repairers always
+//! count at dry (unloaded) amounts; Nanite Repair Paste
+//! would multiply their repair amount (SDE attribute
+//! 1886), and [`AncillaryPasteState`] on every result says
+//! so explicitly whenever one is fitted.
 //!
-//! Pure computation over the bundled catalogue — no egui,
-//! no state, no network, no database. Logs nothing
-//! (render cadence precedent).
+//! Pure computation over the bundled catalogues — no
+//! egui, no state, no network, no database. Fitting-level
+//! entries log one `[FITTING]` debug line with counts.
 
 use crate::esi::models::CharacterFitting;
 use crate::fitting::active_repair::fitting_active_repair;
+use crate::fitting::dogma_catalogue::{
+    fitting_location_skill_modifiers, fitting_ship_modifiers, skill_location_modifiers,
+    DogmaCatalogue, ATTR_ARMOR_DAMAGE_AMOUNT, ATTR_DURATION, ATTR_REQUIRED_SKILL_1,
+    ATTR_SHIELD_BONUS, ATTR_STRUCTURE_DAMAGE_AMOUNT,
+};
 use crate::fitting::dogma_pipeline::{
-    evaluate_attribute, DogmaModifier, SkillContext, UnappliedEffect,
+    evaluate_attribute, DogmaModifier, DogmaOperator, SkillContext, UnappliedEffect,
+    UnappliedReason,
 };
 use crate::fitting::ship_resistances::{
     ship_resistances_with_module_bonuses, BonusedShipResistancesOutcome, ResistLayer,
 };
 use crate::names::fitting_types::FittingTypes;
 
-/// Pipeline grouping key for repair-amount modifiers. This
-/// is a local key, not an SDE attribute id: the bundled
-/// extract bakes no repair-amount modifier family, so
-/// callers tag their SDE-resolved skill/implant repair
-/// modifiers with it and this module evaluates them as one
-/// multiplier over the base rates.
-pub const REPAIR_AMOUNT_ATTRIBUTE_ID: i64 = 0;
+/// Shield-layer repair-amount attribute (`shieldBonus`).
+/// Repair modifiers for the shield layer are keyed with
+/// this real SDE id and evaluate only against shield HP/s.
+pub const SHIELD_REPAIR_ATTRIBUTE_ID: i64 = ATTR_SHIELD_BONUS;
+/// Armor-layer repair-amount attribute
+/// (`armorDamageAmount`).
+pub const ARMOR_REPAIR_ATTRIBUTE_ID: i64 = ATTR_ARMOR_DAMAGE_AMOUNT;
+/// Hull-layer repair-amount attribute
+/// (`structureDamageAmount`).
+pub const HULL_REPAIR_ATTRIBUTE_ID: i64 = ATTR_STRUCTURE_DAMAGE_AMOUNT;
+
+/// Whether fitted ancillary armor repairers are present
+/// and therefore whether the armor figures assume dry
+/// (unloaded) amounts. Loaded with Nanite Repair Paste an
+/// ancillary armor repairer repairs at its SDE 1886
+/// multiplier (x3) while charges last; that loaded state
+/// is never modelled silently.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum AncillaryPasteState {
+    /// No ancillary (fueled) armor repairer is fitted and
+    /// counted; paste state cannot affect the figures.
+    NoAncillaryArmorRepairers,
+    /// Ancillary armor repairers are fitted and counted
+    /// at dry amounts. Loaded burst would be higher (SDE
+    /// attribute 1886 on the ancillary portion) and is
+    /// not included in any figure.
+    DryAmountsAssumed { ancillary_modules: u64 },
+}
 
 /// How the sustained figures were derived.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -105,6 +150,51 @@ pub struct FittingActiveTank {
     /// Provenance tag of the skill context used.
     pub skill_context_tag: &'static str,
     pub sustained_basis: SustainedBasis,
+    /// Dry-vs-loaded disclosure for ancillary armor
+    /// repairers (Nanite Repair Paste never modelled).
+    pub ancillary_paste: AncillaryPasteState,
+    /// Evaluated cycle-duration multiplier per layer from
+    /// repair skills (catalogue entry point only):
+    /// `Some(0.75)` means cycles run at 75% duration and
+    /// HP/s was divided by it; `Some(1.0)` evaluated with
+    /// no change; `None` when no uniform layer skill
+    /// exists (plain entry point, mixed skills, or no
+    /// counted repairer) and no duration scaling applied.
+    pub shield_duration_factor: Option<f64>,
+    pub armor_duration_factor: Option<f64>,
+    pub hull_duration_factor: Option<f64>,
+}
+
+/// Count fitted ancillary (fueled) armor repairer units
+/// the repair block would count, for the paste disclosure.
+fn ancillary_paste_state(
+    fitting: &CharacterFitting,
+    catalogue: &FittingTypes,
+) -> AncillaryPasteState {
+    let mut ancillary_modules: u64 = 0;
+    for item in &fitting.items {
+        if item.type_id <= 0 || item.quantity.max(0) == 0 {
+            continue;
+        }
+        let slot = item.flag.starts_with("LoSlot")
+            || item.flag.starts_with("MedSlot")
+            || item.flag.starts_with("HiSlot")
+            || item.flag.starts_with("RigSlot")
+            || item.flag.starts_with("SubSystemSlot");
+        if !slot {
+            continue;
+        }
+        if let Some(row) = catalogue.lookup_by_id(item.type_id) {
+            if row.fueled_armor_repair {
+                ancillary_modules = ancillary_modules.saturating_add(item.quantity.max(0) as u64);
+            }
+        }
+    }
+    if ancillary_modules == 0 {
+        AncillaryPasteState::NoAncillaryArmorRepairers
+    } else {
+        AncillaryPasteState::DryAmountsAssumed { ancillary_modules }
+    }
 }
 
 /// Mean resonance of one layer over its present damage
@@ -173,11 +263,18 @@ fn layer(
 }
 
 /// Active tank for one fitting. `repair_modifiers` are
-/// SDE-resolved repair-amount modifiers (skills, implants,
-/// rigs) evaluated by the Dogma pipeline as one multiplier
-/// over the base rates under `skills`; pass an empty slice
-/// for unbonused base repair. `sustained_uptime` is an
-/// optional 0..=1 duty fraction for the sustained figures.
+/// repair-AMOUNT modifiers keyed to the real per-layer
+/// SDE attributes ([`SHIELD_REPAIR_ATTRIBUTE_ID`],
+/// [`ARMOR_REPAIR_ATTRIBUTE_ID`],
+/// [`HULL_REPAIR_ATTRIBUTE_ID`]); each layer evaluates
+/// only its own modifiers as a multiplier over its base
+/// rate under `skills`, so an armor repair bonus can
+/// never inflate shield boosting. Modifiers keyed to any
+/// other attribute are disclosed in `unapplied_effects`.
+/// Pass an empty slice for unbonused base repair.
+/// `sustained_uptime` is an optional 0..=1 duty fraction
+/// for the sustained figures. Cycle-duration skills are
+/// applied only by [`fitting_active_tank_with_catalogue`].
 pub fn fitting_active_tank(
     fitting: &CharacterFitting,
     catalogue: &FittingTypes,
@@ -186,7 +283,36 @@ pub fn fitting_active_tank(
     sustained_uptime: Option<f64>,
 ) -> FittingActiveTank {
     let repair = fitting_active_repair(fitting, catalogue);
-    let scaling = evaluate_attribute(1.0, repair_modifiers, skills);
+    let layer_scaling = |attribute_id: i64| {
+        let own: Vec<DogmaModifier> = repair_modifiers
+            .iter()
+            .filter(|m| m.attribute_id == attribute_id)
+            .cloned()
+            .collect();
+        evaluate_attribute(1.0, &own, skills)
+    };
+    let shield_scaling = layer_scaling(SHIELD_REPAIR_ATTRIBUTE_ID);
+    let armor_scaling = layer_scaling(ARMOR_REPAIR_ATTRIBUTE_ID);
+    let hull_scaling = layer_scaling(HULL_REPAIR_ATTRIBUTE_ID);
+    let mut unapplied_effects: Vec<UnappliedEffect> = Vec::new();
+    let mut inactive_offline: usize = 0;
+    for scaling in [&shield_scaling, &armor_scaling, &hull_scaling] {
+        unapplied_effects.extend(scaling.unapplied_effects.iter().cloned());
+        inactive_offline = inactive_offline.saturating_add(scaling.inactive_offline);
+    }
+    for modifier in repair_modifiers {
+        if !matches!(
+            modifier.attribute_id,
+            SHIELD_REPAIR_ATTRIBUTE_ID | ARMOR_REPAIR_ATTRIBUTE_ID | HULL_REPAIR_ATTRIBUTE_ID
+        ) {
+            unapplied_effects.push(UnappliedEffect {
+                label: modifier.label.clone(),
+                source_type_id: modifier.source_type_id,
+                operator: modifier.operator,
+                reason: UnappliedReason::UnknownAttribute,
+            });
+        }
+    }
     let (resistances, resistance_excluded, resistance_unapplied) =
         match ship_resistances_with_module_bonuses(fitting, catalogue) {
             BonusedShipResistancesOutcome::Available(bonused) => (
@@ -207,21 +333,28 @@ pub fn fitting_active_tank(
     };
     let shield = layer(
         repair.shield_hp_per_sec,
-        scaling.value,
+        shield_scaling.value,
         resistances.as_ref().and_then(|r| mean_resonance(&r.shield)),
         mode,
     );
     let armor = layer(
         repair.armor_hp_per_sec,
-        scaling.value,
+        armor_scaling.value,
         resistances.as_ref().and_then(|r| mean_resonance(&r.armor)),
         mode,
     );
     let hull = layer(
         repair.hull_hp_per_sec,
-        scaling.value,
+        hull_scaling.value,
         resistances.as_ref().and_then(|r| mean_resonance(&r.hull)),
         mode,
+    );
+    tracing::debug!(
+        "[FITTING] active tank evaluated counted={} excluded={} unapplied={} context={}",
+        repair.counted_modules,
+        repair.excluded_modules,
+        unapplied_effects.len(),
+        skills.tag()
     );
     FittingActiveTank {
         shield,
@@ -231,11 +364,206 @@ pub fn fitting_active_tank(
         excluded_modules: repair.excluded_modules,
         resistance_excluded_modules: resistance_excluded,
         resistance_unapplied_modules: resistance_unapplied,
-        unapplied_effects: scaling.unapplied_effects,
-        inactive_offline: scaling.inactive_offline,
-        skill_context_tag: scaling.skill_context_tag,
+        unapplied_effects,
+        inactive_offline,
+        skill_context_tag: skills.tag(),
         sustained_basis: basis,
+        ancillary_paste: ancillary_paste_state(fitting, catalogue),
+        shield_duration_factor: None,
+        armor_duration_factor: None,
+        hull_duration_factor: None,
     }
+}
+
+/// Required skill (SDE attribute 182) of every counted
+/// repairer in one layer, or `None` when the layer has no
+/// counted repairer or mixes required skills.
+fn uniform_layer_skill(
+    fitting: &CharacterFitting,
+    catalogue: &FittingTypes,
+    dogma: &DogmaCatalogue,
+    amount_attribute_id: i64,
+) -> Option<i64> {
+    let mut uniform: Option<i64> = None;
+    for item in &fitting.items {
+        if item.type_id <= 0 || item.quantity.max(0) == 0 {
+            continue;
+        }
+        let slot = item.flag.starts_with("LoSlot")
+            || item.flag.starts_with("MedSlot")
+            || item.flag.starts_with("HiSlot")
+            || item.flag.starts_with("RigSlot")
+            || item.flag.starts_with("SubSystemSlot");
+        if !slot {
+            continue;
+        }
+        let Some(row) = catalogue.lookup_by_id(item.type_id) else {
+            continue;
+        };
+        let (family, amount) = if row.armor_repair
+            || row.fueled_armor_repair
+            || row.armor_damage_amount.is_some()
+        {
+            (ARMOR_REPAIR_ATTRIBUTE_ID, row.armor_damage_amount)
+        } else if row.shield_boosting || row.fueled_shield_boosting || row.shield_bonus.is_some() {
+            (SHIELD_REPAIR_ATTRIBUTE_ID, row.shield_bonus)
+        } else if row.structure_repair || row.structure_damage_amount.is_some() {
+            (HULL_REPAIR_ATTRIBUTE_ID, row.structure_damage_amount)
+        } else {
+            continue;
+        };
+        if family != amount_attribute_id {
+            continue;
+        }
+        // Mirror the repair block's counted rule: usable
+        // positive amount and cycle.
+        let counted = matches!(amount, Some(a) if a.is_finite() && a > 0.0)
+            && matches!(row.duration, Some(d) if d.is_finite() && d > 0.0);
+        if !counted {
+            continue;
+        }
+        let required = dogma
+            .attribute(item.type_id, ATTR_REQUIRED_SKILL_1)
+            .filter(|v| v.is_finite() && v.fract() == 0.0 && *v > 0.0)
+            .map(|v| v as i64);
+        match (uniform, required) {
+            (None, Some(skill)) => uniform = Some(skill),
+            (Some(existing), Some(skill)) if existing == skill => {}
+            _ => return None,
+        }
+    }
+    uniform
+}
+
+/// Evaluated duration multiplier for one layer plus any
+/// location modifiers that had to be disclosed. The
+/// multiplier is scale-invariant only for multiplicative
+/// operators; an additive duration row makes the layer
+/// unresolvable (`None`) instead of guessed.
+fn layer_duration_factor(
+    fitting: &CharacterFitting,
+    dogma: &DogmaCatalogue,
+    skills: &SkillContext,
+    layer_skill: Option<i64>,
+    disclosed: &mut Vec<UnappliedEffect>,
+) -> Option<f64> {
+    let layer_skill = layer_skill?;
+    let mut modifiers: Vec<DogmaModifier> =
+        skill_location_modifiers(dogma, layer_skill, ATTR_DURATION);
+    for (required, modifier) in fitting_location_skill_modifiers(fitting, dogma, ATTR_DURATION) {
+        if required == layer_skill {
+            modifiers.push(modifier);
+        } else {
+            disclosed.push(UnappliedEffect {
+                label: modifier.label.clone(),
+                source_type_id: modifier.source_type_id,
+                operator: modifier.operator,
+                reason: UnappliedReason::LayerSkillMismatch,
+            });
+        }
+    }
+    if modifiers
+        .iter()
+        .any(|m| matches!(m.operator, DogmaOperator::ModAdd | DogmaOperator::ModSub))
+    {
+        return None;
+    }
+    evaluate_attribute(1.0, &modifiers, skills)
+        .value
+        .filter(|f| f.is_finite() && *f > 0.0)
+}
+
+fn scale_layer(layer: &mut ActiveTankLayer, duration_factor: Option<f64>) {
+    let Some(factor) = duration_factor else {
+        return;
+    };
+    let rate = |value: Option<f64>| value.map(|v| v / factor).filter(|v| v.is_finite());
+    layer.hp_per_sec = rate(layer.hp_per_sec);
+    layer.burst_ehp_per_sec = rate(layer.burst_ehp_per_sec);
+    layer.sustained_ehp_per_sec = rate(layer.sustained_ehp_per_sec);
+}
+
+/// Active tank with modifiers built from bundled Dogma:
+/// per-layer repair-amount bonuses (hull traits,
+/// subsystem bonuses, implants, rigs, skills) plus
+/// per-layer cycle-duration scaling from repair skills.
+/// Repair Systems therefore boosts armor and hull HP/s
+/// through shorter cycles and never touches shield
+/// boosting, whose modules require Shield Operation.
+pub fn fitting_active_tank_with_catalogue(
+    fitting: &CharacterFitting,
+    catalogue: &FittingTypes,
+    dogma: &DogmaCatalogue,
+    skills: &SkillContext,
+    sustained_uptime: Option<f64>,
+) -> FittingActiveTank {
+    let built = fitting_ship_modifiers(fitting, dogma, skills, &[]);
+    let mut amount_modifiers: Vec<DogmaModifier> = built
+        .modifiers
+        .into_iter()
+        .filter(|m| {
+            matches!(
+                m.attribute_id,
+                SHIELD_REPAIR_ATTRIBUTE_ID | ARMOR_REPAIR_ATTRIBUTE_ID | HULL_REPAIR_ATTRIBUTE_ID
+            )
+        })
+        .collect();
+    let layer_skills = [
+        (
+            SHIELD_REPAIR_ATTRIBUTE_ID,
+            uniform_layer_skill(fitting, catalogue, dogma, SHIELD_REPAIR_ATTRIBUTE_ID),
+        ),
+        (
+            ARMOR_REPAIR_ATTRIBUTE_ID,
+            uniform_layer_skill(fitting, catalogue, dogma, ARMOR_REPAIR_ATTRIBUTE_ID),
+        ),
+        (
+            HULL_REPAIR_ATTRIBUTE_ID,
+            uniform_layer_skill(fitting, catalogue, dogma, HULL_REPAIR_ATTRIBUTE_ID),
+        ),
+    ];
+    let mut disclosed: Vec<UnappliedEffect> = Vec::new();
+    for (attribute_id, layer_skill) in layer_skills {
+        for (required, modifier) in fitting_location_skill_modifiers(fitting, dogma, attribute_id) {
+            if Some(required) == layer_skill {
+                amount_modifiers.push(modifier);
+            } else {
+                disclosed.push(UnappliedEffect {
+                    label: modifier.label.clone(),
+                    source_type_id: modifier.source_type_id,
+                    operator: modifier.operator,
+                    reason: UnappliedReason::LayerSkillMismatch,
+                });
+            }
+        }
+    }
+    let mut tank = fitting_active_tank(
+        fitting,
+        catalogue,
+        skills,
+        &amount_modifiers,
+        sustained_uptime,
+    );
+    let shield_factor =
+        layer_duration_factor(fitting, dogma, skills, layer_skills[0].1, &mut disclosed);
+    let armor_factor =
+        layer_duration_factor(fitting, dogma, skills, layer_skills[1].1, &mut disclosed);
+    let hull_factor =
+        layer_duration_factor(fitting, dogma, skills, layer_skills[2].1, &mut disclosed);
+    scale_layer(&mut tank.shield, shield_factor);
+    scale_layer(&mut tank.armor, armor_factor);
+    scale_layer(&mut tank.hull, hull_factor);
+    tank.shield_duration_factor = shield_factor;
+    tank.armor_duration_factor = armor_factor;
+    tank.hull_duration_factor = hull_factor;
+    tank.unapplied_effects.extend(disclosed);
+    tracing::debug!(
+        "[FITTING] active tank catalogue wiring counted={} amount_modifiers={} context={}",
+        tank.counted_modules,
+        amount_modifiers.len(),
+        skills.tag()
+    );
+    tank
 }
 
 #[cfg(test)]
@@ -297,15 +625,16 @@ mod tests {
     }
 
     fn repair_skill() -> DogmaModifier {
-        // Fixture +5% repair amount per level, scaled by
-        // skill 3393 (the Repair Systems shape).
+        // Fixture +5% ARMOR repair amount per level, scaled
+        // by skill 3393, keyed to the real armor amount
+        // attribute. It must never touch the shield layer.
         let mut skill = DogmaModifier::new(
-            REPAIR_AMOUNT_ATTRIBUTE_ID,
+            ARMOR_REPAIR_ATTRIBUTE_ID,
             DogmaOperator::PostPercent,
             Some(5.0),
             ModifierSource::Skill,
             3393,
-            "fixture repair skill",
+            "fixture armor repair skill",
         );
         skill.scaling = OperandScaling::PerSkillLevel;
         skill.skill_type_id = Some(3393);
@@ -348,9 +677,13 @@ mod tests {
     }
 
     #[test]
-    fn skill_context_scales_repair_amount() {
+    fn skill_context_scales_only_its_own_layer() {
+        // Per-layer scoping (P1-4): the armor-scoped skill
+        // scales armor HP/s and leaves shield HP/s at the
+        // unbonused rate under every context.
         let catalogue = fixture_catalogue();
         let modifiers = vec![repair_skill()];
+        let armor_raw = 920.0 / 15.0 + 52.0 / 6.0;
         let all_five = fitting_active_tank(
             &tank_fit(),
             &catalogue,
@@ -359,9 +692,14 @@ mod tests {
             None,
         );
         assert_close(
-            all_five.shield.hp_per_sec.expect("all V raw"),
-            (104.0 / 3.0) * 1.25,
-            "all V x1.25",
+            all_five.armor.hp_per_sec.expect("all V armor"),
+            armor_raw * 1.25,
+            "armor all V x1.25",
+        );
+        assert_close(
+            all_five.shield.hp_per_sec.expect("all V shield"),
+            104.0 / 3.0,
+            "shield untouched at All V",
         );
         assert_eq!(all_five.skill_context_tag, "Assumes All V");
         let trained = fitting_active_tank(
@@ -372,9 +710,14 @@ mod tests {
             None,
         );
         assert_close(
-            trained.shield.hp_per_sec.expect("trained raw"),
-            (104.0 / 3.0) * 1.20,
-            "trained IV x1.20",
+            trained.armor.hp_per_sec.expect("trained armor"),
+            armor_raw * 1.20,
+            "armor trained IV x1.20",
+        );
+        assert_close(
+            trained.shield.hp_per_sec.expect("trained shield"),
+            104.0 / 3.0,
+            "shield untouched trained",
         );
         assert_eq!(trained.skill_context_tag, "Trained Character");
         let base = fitting_active_tank(
@@ -385,10 +728,19 @@ mod tests {
             None,
         );
         assert_close(
-            base.shield.hp_per_sec.expect("base raw"),
-            104.0 / 3.0,
-            "base only x1.0",
+            base.armor.hp_per_sec.expect("base armor"),
+            armor_raw,
+            "armor base only x1.0",
         );
+        // The fixture fits an ancillary armor repairer:
+        // dry paste state must be disclosed.
+        assert_eq!(
+            base.ancillary_paste,
+            AncillaryPasteState::DryAmountsAssumed {
+                ancillary_modules: 1
+            }
+        );
+        assert_eq!(base.armor_duration_factor, None);
     }
 
     #[test]
@@ -440,7 +792,7 @@ mod tests {
     fn unknown_repair_operand_is_disclosed_not_guessed() {
         let catalogue = fixture_catalogue();
         let unknown = DogmaModifier::new(
-            REPAIR_AMOUNT_ATTRIBUTE_ID,
+            ARMOR_REPAIR_ATTRIBUTE_ID,
             DogmaOperator::PostPercent,
             None,
             ModifierSource::Skill,
@@ -459,6 +811,96 @@ mod tests {
             tank.shield.hp_per_sec.expect("unscaled raw"),
             104.0 / 3.0,
             "operand never guessed",
+        );
+    }
+
+    #[test]
+    fn catalogue_wiring_repair_systems_never_boosts_shield() {
+        // Real bundled data: Small Ancillary Shield Booster
+        // (32774, 52 HP / 2 s = 26 HP/s) plus Medium Armor
+        // Repairer II (3530, 368 HP / 12 s) on a Rifter.
+        // At All V, Repair Systems shortens the armor cycle
+        // x0.75 (armor HP/s / 0.75) and must leave shield
+        // HP/s exactly at base — shield boosters require
+        // Shield Operation, which has no duration bonus.
+        let catalogue = FittingTypes::load_bundled().expect("bundled catalogue loads");
+        let dogma = DogmaCatalogue::load_bundled().expect("bundled dogma loads");
+        let fit = fitting(
+            587,
+            vec![item("MedSlot0", 1, 32774), item("LoSlot0", 1, 3530)],
+        );
+        let base = fitting_active_tank_with_catalogue(
+            &fit,
+            &catalogue,
+            &dogma,
+            &SkillContext::BaseOnly,
+            None,
+        );
+        assert_close(
+            base.shield.hp_per_sec.expect("shield base"),
+            26.0,
+            "shield base",
+        );
+        assert_close(
+            base.armor.hp_per_sec.expect("armor base"),
+            368.0 / 12.0,
+            "armor base",
+        );
+        assert_eq!(base.armor_duration_factor, Some(1.0));
+        let all_five = fitting_active_tank_with_catalogue(
+            &fit,
+            &catalogue,
+            &dogma,
+            &SkillContext::AllFive,
+            None,
+        );
+        assert_close(
+            all_five.shield.hp_per_sec.expect("shield all V"),
+            26.0,
+            "Repair Systems never boosts shield",
+        );
+        assert_close(
+            all_five.armor.hp_per_sec.expect("armor all V"),
+            (368.0 / 12.0) / 0.75,
+            "armor cycle x0.75 at All V",
+        );
+        assert_eq!(all_five.armor_duration_factor, Some(0.75));
+        assert_eq!(all_five.shield_duration_factor, Some(1.0));
+        assert_eq!(all_five.skill_context_tag, "Assumes All V");
+    }
+
+    #[test]
+    fn catalogue_wiring_myrmidon_hull_trait_scales_armor_amount() {
+        // Myrmidon (24700): +7.5% armor repair amount per
+        // Gallente Battlecruiser level on repairers
+        // requiring Repair Systems, plus Repair Systems
+        // cycle x0.75 at All V: 368 x 1.375 / (12 x 0.75).
+        let catalogue = FittingTypes::load_bundled().expect("bundled catalogue loads");
+        let dogma = DogmaCatalogue::load_bundled().expect("bundled dogma loads");
+        let fit = fitting(24700, vec![item("LoSlot0", 1, 3530)]);
+        let all_five = fitting_active_tank_with_catalogue(
+            &fit,
+            &catalogue,
+            &dogma,
+            &SkillContext::AllFive,
+            None,
+        );
+        assert_close(
+            all_five.armor.hp_per_sec.expect("myrmidon armor"),
+            368.0 * 1.375 / 9.0,
+            "hull trait amount + duration at All V",
+        );
+        let base = fitting_active_tank_with_catalogue(
+            &fit,
+            &catalogue,
+            &dogma,
+            &SkillContext::BaseOnly,
+            None,
+        );
+        assert_close(
+            base.armor.hp_per_sec.expect("myrmidon base"),
+            368.0 / 12.0,
+            "base only unbonused",
         );
     }
 }

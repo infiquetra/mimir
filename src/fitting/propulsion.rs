@@ -3,34 +3,50 @@
 //!
 //! Maximum velocity under an active propulsion module is
 //! the EVE thrust-over-mass rule
-//! `v_max = v_base * (1.0 + boost_factor * (thrust / mass_total))`,
-//! where `boost_factor` is the module's speed-factor percent
-//! divided by 100 (SDE attribute 20 `speedFactor`: 135 on a
-//! 1MN Afterburner II, 510 on a 5MN Microwarpdrive II),
+//! `v_max = v_bonused * (1.0 + boost_factor * (thrust / mass_total))`,
+//! where `v_bonused` is the hull's max velocity after real
+//! Dogma evaluation (fitted velocity modules such as
+//! Overdrive Injectors and Nanofibers, velocity rigs such
+//! as Auxiliary Thrusters, hull traits, subsystems,
+//! implants, and the Navigation skill —
+//! [`crate::fitting::dogma_catalogue`]), `boost_factor` is
+//! the module's speed-factor percent divided by 100 (SDE
+//! attribute 20 `speedFactor`: 135 on a 1MN Afterburner
+//! II, 510 on a 5MN Microwarpdrive II), scaled by
+//! Acceleration Control when the module type is known,
 //! `thrust` is SDE attribute 567 in newtons, and
 //! `mass_total` includes every mass addition — the
-//! propulsion module's own (SDE attribute 796), armor
-//! plates, and percent mass effects such as Higgs Anchor
-//! rigs. Align time is the repo-locked
+//! propulsion module's own (SDE attribute 796, applied
+//! while the module is active; this module always models
+//! an active propulsion module), armor plates, and
+//! percent mass effects such as Higgs Anchor rigs. Align
+//! time is the repo-locked
 //! `-ln(0.25) * agility * mass / 1_000_000` (the
 //! `ship_nav_targeting.rs` formula), recomputed here over
 //! the same total mass so velocity and align always agree
 //! on what the ship weighs.
 //!
-//! The bundled `fitting_types.json` extract carries hull
-//! mass, agility, base velocity, and baked mass modifiers,
-//! but not attributes 20/567/796 — so a propulsion module's
-//! boost, thrust, and own mass addition arrive as explicit
-//! [`PropulsionModule`] inputs the caller resolves from the
-//! SDE, exactly like [`crate::fitting::dogma_pipeline`]
-//! operands. Nothing is read from `dogma.json` at runtime.
+//! Velocity carriers that cannot be applied are counted
+//! in [`FittingPropulsion::velocity_unapplied_modules`],
+//! and every result carries its
+//! [`SkillContext`](crate::fitting::dogma_pipeline::SkillContext)
+//! tag so the Navigation / Acceleration Control assumption
+//! is always disclosed. The module's boost, thrust, and
+//! own mass addition arrive as a [`PropulsionModule`]
+//! (explicit SDE values, or resolved from the bundled
+//! Dogma catalogue by type id).
 //!
 //! The module is pure computation over the bundled
-//! catalogue — no egui, no state, no network, no database.
-//! It logs nothing (render cadence; the
-//! `ship_resistances.rs` precedent).
+//! catalogues — no egui, no state, no network, no
+//! database. The fitting entry point logs one `[FITTING]`
+//! debug line with counts.
 
 use crate::esi::models::CharacterFitting;
+use crate::fitting::dogma_catalogue::{
+    evaluate_ship_attribute, propulsion_inputs, scaled_speed_factor_percent, DogmaCatalogue,
+    ATTR_MAX_VELOCITY,
+};
+use crate::fitting::dogma_pipeline::SkillContext;
 use crate::fitting::ship_nav_targeting::{
     ship_nav_targeting_with_module_bonuses, BonusedShipNavTargetingOutcome,
 };
@@ -46,10 +62,15 @@ pub struct PropulsionModule {
     pub boost_factor: f64,
     /// Thrust in newtons (SDE attribute 567).
     pub thrust: f64,
-    /// The module's own mass addition in kilograms while
-    /// fitted (SDE attribute 796; propulsion modules add it
-    /// whenever online).
+    /// The module's own mass addition in kilograms (SDE
+    /// attribute 796). Propulsion mass addition applies
+    /// while the module is active; the figures here always
+    /// model an active module, so it always weighs in.
     pub mass_addition: f64,
+    /// Catalogue type id when resolved from the Dogma
+    /// catalogue; enables Acceleration Control scaling of
+    /// the speed factor. `None` for explicit SDE inputs.
+    pub type_id: Option<i64>,
 }
 
 impl PropulsionModule {
@@ -59,7 +80,18 @@ impl PropulsionModule {
             boost_factor: speed_factor_percent / 100.0,
             thrust,
             mass_addition,
+            type_id: None,
         }
+    }
+
+    /// Resolve from the bundled Dogma catalogue by type
+    /// id. `None` when the type carries no usable
+    /// 20/567/796 input set.
+    pub fn from_catalogue(dogma: &DogmaCatalogue, type_id: i64) -> Option<Self> {
+        let (factor, thrust, mass) = propulsion_inputs(dogma, type_id)?;
+        let mut module = Self::from_sde(factor, thrust, mass);
+        module.type_id = Some(type_id);
+        Some(module)
     }
 }
 
@@ -118,6 +150,11 @@ pub fn mass_with_percent(mass: f64, percent: f64) -> Option<f64> {
 pub struct FittingPropulsion {
     /// Bare-hull base maximum velocity, m/s.
     pub base_velocity: f64,
+    /// Max velocity after fitted velocity modules, rigs,
+    /// hull traits, subsystems, implants, and skills
+    /// (attribute 37 through the Dogma pipeline), m/s.
+    /// This is the `v_base` the propelled figure scales.
+    pub bonused_velocity: f64,
     /// Maximum velocity with the module active, m/s.
     pub propelled_velocity: f64,
     /// Total mass in kg: bonused hull mass (fitted plates
@@ -127,6 +164,19 @@ pub struct FittingPropulsion {
     /// Align time in seconds at `total_mass` under the
     /// bonused agility.
     pub align_time_secs: f64,
+    /// Velocity modifier instances that could not be
+    /// applied (missing operands or unsupported rows on
+    /// attribute 37), in quantity units — fitted velocity
+    /// modules are never silently dropped.
+    pub velocity_unapplied_modules: usize,
+    /// Whether Acceleration Control (or another trained
+    /// speed-factor skill) actually scaled the module's
+    /// boost factor. `false` when the module type is
+    /// unknown or no such skill contributed.
+    pub propulsion_skill_applied: bool,
+    /// Provenance tag of the skill context used (the
+    /// Navigation / Acceleration Control assumption).
+    pub skill_context_tag: &'static str,
     /// Counted fitted rows whose baked mass bonus could not
     /// be applied (from the navigation block), in quantity
     /// units — disclosed, never silently zero-weight.
@@ -144,15 +194,22 @@ pub enum FittingPropulsionOutcome {
     Unavailable,
 }
 
-/// Propulsion figures for one fitting. Hull velocity comes
-/// from [`ship_base_stats`]; bonused mass and agility from
+/// Propulsion figures for one fitting. Bare hull velocity
+/// comes from [`ship_base_stats`]; bonused velocity from
+/// real Dogma evaluation over `dogma` (fitted velocity
+/// modules, rigs, hull traits, subsystems, implants, and
+/// skills under `skills`); bonused mass and agility from
 /// [`ship_nav_targeting_with_module_bonuses`], so fitted
-/// armor plates and other baked mass modifiers already
-/// weigh in before the module's own addition.
+/// armor plates, Higgs rigs, and mass entanglers already
+/// weigh in before the module's own addition. When
+/// `module.type_id` is known, its speed factor is scaled
+/// by trained propulsion skills (Acceleration Control).
 pub fn fitting_propulsion(
     fitting: &CharacterFitting,
     catalogue: &FittingTypes,
+    dogma: &DogmaCatalogue,
     module: &PropulsionModule,
+    skills: &SkillContext,
 ) -> FittingPropulsionOutcome {
     let ShipBaseStatsOutcome::Available(stats) = ship_base_stats(fitting, catalogue) else {
         return FittingPropulsionOutcome::Unavailable;
@@ -169,26 +226,57 @@ pub fn fitting_propulsion(
     ) else {
         return FittingPropulsionOutcome::Unavailable;
     };
+    let velocity = evaluate_ship_attribute(
+        fitting,
+        dogma,
+        ATTR_MAX_VELOCITY,
+        base_velocity,
+        skills,
+        &[],
+    );
+    let Some(bonused_velocity) = velocity.evaluated.value else {
+        return FittingPropulsionOutcome::Unavailable;
+    };
+    let velocity_unapplied_modules = velocity
+        .evaluated
+        .unapplied_effects
+        .len()
+        .saturating_add(velocity.unsupported_modifiers);
     let Some(mass_addition) = usable(module.mass_addition) else {
         return FittingPropulsionOutcome::Unavailable;
     };
     let total_mass = bonused_mass + mass_addition;
+    let (boost_factor, propulsion_skill_applied) = match module.type_id {
+        Some(type_id) => match scaled_speed_factor_percent(dogma, type_id, skills, false) {
+            Some(percent) => (
+                percent / 100.0,
+                (percent / 100.0 - module.boost_factor).abs() > f64::EPSILON,
+            ),
+            None => (module.boost_factor, false),
+        },
+        None => (module.boost_factor, false),
+    };
     let (Some(propelled_velocity), Some(align_time)) = (
-        propelled_max_velocity(
-            base_velocity,
-            module.boost_factor,
-            module.thrust,
-            total_mass,
-        ),
+        propelled_max_velocity(bonused_velocity, boost_factor, module.thrust, total_mass),
         align_time_secs(agility, total_mass),
     ) else {
         return FittingPropulsionOutcome::Unavailable;
     };
+    tracing::debug!(
+        "[FITTING] fitting propulsion evaluated velocity_unapplied={} excluded={} context={}",
+        velocity_unapplied_modules,
+        nav.excluded_modules,
+        velocity.evaluated.skill_context_tag
+    );
     FittingPropulsionOutcome::Available(FittingPropulsion {
         base_velocity,
+        bonused_velocity,
         propelled_velocity,
         total_mass,
         align_time_secs: align_time,
+        velocity_unapplied_modules,
+        propulsion_skill_applied,
+        skill_context_tag: velocity.evaluated.skill_context_tag,
         mass_unapplied_modules: nav.mass_unapplied_modules,
         excluded_modules: nav.excluded_modules,
     })
@@ -226,6 +314,21 @@ mod tests {
 
     fn bundled() -> FittingTypes {
         FittingTypes::load_bundled().expect("bundled catalogue loads")
+    }
+
+    fn bundled_dogma() -> DogmaCatalogue {
+        DogmaCatalogue::load_bundled().expect("bundled dogma loads")
+    }
+
+    fn available(
+        fit: &CharacterFitting,
+        module: &PropulsionModule,
+        skills: &SkillContext,
+    ) -> FittingPropulsion {
+        match fitting_propulsion(fit, &bundled(), &bundled_dogma(), module, skills) {
+            FittingPropulsionOutcome::Available(result) => result,
+            FittingPropulsionOutcome::Unavailable => panic!("propulsion must be Available"),
+        }
     }
 
     // SDE operands below are read from
@@ -337,14 +440,10 @@ mod tests {
 
     #[test]
     fn fitting_propulsion_reads_bundled_rifter() {
-        let catalogue = bundled();
         let module = PropulsionModule::from_sde(135.0, 1_500_000.0, 500_000.0);
-        let FittingPropulsionOutcome::Available(result) =
-            fitting_propulsion(&fitting(587, vec![]), &catalogue, &module)
-        else {
-            panic!("Rifter propulsion must be Available");
-        };
+        let result = available(&fitting(587, vec![]), &module, &SkillContext::BaseOnly);
         assert_close(result.base_velocity, 365.0, "base velocity");
+        assert_close(result.bonused_velocity, 365.0, "bonused velocity base only");
         assert_close(result.total_mass, 1_567_000.0, "total mass");
         assert_close(
             result.propelled_velocity,
@@ -356,19 +455,134 @@ mod tests {
             -0.25_f64.ln() * 3.2 * 1_567_000.0 / 1_000_000.0,
             "fitting align",
         );
+        assert_eq!(result.velocity_unapplied_modules, 0);
+        assert!(!result.propulsion_skill_applied);
+        assert_eq!(result.skill_context_tag, "Base Only");
         assert_eq!(result.mass_unapplied_modules, 0);
         assert_eq!(result.excluded_modules, 0);
     }
 
     #[test]
+    fn fitting_propulsion_applies_fitted_velocity_modules_and_skills() {
+        // Overdrive Injector System II (1236, +12.5%) and
+        // Nanofiber Internal Structure II (2605, +9.5%)
+        // fitted: velocity modules are evaluated, never
+        // silently dropped. BaseOnly: penalized bonus chain
+        // [1.125, 1.095] sorted by |f-1|: 1.125 full, then
+        // 1 + 0.095 * S(1). At All V, Navigation (+25%,
+        // unpenalized skill) multiplies on top and
+        // Acceleration Control scales the 1MN AB II (438)
+        // speed factor 135 -> 168.75.
+        let dogma = bundled_dogma();
+        let module = PropulsionModule::from_catalogue(&dogma, 438).expect("1MN AB II inputs");
+        let fit = fitting(
+            587,
+            vec![
+                item("MedSlot0", 1, 438),
+                item("LoSlot0", 1, 1236),
+                item("LoSlot1", 1, 2605),
+            ],
+        );
+        let s1 = crate::fitting::dogma_pipeline::stacking_effectiveness(1);
+        let chain = 1.125 * (1.0 + 0.095 * s1);
+        let base_only = available(&fit, &module, &SkillContext::BaseOnly);
+        assert_close(
+            base_only.bonused_velocity,
+            365.0 * chain,
+            "bonused base only",
+        );
+        assert_eq!(base_only.velocity_unapplied_modules, 0);
+        assert_close(
+            base_only.propelled_velocity,
+            365.0 * chain * (1.0 + 1.35 * (1_500_000.0 / base_only.total_mass)),
+            "propelled base only",
+        );
+        let all_five = available(&fit, &module, &SkillContext::AllFive);
+        assert_close(
+            all_five.bonused_velocity,
+            365.0 * chain * 1.25,
+            "bonused All V",
+        );
+        assert!(all_five.propulsion_skill_applied);
+        assert_eq!(all_five.skill_context_tag, "Assumes All V");
+        assert_close(
+            all_five.propelled_velocity,
+            365.0 * chain * 1.25 * (1.0 + 1.6875 * (1_500_000.0 / all_five.total_mass)),
+            "propelled All V with Acceleration Control",
+        );
+    }
+
+    #[test]
+    fn fitting_propulsion_with_fitted_plate_higgs_and_entangler() {
+        // The acceptance path itself, on real fitted rows:
+        // 1600mm Steel Plates II (20353) on a Raven under a
+        // catalogue-resolved 500MN (5945); Higgs Anchor
+        // (34266, +100% mass) and Zero-Point Mass Entangler
+        // (49099, -80% mass) on a Rifter. Mass comes from
+        // the navigation block's baked families.
+        let dogma = bundled_dogma();
+        let mwd_500 = PropulsionModule::from_catalogue(&dogma, 5945).expect("500MN inputs");
+        let plated = available(
+            &fitting(638, vec![item("LoSlot0", 1, 20353)]),
+            &mwd_500,
+            &SkillContext::BaseOnly,
+        );
+        assert_close(plated.total_mass, 153_050_000.0, "plated total mass");
+        assert_close(
+            plated.propelled_velocity,
+            113.0 * (1.0 + 5.05 * (150_000_000.0 / 153_050_000.0)),
+            "plated Raven velocity",
+        );
+        assert_close(
+            plated.align_time_secs,
+            -0.25_f64.ln() * 0.12 * 153_050_000.0 / 1_000_000.0,
+            "plated Raven align",
+        );
+        let ab = PropulsionModule::from_sde(135.0, 1_500_000.0, 500_000.0);
+        let higgs = available(
+            &fitting(587, vec![item("RigSlot0", 1, 34266)]),
+            &ab,
+            &SkillContext::BaseOnly,
+        );
+        assert_close(higgs.total_mass, 2_634_000.0, "Higgs total mass");
+        // The Higgs rig itself carries -75% max velocity
+        // (attribute 315, flat rig operand).
+        assert_close(higgs.bonused_velocity, 91.25, "Higgs velocity penalty");
+        let entangled = available(
+            &fitting(587, vec![item("MedSlot1", 1, 49099)]),
+            &ab,
+            &SkillContext::BaseOnly,
+        );
+        assert_close(entangled.total_mass, 713_400.0, "Entangler total mass");
+        // The Entangler carries -95% max velocity
+        // (attribute 2603): mass drops, velocity collapses.
+        assert_close(
+            entangled.bonused_velocity,
+            18.25,
+            "Entangler velocity penalty",
+        );
+        assert_close(
+            entangled.propelled_velocity,
+            18.25 * (1.0 + 1.35 * (1_500_000.0 / 713_400.0)),
+            "Entangler propelled velocity",
+        );
+    }
+
+    #[test]
     fn fitting_propulsion_unavailable_without_hull_data() {
         let catalogue = bundled();
+        let dogma = bundled_dogma();
         let module = PropulsionModule::from_sde(135.0, 1_500_000.0, 500_000.0);
         assert_eq!(
-            fitting_propulsion(&fitting(999999, vec![]), &catalogue, &module),
+            fitting_propulsion(
+                &fitting(999999, vec![item("MedSlot0", 1, 438)]),
+                &catalogue,
+                &dogma,
+                &module,
+                &SkillContext::BaseOnly
+            ),
             FittingPropulsionOutcome::Unavailable
         );
-        let _ = item("MedSlot0", 1, 438);
     }
 
     #[test]

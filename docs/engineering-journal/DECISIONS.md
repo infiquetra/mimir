@@ -974,3 +974,16 @@ the provenance model. Do not collapse back to unstructured prompt-only evidence.
 **Revisit when.** The generator (`scripts/sde/generate_fitting_types_sde.py`) bakes attributes 20/567/796/5736/5737 and subsystem modifiers into `fitting_types.json` (or SDE-over-HTTP #654 serves them): then `fitting_propulsion`, pod resolution, and hull/skill modifier construction should read the catalogue directly and the explicit-input structs retire.
 
 **Refs.** `tests/dogma_pyfa_oracles.rs` (30 SDE-derived fixtures); [LEARNINGS 2026-11-28](LEARNINGS.md).
+
+### Dogma fitting evaluation reads the bundled Dogma extracts; per-layer repair scoping (#639 repair)
+
+**Decision.** Supersedes the explicit-inputs half of the #639 decision above. A new `src/fitting/dogma_catalogue.rs` loads the bundled generated extracts `assets/sde/dogma.json` + `assets/sde/effect_modifiers.json` and builds real fitting modifiers (hull traits cat 6, modules/rigs cat 7, charges cat 8, skills cat 16, implants cat 20, subsystems cat 32, overheated rows for caller-named types) for `fitting_propulsion`, `fitting_active_tank_with_catalogue`, and `evaluate_ship_attribute`. Per-level scaling is proven from the SDE level chain (a skill modifier with `modifying == 280`) gated to the owner itself or its required skills (182/183), so rigs reusing bonus attribute ids stay flat. Repair scaling is keyed to the real per-layer amount attributes (68/84/83) plus uniform-skill cycle-duration scaling, so Repair Systems can never inflate shield boosting. The shipped `ship_*` blocks and every pinned category-7 value remain untouched; the `resources.rs` no-runtime-read rule stays scoped to its hand-pinned need-reduction table, whose double-scaling rationale does not extend to general evaluation.
+
+**Rejected alternatives.**
+- Baking new families into `fitting_types.json` via the generator in the same repair. The generator and asset are outside this card's owned files, and a regenerated 3.8 MB asset would bury the repair diff; the Dogma extracts are already generated, bundled, and complete.
+- Keeping explicit caller operands for velocity/repair. That is exactly what left fitted velocity modules silently dropped and hull/skill evaluation unwired (review findings 3 and 5).
+- Rerouting `ship_*` blocks through the corrected pipeline now. Their shipped single-chain percent semantics are pinned by hundreds of tests; migration stays a family-by-family follow-up behind the literal oracle suite.
+
+**Revisit when.** SDE-over-HTTP (#654) can serve type attributes/effects and per-attribute `stackable` metadata: then `DogmaCatalogue` should source from the synced tables (retiring the non-stackable assumption) and the generator-baked families can converge onto the pipeline.
+
+**Refs.** PR #657 repair commit; `/tmp/alidade-review-639.md`; [LEARNINGS 2026-11-28 stacking entry](LEARNINGS.md).
