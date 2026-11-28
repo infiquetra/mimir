@@ -28,7 +28,10 @@ use crate::storage::repositories::CharacterRow;
 use crate::trade_calculator::{DEFAULT_BROKER_FEE_PERCENT, DEFAULT_SALES_TAX_PERCENT};
 
 /// The eleven views (keys 1-9, 0 and E in the shell).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+/// Serialized as `egui_tiles` panes in persisted workspace
+/// layouts (#652); unknown variants in older layout JSON
+/// fail deserialization and fall back to default presets.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub enum View {
     #[default]
     Dashboard,

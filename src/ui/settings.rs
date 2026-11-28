@@ -70,7 +70,7 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
         });
         if state.auth == AuthState::Error {
             ui.colored_label(
-                egui::Color32::LIGHT_RED,
+                super::theme::NEGATIVE,
                 "Last sign-in attempt failed; see the log below for details.",
             );
         }
@@ -154,7 +154,7 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
             || state.sde_status.contains("SDE sync failed")
         {
             ui.colored_label(
-                egui::Color32::LIGHT_RED,
+                super::theme::NEGATIVE,
                 format!("SDE URL/status: {}", state.sde_status),
             );
         }
@@ -264,7 +264,7 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
         ui.horizontal(|ui| {
             ui.label("Filter:");
             let response = ui.text_edit_singleline(&mut state.log_filter);
-            if state.focus_search {
+            if state.focus_search && state.view == View::Settings {
                 response.request_focus();
                 state.focus_search = false;
             }

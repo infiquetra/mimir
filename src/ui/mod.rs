@@ -1,4 +1,5 @@
 pub mod assets;
+pub mod canvases;
 pub mod characters;
 pub mod dashboard;
 pub mod exploration;
@@ -7,8 +8,11 @@ pub mod industry;
 pub mod market;
 pub mod planets;
 pub mod portraits;
+pub mod quick_sight;
 pub mod settings;
 pub mod skills;
 pub mod theme;
+pub mod tiles;
+pub mod tokens;
 pub mod wallet;
 pub mod widgets;

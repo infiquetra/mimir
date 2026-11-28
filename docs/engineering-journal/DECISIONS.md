@@ -1049,3 +1049,16 @@ the provenance model. Do not collapse back to unstructured prompt-only evidence.
 **Rejected alternatives.** Keeping the UI-thread 200 ms rescan (freezes the window on large log folders); keeping the shape-only clipboard classifier (echoes unrelated clipboard text on screen); persisting clipboard opt-in on (ADR-014 requires an explicit per-launch opt-in).
 **Revisit when.** A future card wires the suggestion CTA to an explicit user-confirmed import, or log events need a dedicated view beyond the Settings status/counts.
 **Refs.** `src/app/shell.rs` (`LogWorker`, `spawn_log_worker`, `sync_daemon_state`, `BackendMsg::LogEvent`), `src/daemon/fsevents_logs.rs` (`LogTailer`, `LogWatcher::poll_notified`), `src/daemon/clipboard.rs` (`classify_validated`), `src/app/state.rs` (daemon fields), `src/ui/settings.rs` (Local telemetry card).
+
+### Astrometric DesignTokens gate the shell: tiles workspaces, Quick-Sight, provenance popovers (#652)
+
+**Decision.** All colors, radii, spacing, and type sizes resolve through one `DesignTokens` constant in `src/ui/tokens.rs` (spec palette: obsidian surfaces, brass sight, cyan telemetry; strict 18/13.5/12 type with tabular mono). `theme.rs` keeps its shipped constant names as token aliases so views compile unchanged while values gain a single source. A permanent guard test (`ui::tokens::no_inline_rgb_literals_outside_tokens`) walks `src/ui/` + `src/app/` and fails on any `Color32::from_rgb` outside tokens, binding every later UI card. The central area is four `egui_tiles` 0.18 workspace trees (Command Deck, Fitting & Hangar, Industry & Trade, Exploration & Ops) whose panes are whole views rendered by the existing dispatch; layouts persist as JSON in live mode only and fall back to presets on any parse error. Navigation is registry-driven (`View::ALL` + `Workspace::for_view` + Cmd+K Quick-Sight), so views beyond the eleventh need no new single keys. Verbose prose moves behind `widgets::provenance_popover` while count disclosures stay inline.
+
+**Rejected alternatives.**
+- Per-view token structs or CSS-style cascading. One flat token set is auditable by a single grep guard; cascading reintroduces scattered literals.
+- Rewriting every view's layout in this gate card. The gate changes the shell, tokens, and navigation seams only; per-view visual elevation rides the Wave 2B/3 cards that own those views.
+- Persisting layouts through eframe storage unconditionally. Demo mode must write zero disk state, so persistence goes through `app_settings` behind the same live-only guard as SDE/daemon settings.
+
+**Revisit when.** Wave 3A canvases land in `src/ui/canvases/` (stub created here): canvas shaders/painter code must take token colors as uniforms/arguments, never literals, and the guard test should be extended to WGSL sources when the first shader ships.
+
+**Refs.** `src/ui/{tokens,tiles,quick_sight,canvases/mod}.rs`; `src/app/shell.rs` (ViewBehavior, activate_view); [LEARNINGS 2026-11-28 guard-test entry](LEARNINGS.md).

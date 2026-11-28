@@ -79,7 +79,7 @@ impl OpsTone {
             OpsTone::Positive => theme::POSITIVE,
             OpsTone::Warning => theme::WARNING,
             OpsTone::Secondary => theme::TEXT_SECONDARY,
-            OpsTone::Muted => theme::TEXT_MUTED,
+            OpsTone::Muted => theme::TEXT_SECONDARY,
         }
     }
 }
@@ -296,13 +296,13 @@ fn render_ops_tile(ui: &mut egui::Ui, label: &str, metric: &OpsMetric, button_la
             ui.set_width(ui.available_width());
             ui.label(
                 egui::RichText::new(label)
-                    .size(11.5)
+                    .size(super::tokens::TOKENS.typography.small)
                     .color(theme::TEXT_SECONDARY),
             );
             ui.add_space(2.0);
             ui.label(
-                egui::RichText::new(&metric.value)
-                    .size(15.0)
+                widgets::numeric_text(metric.value.clone())
+                    .size(super::tokens::TOKENS.typography.heading)
                     .strong()
                     .color(metric.tone.color()),
             );
@@ -311,7 +311,7 @@ fn render_ops_tile(ui: &mut egui::Ui, label: &str, metric: &OpsMetric, button_la
             let detail_text = metric.detail.as_deref().unwrap_or(" ");
             ui.label(
                 egui::RichText::new(detail_text)
-                    .size(12.0)
+                    .size(super::tokens::TOKENS.typography.small)
                     .color(theme::TEXT_SECONDARY),
             );
             ui.add_space(6.0);
@@ -410,7 +410,7 @@ pub fn show(
     let wallet_kpi_color = if combined.or(active_balance).is_some() {
         theme::ACCENT_CYAN
     } else {
-        theme::TEXT_MUTED
+        theme::TEXT_SECONDARY
     };
     let (training_kpi_value, training_kpi_color) = match &state.skills {
         LoadState::Ready(data) => {
@@ -432,8 +432,8 @@ pub fn show(
                 )
             }
         }
-        LoadState::Loading => ("Loading...".to_string(), theme::TEXT_MUTED),
-        _ => ("Not loaded".to_string(), theme::TEXT_MUTED),
+        LoadState::Loading => ("Loading...".to_string(), theme::TEXT_SECONDARY),
+        _ => ("Not loaded".to_string(), theme::TEXT_SECONDARY),
     };
     let (net_kpi_value, net_kpi_color) = match &state.wallet {
         LoadState::Ready(w) => {
@@ -447,8 +447,8 @@ pub fn show(
                 )
             }
         }
-        LoadState::Loading => ("Loading...".to_string(), theme::TEXT_MUTED),
-        _ => ("Not loaded".to_string(), theme::TEXT_MUTED),
+        LoadState::Loading => ("Loading...".to_string(), theme::TEXT_SECONDARY),
+        _ => ("Not loaded".to_string(), theme::TEXT_SECONDARY),
     };
     ui.horizontal_wrapped(|ui| {
         widgets::metric_tile(ui, "Combined Wallet", &wallet_kpi_value, wallet_kpi_color);
@@ -533,10 +533,11 @@ pub fn show(
                                 None
                             });
                             match balance {
-                                Some(val) => {
-                                    ui.colored_label(theme::TEXT_PRIMARY, widgets::format_isk(val))
-                                }
-                                None => ui.colored_label(theme::TEXT_MUTED, "not loaded"),
+                                Some(val) => ui.colored_label(
+                                    theme::TEXT_PRIMARY,
+                                    widgets::numeric_text(widgets::format_isk(val)),
+                                ),
+                                None => ui.colored_label(theme::TEXT_SECONDARY, "not loaded"),
                             };
                             let active_skills = if *is_active {
                                 state.skills.as_ready()
@@ -546,14 +547,20 @@ pub fn show(
                             let (training_text, training_muted, finishes_text, finishes_muted) =
                                 character_training_cells(summary, active_skills, sde, now);
                             if training_muted {
-                                ui.colored_label(theme::TEXT_MUTED, training_text);
+                                ui.colored_label(
+                                    theme::TEXT_SECONDARY,
+                                    widgets::numeric_text(training_text),
+                                );
                             } else {
-                                ui.label(training_text);
+                                ui.label(widgets::numeric_text(training_text));
                             }
                             if finishes_muted {
-                                ui.colored_label(theme::TEXT_MUTED, finishes_text);
+                                ui.colored_label(
+                                    theme::TEXT_SECONDARY,
+                                    widgets::numeric_text(finishes_text),
+                                );
                             } else {
-                                ui.label(finishes_text);
+                                ui.label(widgets::numeric_text(finishes_text));
                             }
                             let queue_len = summary.and_then(|s| s.queue_len).or_else(|| {
                                 if *is_active {

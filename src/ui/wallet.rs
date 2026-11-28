@@ -7,7 +7,7 @@ use chrono::{DateTime, Utc};
 
 use super::theme;
 use super::widgets;
-use crate::app::state::{AppState, LoadState, WalletPeriod};
+use crate::app::state::{AppState, LoadState, View, WalletPeriod};
 use crate::esi::models::WalletJournalItem;
 use crate::names::resolver::NameResolver;
 
@@ -100,7 +100,10 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState, resolver: &NameResolver) {
             let now = Utc::now();
             if w.journal.is_empty() && w.transactions.is_empty() {
                 widgets::card(ui, |ui| {
-                    ui.label(format!("Balance: {}", widgets::format_isk(w.balance)));
+                    ui.label(widgets::numeric_text(format!(
+                        "Balance: {}",
+                        widgets::format_isk(w.balance)
+                    )));
                     widgets::empty_panel(
                         ui,
                         "No wallet history yet. Press Ctrl+R (or Refresh) after signing in.",
@@ -164,10 +167,10 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState, resolver: &NameResolver) {
                     ui,
                     &mut state.wallet_search,
                     "Filter journal/transactions (press / to focus, arrows move)",
-                    state.focus_search,
+                    state.focus_search && state.view == View::Wallet,
                 );
                 state.text_input_focused |= focus;
-                if focus {
+                if focus && state.view == View::Wallet {
                     state.focus_search = false;
                 }
             });

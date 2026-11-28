@@ -9,7 +9,7 @@
 use super::widgets;
 use crate::app::state::{
     AppState, FittingWriteConfirm, FittingWriteKind, FittingWriteRequest, FittingsData, LoadState,
-    SectionError, StepUpRequest,
+    SectionError, StepUpRequest, View,
 };
 use crate::config::EveConfig;
 use crate::esi::models::CharacterFitting;
@@ -2345,13 +2345,13 @@ fn render_fitting_resources(
                 ui.heading(FITTINGS_RESOURCES_APPLIED_HEADING);
                 let cpu_line = resource_line("CPU", &cpu, "tf");
                 if cpu.is_over() {
-                    ui.colored_label(egui::Color32::LIGHT_RED, cpu_line);
+                    ui.colored_label(super::theme::NEGATIVE, cpu_line);
                 } else {
                     ui.label(cpu_line);
                 }
                 let power_line = resource_line("Power grid", &power, "MW");
                 if power.is_over() {
-                    ui.colored_label(egui::Color32::LIGHT_RED, power_line);
+                    ui.colored_label(super::theme::NEGATIVE, power_line);
                 } else {
                     ui.label(power_line);
                 }
@@ -2424,13 +2424,13 @@ fn render_fitting_resources(
                 ui.heading(FITTINGS_RESOURCES_HEADING);
                 let cpu_line = resource_line("CPU", &cpu, "tf");
                 if cpu.is_over() {
-                    ui.colored_label(egui::Color32::LIGHT_RED, cpu_line);
+                    ui.colored_label(super::theme::NEGATIVE, cpu_line);
                 } else {
                     ui.label(cpu_line);
                 }
                 let power_line = resource_line("Power grid", &power, "MW");
                 if power.is_over() {
-                    ui.colored_label(egui::Color32::LIGHT_RED, power_line);
+                    ui.colored_label(super::theme::NEGATIVE, power_line);
                 } else {
                     ui.label(power_line);
                 }
@@ -3175,7 +3175,7 @@ fn render_rig_calibration(
             ui.heading(FITTINGS_CALIBRATION_HEADING);
             let line = calibration_line(&budget);
             if budget.is_over() {
-                ui.colored_label(egui::Color32::LIGHT_RED, line);
+                ui.colored_label(super::theme::NEGATIVE, line);
             } else {
                 ui.label(line);
             }
@@ -3304,7 +3304,7 @@ fn render_bay_usage(
             ui.heading(FITTINGS_BAYS_HEADING);
             for (line, is_over) in bay_usage_lines(&usage) {
                 if is_over {
-                    ui.colored_label(egui::Color32::LIGHT_RED, line);
+                    ui.colored_label(super::theme::NEGATIVE, line);
                 } else {
                     ui.label(line);
                 }
@@ -3993,7 +3993,7 @@ fn render_slot_layout(
             ui.heading(FITTINGS_SLOT_LAYOUT_HEADING);
             for (line, is_over) in slot_layout_lines(&layout) {
                 if is_over {
-                    ui.colored_label(egui::Color32::LIGHT_RED, line);
+                    ui.colored_label(super::theme::NEGATIVE, line);
                 } else {
                     ui.label(line);
                 }
@@ -4459,7 +4459,14 @@ fn fittings_import_controls_panel(
 ) {
     widgets::card(ui, |ui| {
         widgets::section_title(ui, "Import a fitting from EFT or DNA text");
-        ui.label("Paste an EFT block (the [Ship, Fitting name] text format) or a DNA fitting link (the single line of separated numbers the EVE client copies). The imported fitting stays in Mimir on this device unless you save it to EVE below, and it is gone when you switch characters or close Mimir.");
+        ui.horizontal(|ui| {
+            ui.label("Paste EFT or DNA text — not saved until you save it to EVE.");
+            widgets::provenance_popover(
+                ui,
+                "About imported fittings",
+                "Paste an EFT block (the [Ship, Fitting name] text format) or a DNA fitting link (the single line of separated numbers the EVE client copies). The imported fitting stays in Mimir on this device unless you save it to EVE below, and it is gone when you switch characters or close Mimir.",
+            );
+        });
         let Some(catalogue) = fitting_types else {
             ui.label("Could not import: Mimir's bundled item data failed to load. Restart Mimir and try again.");
             return;
@@ -4728,7 +4735,11 @@ fn show_saved_fitting_detail(
                 SavedCopyOutcome::Refused(reason) => apply_copied_refusal(state, reason),
             }
         }
-        ui.label("Editing a copy changes only the copy in Mimir and replaces the fitting above, if there is one. The saved fitting in EVE stays as it is, and saving the copy adds a new fitting.");
+        widgets::provenance_popover(
+            ui,
+            "About editing a copy",
+            "Editing a copy changes only the copy in Mimir and replaces the fitting above, if there is one. The saved fitting in EVE stays as it is, and saving the copy adds a new fitting.",
+        );
     }
     if render_write_in_flight(ui, state) {
         return;
@@ -4897,10 +4908,10 @@ fn show_saved_fittings_section(
                             ui,
                             &mut state.fittings_search,
                             "Search fittings and ships",
-                            state.focus_search,
+                            state.focus_search && state.view == View::Fittings,
                         );
                         state.text_input_focused |= focus;
-                        if focus {
+                        if focus && state.view == View::Fittings {
                             state.focus_search = false;
                         }
                         let query = state.fittings_search.clone();
@@ -4937,7 +4948,7 @@ fn show_saved_fittings_section(
                                                 "{} • {} items",
                                                 row.ship_name, row.item_count
                                             ))
-                                            .size(12.0)
+                                            .size(super::tokens::TOKENS.typography.small)
                                             .color(super::theme::TEXT_SECONDARY),
                                         );
                                     }

@@ -8,7 +8,7 @@ use super::portraits::{
     ensure_type_icon_requested, show_type_icon, PortraitImageCache, TYPE_ICON_PX,
 };
 use super::widgets;
-use crate::app::state::{AppState, AssetsData, LoadState, StepUpRequest};
+use crate::app::state::{AppState, AssetsData, LoadState, StepUpRequest, View};
 use crate::config::EveConfig;
 use crate::esi::models::AssetItem;
 use crate::names::resolver::NameResolver;
@@ -286,10 +286,10 @@ pub fn show(
                 ui,
                 &mut state.assets_search,
                 "Filter assets by item or location (press / to focus)",
-                state.focus_search,
+                state.focus_search && state.view == View::Assets,
             );
             state.text_input_focused |= focus;
-            if focus {
+            if focus && state.view == View::Assets {
                 state.focus_search = false;
             }
             let groups = filter_groups(&group_assets(&data, resolver), &state.assets_search);

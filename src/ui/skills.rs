@@ -9,7 +9,7 @@ use super::portraits::{
     ensure_type_icon_requested, show_type_icon, PortraitImageCache, TYPE_ICON_PX,
 };
 use super::widgets;
-use crate::app::state::{AppState, LoadState, SkillPlanConfirm, SkillPlanEditor};
+use crate::app::state::{AppState, LoadState, SkillPlanConfirm, SkillPlanEditor, View};
 use crate::esi::models::{CharacterAttributes, SkillQueueItem};
 use crate::names::sde::{Sde, SdeSkillType};
 use crate::skills::plans::{normalize_plan_text, SkillPlan, SkillPlanAction, SkillPlanEntry};
@@ -504,10 +504,10 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState, sde: &Sde, cache: &mut Port
                     ui,
                     &mut state.skill_search,
                     "Search skills (press / to focus)",
-                    state.focus_search,
+                    state.focus_search && state.view == View::Skills,
                 );
                 state.text_input_focused |= focus;
-                if focus {
+                if focus && state.view == View::Skills {
                     state.focus_search = false;
                 }
                 let query = state.skill_search.clone();
@@ -990,7 +990,7 @@ fn show_plan_editor(ui: &mut egui::Ui, state: &mut AppState, active_id: i64) {
     );
     let normalized = validation.clone();
     if let Err(message) = &validation {
-        ui.colored_label(egui::Color32::LIGHT_RED, *message);
+        ui.colored_label(super::theme::NEGATIVE, *message);
     }
     ui.horizontal(|ui| {
         let save_label = if is_create {
