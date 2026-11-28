@@ -26,6 +26,15 @@ impl ClipboardKind {
     }
 }
 
+/// Hash-only dedupe key for clipboard text: the raw text is never
+/// stored, logged, or persisted beyond the classify call.
+pub fn clipboard_text_hash(text: &str) -> u64 {
+    use std::hash::{Hash, Hasher};
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    text.hash(&mut hasher);
+    hasher.finish()
+}
+
 /// Pure demo / opt-in guard for the deferred clipboard poller.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ClipboardGuard {

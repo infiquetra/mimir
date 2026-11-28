@@ -69,6 +69,18 @@ impl DaemonStatus {
     }
 }
 
+/// Platform default EVE logs directory (`~/Documents/EVE/logs` via
+/// the `directories` crate). Pure path computation: creates nothing.
+pub fn default_eve_logs_dir() -> PathBuf {
+    if let Some(dirs) = directories::UserDirs::new() {
+        if let Some(doc) = dirs.document_dir() {
+            return doc.join("EVE").join("logs");
+        }
+        return dirs.home_dir().join("Documents").join("EVE").join("logs");
+    }
+    PathBuf::from("Documents/EVE/logs")
+}
+
 fn parse_timestamped(rest_line: &str) -> Option<(String, &str)> {
     let after = rest_line.trim_start().strip_prefix('[')?;
     let (ts, rest) = after.split_once(']')?;

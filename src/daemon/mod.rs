@@ -12,8 +12,12 @@ pub mod clipboard;
 pub mod fsevents_logs;
 pub mod utf16_chatlog;
 
-pub use clipboard::{classify, ClipboardGuard, ClipboardKind};
-pub use fsevents_logs::{DaemonStatus, LogEvent, LogEventKind, LogSource, LogTailer, LogWatcher};
+pub use clipboard::{
+    classify, clipboard_text_hash, poll_clipboard_once, ClipboardGuard, ClipboardKind,
+};
+pub use fsevents_logs::{
+    default_eve_logs_dir, DaemonStatus, LogEvent, LogEventKind, LogSource, LogTailer, LogWatcher,
+};
 
 #[cfg(test)]
 mod privacy_and_demo {

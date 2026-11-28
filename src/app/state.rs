@@ -10,6 +10,7 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
+use crate::daemon::{ClipboardKind, LogEvent};
 use crate::esi::endpoints::WriteFailureClass;
 use crate::esi::models::*;
 use crate::fitting::editor::{BrowserRow, ShipRow};
@@ -986,7 +987,24 @@ pub struct AppState {
     /// Sync now is clicked; the shell persists only then, so typing
     /// never takes the DB lock per keystroke.
     pub sde_base_url_persist_requested: bool,
+    // Local telemetry daemon state (card #655 wiring). Clipboard
+    // monitoring is OFF by default (ADR-014): `clipboard_opt_in`
+    // starts false, raw clipboard text is never stored here (only a
+    // u64 hash of the last-seen text), and the suggestion carries
+    // only the typed `ClipboardKind`. Log events are session-only.
+    pub daemon_logs_enabled: bool,
+    pub clipboard_opt_in: bool,
+    pub eve_logs_dir: String,
+    pub eve_logs_dir_persist_requested: bool,
+    pub daemon_status: String,
+    pub daemon_event_count: usize,
+    pub recent_log_events: Vec<LogEvent>,
+    pub clipboard_suggestion: Option<ClipboardKind>,
+    pub clipboard_last_hash: u64,
 }
+
+/// Cap for the session-only recent log-event ring.
+pub const RECENT_LOG_EVENTS_CAP: usize = 100;
 
 impl AppState {
     pub fn new(demo: bool) -> Self {
@@ -1044,6 +1062,16 @@ impl AppState {
                 "SDE not configured: set a base URL in Settings to enable sync \
                  (embedded baseline only)."
                     .to_string()
+            },
+            daemon_logs_enabled: true,
+            clipboard_opt_in: false,
+            eve_logs_dir: crate::daemon::default_eve_logs_dir()
+                .to_string_lossy()
+                .into_owned(),
+            daemon_status: if demo {
+                "Demo mode: log watcher and clipboard monitoring off.".to_string()
+            } else {
+                "EVE logs watcher not started yet.".to_string()
             },
             ..Self::default()
         }
@@ -1669,7 +1697,19 @@ impl AppState {
         self.market_fetch_requested = false;
         self.market_lookup_requested = None;
         self.sde_sync_requested = false;
+        self.clipboard_suggestion = None;
         self.focus_search = false;
+    }
+
+    /// Record one daemon log event in the capped session-only ring.
+    /// Counts and variants only are ever logged by callers.
+    pub fn push_log_event(&mut self, event: LogEvent) {
+        self.daemon_event_count = self.daemon_event_count.saturating_add(1);
+        self.recent_log_events.push(event);
+        if self.recent_log_events.len() > RECENT_LOG_EVENTS_CAP {
+            let excess = self.recent_log_events.len() - RECENT_LOG_EVENTS_CAP;
+            self.recent_log_events.drain(..excess);
+        }
     }
 
     /// Reset all demo characters, per-character caches, and drafts when

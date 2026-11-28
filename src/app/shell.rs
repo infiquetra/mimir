@@ -2,9 +2,10 @@
 //! keyboard-first navigation, and per-second repaints for countdowns.
 
 use std::collections::{HashMap, HashSet};
+use std::path::PathBuf;
 use std::sync::mpsc::{Receiver, Sender};
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use super::state::{
     ship_display_name, summary_location_name, AppState, AssetsData, AuthState, BlueprintsData,
@@ -19,6 +20,9 @@ use crate::auth::jwt_verify::JwtVerifier;
 use crate::auth::oauth;
 use crate::auth::token_store::{StoredTokens, TokenStore};
 use crate::config::EveConfig;
+use crate::daemon::{
+    clipboard_text_hash, poll_clipboard_once, ClipboardGuard, ClipboardKind, LogWatcher,
+};
 use crate::demo::data::DemoBundle;
 use crate::esi::endpoints::{self, WriteFailureClass};
 use crate::esi::models::{
@@ -233,6 +237,28 @@ fn should_spawn_sde_sync(demo: bool, base_url: &str, in_flight: bool) -> bool {
     !demo && !base_url.trim().is_empty() && !in_flight
 }
 
+/// Whether the EVE log watcher may run: never in demo mode
+/// (invariant 5, zero filesystem watching) and only when enabled.
+fn should_run_log_watcher(demo: bool, logs_enabled: bool) -> bool {
+    !demo && logs_enabled
+}
+
+/// Derive the `Gamelogs`/`Chatlogs` subdirectories from the
+/// operator-configured EVE logs directory.
+fn eve_log_subdirs(logs_dir: &str) -> (PathBuf, PathBuf) {
+    let base = PathBuf::from(logs_dir.trim());
+    (base.join("Gamelogs"), base.join("Chatlogs"))
+}
+
+/// Dismiss the clipboard suggestion without importing anything; a
+/// suggestion never overwrites an active fitting draft.
+fn dismiss_clipboard_suggestion(state: &mut AppState) {
+    if state.clipboard_suggestion.is_some() {
+        tracing::debug!("[DAEMON] clipboard suggestion dismissed");
+    }
+    state.clipboard_suggestion = None;
+}
+
 /// Fixed lookup outcome lines (design section 6.1): the submitted text
 /// is never echoed inside either sentence, and lookup error detail
 /// stays in a `[MARKET]` log line, never on screen.
@@ -266,6 +292,16 @@ pub struct MimirApp {
     demo_names_loaded: bool,
     persisted_startup_view: Option<String>,
     persisted_sde_base_url: Option<String>,
+    persisted_eve_logs_dir: Option<String>,
+    /// Live EVE log watcher (card #655). `None` in demo mode, when
+    /// log watching is disabled, or before the first start. Polled
+    /// synchronously on the repaint cadence; holds no DB lock.
+    log_watcher: Option<LogWatcher>,
+    log_watcher_dir: Option<String>,
+    /// Lazily created OS clipboard handle: constructed only when
+    /// the clipboard guard may poll (live + opt-in), never in demo.
+    clipboard: Option<arboard::Clipboard>,
+    last_clipboard_poll: Option<Instant>,
     /// Handle to an in-flight EVE SSO login or step-up callback task so demo
     /// entry can abort it promptly and release `127.0.0.1:54321`.
     auth_task: Option<tokio::task::JoinHandle<()>>,
@@ -1101,6 +1137,7 @@ impl MimirApp {
         let mut demo_bundle = None;
         let mut persisted_startup_view: Option<String> = None;
         let mut persisted_sde_base_url: Option<String> = None;
+        let mut persisted_eve_logs_dir: Option<String> = None;
         if let Some(b) = &backends {
             if let Ok(conn) = b.db.lock() {
                 // Demo data stays in memory from the bundled fixtures; it is
@@ -1184,6 +1221,13 @@ impl MimirApp {
                             state.sde_base_url = saved;
                         }
                     }
+                    if let Ok(saved) = repositories::get_setting(&conn, "eve_logs_dir") {
+                        persisted_eve_logs_dir = saved.clone();
+                        if let Some(saved) = saved {
+                            tracing::info!("[DAEMON] applying saved EVE logs directory");
+                            state.eve_logs_dir = saved;
+                        }
+                    }
                 }
             }
             if !demo {
@@ -1240,6 +1284,11 @@ impl MimirApp {
             demo_names_loaded: false,
             persisted_startup_view,
             persisted_sde_base_url,
+            persisted_eve_logs_dir,
+            log_watcher: None,
+            log_watcher_dir: None,
+            clipboard: None,
+            last_clipboard_poll: None,
             auth_task: None,
             portrait_textures: ui::portraits::PortraitImageCache::new(),
         };
@@ -2421,6 +2470,12 @@ impl MimirApp {
                             self.persisted_sde_base_url = saved.clone();
                             self.state.sde_base_url = saved.unwrap_or_default();
                         }
+                        if let Ok(saved) = repositories::get_setting(&conn, "eve_logs_dir") {
+                            self.persisted_eve_logs_dir = saved.clone();
+                            if let Some(saved) = saved {
+                                self.state.eve_logs_dir = saved;
+                            }
+                        }
                         if let Ok(build) = local_build_number(&conn) {
                             self.state.sde_build_number = build;
                         }
@@ -2538,6 +2593,7 @@ impl MimirApp {
         if self.state.sde_sync_requested {
             self.try_spawn_sde_sync();
         }
+        self.sync_daemon_state();
     }
 
     /// Spawn the background SDE sync when the decision helper allows
@@ -2684,6 +2740,137 @@ impl MimirApp {
                     }
                 }
             }
+        }
+    }
+
+    fn persist_eve_logs_dir_if_changed(&mut self) {
+        if !self.state.eve_logs_dir_persist_requested {
+            return;
+        }
+        self.state.eve_logs_dir_persist_requested = false;
+        if self.state.demo || self.last_demo_mode {
+            return;
+        }
+        // Clearing the field restores the platform default and deletes
+        // the saved value, mirroring the SDE base-URL pattern.
+        if self.state.eve_logs_dir.trim().is_empty() {
+            self.state.eve_logs_dir = crate::daemon::default_eve_logs_dir()
+                .to_string_lossy()
+                .into_owned();
+        }
+        if self.persisted_eve_logs_dir.as_deref() == Some(self.state.eve_logs_dir.as_str()) {
+            return;
+        }
+        if let Some(backends) = self.backends.as_ref() {
+            if let Ok(conn) = backends.db.lock() {
+                let default = crate::daemon::default_eve_logs_dir()
+                    .to_string_lossy()
+                    .into_owned();
+                let result = if self.state.eve_logs_dir == default {
+                    repositories::delete_setting(&conn, "eve_logs_dir")
+                } else {
+                    repositories::set_setting(&conn, "eve_logs_dir", self.state.eve_logs_dir.trim())
+                };
+                if result.is_ok() {
+                    tracing::debug!("[DAEMON] persisted EVE logs directory setting");
+                    self.persisted_eve_logs_dir = Some(self.state.eve_logs_dir.clone());
+                }
+            }
+        }
+    }
+
+    /// Drive the log watcher and clipboard poller for this frame.
+    /// Synchronous polling on the repaint cadence: no async, no DB
+    /// lock anywhere in the daemon path. Demo mode is a hard off:
+    /// watcher dropped, clipboard handle dropped, suggestion cleared.
+    fn sync_daemon_state(&mut self) {
+        if self.state.demo {
+            if self.log_watcher.is_some() {
+                tracing::info!("[DAEMON] log watcher stopped: demo mode");
+                self.log_watcher = None;
+                self.log_watcher_dir = None;
+            }
+            self.clipboard = None;
+            self.state.clipboard_suggestion = None;
+            self.state.daemon_status =
+                "Demo mode: log watcher and clipboard monitoring off.".to_string();
+            return;
+        }
+        if !self.state.clipboard_opt_in {
+            self.clipboard = None;
+            self.state.clipboard_suggestion = None;
+        }
+        let dir = self.state.eve_logs_dir.trim().to_string();
+        if should_run_log_watcher(false, self.state.daemon_logs_enabled) {
+            let need_start = match &self.log_watcher {
+                None => true,
+                Some(_) => self.log_watcher_dir.as_deref() != Some(dir.as_str()),
+            };
+            if need_start {
+                let (gamelogs, chatlogs) = eve_log_subdirs(&dir);
+                tracing::info!("[DAEMON] log watcher starting");
+                let watcher = LogWatcher::start(&gamelogs, &chatlogs);
+                self.state.daemon_status = watcher.status().label().to_string();
+                self.log_watcher = Some(watcher);
+                self.log_watcher_dir = Some(dir.clone());
+            }
+        } else if self.log_watcher.is_some() {
+            tracing::info!("[DAEMON] log watcher stopped: disabled in Settings");
+            self.log_watcher = None;
+            self.log_watcher_dir = None;
+            self.state.daemon_status = "Log watcher off.".to_string();
+        }
+        if let Some(watcher) = &mut self.log_watcher {
+            let events = watcher.poll_once();
+            if !events.is_empty() {
+                // Counts and variants only: never log bodies or names.
+                tracing::debug!("[DAEMON] log events drained count={}", events.len());
+                for event in events {
+                    self.state.push_log_event(event);
+                }
+            }
+            self.state.daemon_status = watcher.status().label().to_string();
+        }
+        let guard = ClipboardGuard {
+            demo: false,
+            clipboard_opt_in: self.state.clipboard_opt_in,
+        };
+        if guard.may_poll() {
+            if self.clipboard.is_none() {
+                self.clipboard = arboard::Clipboard::new().ok();
+            }
+            let due = self
+                .last_clipboard_poll
+                .map(|t| t.elapsed() >= Duration::from_millis(250))
+                .unwrap_or(true);
+            if due {
+                self.last_clipboard_poll = Some(Instant::now());
+                if let Some(clipboard) = &mut self.clipboard {
+                    let last_hash = self.state.clipboard_last_hash;
+                    let mut new_hash: Option<u64> = None;
+                    let kind = poll_clipboard_once(guard, || {
+                        let text = clipboard.get_text().ok()?;
+                        let hash = clipboard_text_hash(&text);
+                        if hash == last_hash {
+                            return None;
+                        }
+                        new_hash = Some(hash);
+                        Some(text)
+                    });
+                    if let Some(hash) = new_hash {
+                        self.state.clipboard_last_hash = hash;
+                    }
+                    if let Some(kind) = kind {
+                        tracing::debug!(
+                            "[DAEMON] clipboard suggestion variant={}",
+                            kind.variant_name()
+                        );
+                        self.state.clipboard_suggestion = Some(kind);
+                    }
+                }
+            }
+        } else {
+            self.clipboard = None;
         }
     }
 
@@ -4517,6 +4704,9 @@ impl MimirApp {
     }
 
     fn needs_tick(&self) -> bool {
+        if self.log_watcher.is_some() || (!self.state.demo && self.state.clipboard_opt_in) {
+            return true;
+        }
         if self.state.auth.is_busy() {
             return true;
         }
@@ -4619,6 +4809,7 @@ impl MimirApp {
         // the last write (settings view edits it); no per-frame DB reads.
         self.persist_startup_view_if_changed();
         self.persist_sde_base_url_if_changed();
+        self.persist_eve_logs_dir_if_changed();
         let actions = self.collect_keys(&ctx);
         self.apply_keys(actions);
         // Reset after key handling; views re-set it while rendering so the
@@ -4627,6 +4818,11 @@ impl MimirApp {
         self.ensure_demo_names();
         if self.needs_tick() {
             ctx.request_repaint_after(Duration::from_secs(1));
+        }
+        // Daemon polling cadence: well under the 250 ms event budget
+        // without busy-looping when frames render faster.
+        if self.log_watcher.is_some() || (!self.state.demo && self.state.clipboard_opt_in) {
+            ctx.request_repaint_after(Duration::from_millis(200));
         }
 
         // Mirror the captured tracing output for the settings log view.
@@ -4701,6 +4897,32 @@ impl MimirApp {
             .fill(ui::theme::BG_PANEL)
             .stroke(egui::Stroke::new(1.0_f32, ui::theme::BORDER_SUBTLE))
             .inner_margin(egui::Margin::symmetric(12, 12));
+
+        if let Some(suggestion) = self.state.clipboard_suggestion.clone() {
+            let text = match &suggestion {
+                ClipboardKind::EftFit { ship, name } => {
+                    format!("Clipboard: EFT fit recognized - {ship}, {name}.")
+                }
+                ClipboardKind::ShipDna => "Clipboard: ship DNA fit link recognized.".to_string(),
+                ClipboardKind::SurveyScan { rows } => {
+                    format!("Clipboard: survey scan recognized ({rows} rows).")
+                }
+                ClipboardKind::Ignored => String::new(),
+            };
+            if !text.is_empty() {
+                egui::Panel::top("clipboard_suggestion")
+                    .frame(bar_frame)
+                    .show(ui, |ui| {
+                        ui.horizontal(|ui| {
+                            ui.label(text);
+                            ui.label("Suggestion only - nothing was imported.");
+                            if ui.button("Dismiss").clicked() {
+                                dismiss_clipboard_suggestion(&mut self.state);
+                            }
+                        });
+                    });
+            }
+        }
 
         egui::Panel::left("character_rail")
             .default_size(210.0)
@@ -4891,6 +5113,7 @@ impl MimirApp {
         // after the top-of-frame drain_requests() pass.
         self.persist_startup_view_if_changed();
         self.persist_sde_base_url_if_changed();
+        self.persist_eve_logs_dir_if_changed();
         if self.has_pending_work() {
             ctx.request_repaint();
         }
@@ -5543,6 +5766,112 @@ mod tests {
             &live.sde_base_url,
             live.sde_sync_in_flight
         ));
+    }
+
+    #[test]
+    fn daemon_decision_helpers_cover_every_demo_opt_in_combination() {
+        // Log watcher: only live + enabled runs.
+        assert!(should_run_log_watcher(false, true));
+        assert!(!should_run_log_watcher(false, false));
+        assert!(!should_run_log_watcher(true, true));
+        assert!(!should_run_log_watcher(true, false));
+        // Clipboard guard: only live + opt-in may poll.
+        for (demo, opt_in, expected) in [
+            (false, true, true),
+            (false, false, false),
+            (true, true, false),
+            (true, false, false),
+        ] {
+            assert_eq!(
+                ClipboardGuard {
+                    demo,
+                    clipboard_opt_in: opt_in
+                }
+                .may_poll(),
+                expected,
+                "demo={demo} opt_in={opt_in}"
+            );
+        }
+        let (game, chat) = eve_log_subdirs("/tmp/eve/logs");
+        assert!(game.ends_with("Gamelogs") && chat.ends_with("Chatlogs"));
+    }
+
+    #[test]
+    fn app_state_daemon_defaults_keep_clipboard_off() {
+        for demo in [false, true] {
+            let state = AppState::new(demo);
+            assert!(!state.clipboard_opt_in, "clipboard must default off");
+            assert!(state.daemon_logs_enabled);
+            assert!(state.clipboard_suggestion.is_none());
+            assert!(state.recent_log_events.is_empty());
+            assert_eq!(state.daemon_event_count, 0);
+            assert!(!state.eve_logs_dir.trim().is_empty());
+        }
+        let mut demo_state = AppState::new(false);
+        demo_state.clipboard_opt_in = true;
+        crate::demo::data::seed_demo_state(&mut demo_state);
+        assert!(!demo_state.clipboard_opt_in);
+        assert!(demo_state.clipboard_suggestion.is_none());
+    }
+
+    #[test]
+    fn clipboard_hash_dedupe_surfaces_same_text_once() {
+        let guard = ClipboardGuard {
+            demo: false,
+            clipboard_opt_in: true,
+        };
+        let mut last_hash = 0u64;
+        let mut surfaced = 0usize;
+        for _ in 0..2 {
+            let kind = poll_clipboard_once(guard, || {
+                let text = "[Rifter, Brawl]\n200mm AutoCannon I\n";
+                let hash = clipboard_text_hash(text);
+                if hash == last_hash {
+                    return None;
+                }
+                last_hash = hash;
+                Some(text.to_string())
+            });
+            if kind.is_some() {
+                surfaced += 1;
+            }
+        }
+        assert_eq!(surfaced, 1, "same clipboard text must surface once");
+        assert_ne!(last_hash, 0);
+    }
+
+    #[test]
+    fn clipboard_suggestion_dismiss_and_opt_out_clear_it() {
+        let mut app = MimirApp::new(false, Arc::new(Mutex::new(Vec::new())), None, None);
+        app.state.clipboard_opt_in = true;
+        app.state.clipboard_suggestion = Some(ClipboardKind::ShipDna);
+        dismiss_clipboard_suggestion(&mut app.state);
+        assert!(app.state.clipboard_suggestion.is_none());
+        app.state.clipboard_suggestion = Some(ClipboardKind::SurveyScan { rows: 2 });
+        app.state.clipboard_opt_in = false;
+        app.sync_daemon_state();
+        assert!(app.state.clipboard_suggestion.is_none());
+        assert!(app.clipboard.is_none(), "opt-out must drop the handle");
+    }
+
+    #[test]
+    fn demo_shell_frames_hold_no_watcher_or_clipboard_handle() {
+        let mut app = MimirApp::new(true, Arc::new(Mutex::new(Vec::new())), None, None);
+        let ctx = egui::Context::default();
+        for view in View::ALL {
+            app.state.switch_view(view);
+            let mut output = ctx.run_ui(shell_test_input(Vec::new()), |ui| {
+                app.show_shell(ui);
+            });
+            output.textures_delta.clear();
+        }
+        assert!(app.log_watcher.is_none(), "demo must hold no log watcher");
+        assert!(
+            app.clipboard.is_none(),
+            "demo must hold no clipboard handle"
+        );
+        assert!(app.state.clipboard_suggestion.is_none());
+        assert!(!app.state.clipboard_opt_in);
     }
 
     #[test]
