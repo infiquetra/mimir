@@ -37,8 +37,13 @@ struct ErrorLimit {
 }
 
 impl ErrorLimit {
+    /// Cooldown trips at or below the warn threshold (contract: `<= 20`).
+    fn is_tripped(&self) -> bool {
+        self.remain <= EveConfig::ERROR_LIMIT_WARN_REMAIN
+    }
+
     fn refresh_if_elapsed(&mut self) -> bool {
-        if self.remain == 0
+        if self.is_tripped()
             && self.updated_at.elapsed() >= Duration::from_secs(u64::from(self.reset_secs))
         {
             self.remain = EveConfig::MAX_ERRORS_PER_MINUTE;
@@ -51,7 +56,7 @@ impl ErrorLimit {
     }
 
     fn remaining_reset_secs(&self) -> u32 {
-        if self.remain == 0 {
+        if self.is_tripped() {
             let elapsed = self.updated_at.elapsed().as_secs();
             u64::from(self.reset_secs).saturating_sub(elapsed) as u32
         } else {
@@ -69,6 +74,8 @@ pub struct EsiClient {
     jwt_verifier: Option<Arc<JwtVerifier>>,
     error_limit: Mutex<ErrorLimit>,
     refresh_locks: Mutex<HashMap<i64, Arc<tokio::sync::Mutex<()>>>>,
+    /// Conditional-cache: cache key -> (ETag, raw body) for 304 replays.
+    etag_cache: Mutex<HashMap<String, (String, String)>>,
 }
 
 impl EsiClient {
@@ -101,6 +108,7 @@ impl EsiClient {
                 updated_at: Instant::now(),
             }),
             refresh_locks: Mutex::new(HashMap::new()),
+            etag_cache: Mutex::new(HashMap::new()),
         }
     }
 
@@ -161,13 +169,13 @@ impl EsiClient {
     }
 
     pub fn is_near_error_limit(&self) -> bool {
-        self.error_limit_remain() < EveConfig::ERROR_LIMIT_WARN_REMAIN
+        self.error_limit_remain() <= EveConfig::ERROR_LIMIT_WARN_REMAIN
     }
 
     /// Record `X-ESI-Error-Limit-Remain` / `-Reset` values.
     pub fn update_error_limit(&self, remain: u32, reset_secs: u32) {
         tracing::debug!("[ESI] error limit remain={} reset={}s", remain, reset_secs);
-        if remain < EveConfig::ERROR_LIMIT_WARN_REMAIN {
+        if remain <= EveConfig::ERROR_LIMIT_WARN_REMAIN {
             tracing::warn!(
                 "[ESI] near error limit remain={} reset={}s",
                 remain,
@@ -205,10 +213,10 @@ impl EsiClient {
                 tracing::info!("[ESI] error limit cooldown elapsed; resuming requests");
                 return Ok(());
             }
-            if guard.remain == 0 {
+            if guard.is_tripped() {
                 let reset_secs = guard.remaining_reset_secs();
                 tracing::warn!(
-                    "[ESI] error limit exhausted; refusing {} reset={}s",
+                    "[ESI] error limit cooldown tripped; refusing {} reset={}s",
                     path,
                     reset_secs
                 );
@@ -334,12 +342,49 @@ impl EsiClient {
         }
     }
 
+    /// Pure OpenAPI 3.1 hygiene on every outbound ESI request (ADR-011).
+    fn with_esi_headers(request: reqwest::RequestBuilder) -> reqwest::RequestBuilder {
+        request
+            .header("X-Compatibility-Date", EveConfig::esi_compatibility_date())
+            .header(reqwest::header::USER_AGENT, EveConfig::USER_AGENT)
+            .header(reqwest::header::ACCEPT, "application/json")
+    }
+
+    fn cached_etag(&self, key: &str) -> Option<(String, String)> {
+        self.etag_cache
+            .lock()
+            .ok()
+            .and_then(|guard| guard.get(key).cloned())
+    }
+
+    fn store_etag(&self, key: &str, etag: String, body: String) {
+        if let Ok(mut guard) = self.etag_cache.lock() {
+            guard.insert(key.to_string(), (etag, body));
+        }
+    }
+
     async fn send<T: DeserializeOwned>(
         &self,
         request: reqwest::RequestBuilder,
         path: &str,
     ) -> AppResult<(T, EsiMeta)> {
+        self.send_cached(request, path, None).await
+    }
+
+    async fn send_cached<T: DeserializeOwned>(
+        &self,
+        request: reqwest::RequestBuilder,
+        path: &str,
+        cache_key: Option<&str>,
+    ) -> AppResult<(T, EsiMeta)> {
         self.check_error_limit(path)?;
+        let mut request = Self::with_esi_headers(request);
+        if let Some(key) = cache_key {
+            if let Some((etag, _body)) = self.cached_etag(key) {
+                tracing::debug!("[ESI] conditional GET path={} etag present", path);
+                request = request.header(reqwest::header::IF_NONE_MATCH, etag);
+            }
+        }
         // Error Display text reaches load-state UI panels: strip the
         // request URL (which embeds numeric character IDs) at this
         // single conversion boundary. Logs below keep the path.
@@ -349,6 +394,11 @@ impl EsiClient {
             .map_err(|e| EsiError::from(e.without_url()))?;
         let status = response.status();
         self.update_error_limit_from_headers(response.headers());
+        let response_etag = response
+            .headers()
+            .get(reqwest::header::ETAG)
+            .and_then(|v| v.to_str().ok())
+            .map(|s| s.to_string());
         let pages = response
             .headers()
             .get("x-pages")
@@ -359,6 +409,18 @@ impl EsiClient {
             error_limit_remain: self.error_limit_remain(),
             error_limit_reset_secs: self.error_limit_reset_secs(),
         };
+        if status.as_u16() == 304 {
+            if let Some(key) = cache_key {
+                if let Some((_etag, cached_body)) = self.cached_etag(key) {
+                    tracing::debug!("[ESI] 304 not modified; serving cached body path={}", path);
+                    let parsed: T = serde_json::from_str(&cached_body)
+                        .map_err(|e| AppError::from(EsiError::Decode(e.to_string())))?;
+                    return Ok((parsed, meta));
+                }
+            }
+            tracing::warn!("[ESI] 304 without cached body path={}", path);
+            return Err(EsiError::Status(304).into());
+        }
         let body = response
             .text()
             .await
@@ -372,6 +434,9 @@ impl EsiClient {
             return Err(
                 EsiError::from_status(status.as_u16(), &body, meta.error_limit_reset_secs).into(),
             );
+        }
+        if let (Some(key), Some(etag)) = (cache_key, response_etag) {
+            self.store_etag(key, etag, body.clone());
         }
         let parsed: T = serde_json::from_str(&body).map_err(|e| {
             tracing::warn!("[ESI] decode failed path={}: {}", path, e);
@@ -390,6 +455,7 @@ impl EsiClient {
     /// `send` itself is untouched, so no read path changes.
     async fn send_unit(&self, request: reqwest::RequestBuilder, path: &str) -> AppResult<()> {
         self.check_error_limit(path)?;
+        let request = Self::with_esi_headers(request);
         let response = request
             .send()
             .await
@@ -419,7 +485,9 @@ impl EsiClient {
 
     pub async fn public_get<T: DeserializeOwned>(&self, path: &str) -> AppResult<T> {
         tracing::debug!("[ESI] GET {}", path);
-        let (value, _meta) = self.send(self.http.get(self.build_url(path)), path).await?;
+        let (value, _meta) = self
+            .send_cached(self.http.get(self.build_url(path)), path, Some(path))
+            .await?;
         Ok(value)
     }
 
@@ -433,7 +501,8 @@ impl EsiClient {
             .http
             .get(self.build_url(path))
             .query(&[("page", page.to_string())]);
-        self.send(request, path).await
+        let cache_key = format!("{path}?page={page}");
+        self.send_cached(request, path, Some(&cache_key)).await
     }
 
     pub async fn public_post<T: DeserializeOwned, B: Serialize>(
@@ -469,10 +538,14 @@ impl EsiClient {
             .http
             .get(self.build_url(path))
             .bearer_auth(token.as_str());
+        let cache_key = match page {
+            Some(page) => format!("{path}?page={page}"),
+            None => path.to_string(),
+        };
         if let Some(page) = page {
             request = request.query(&[("page", page.to_string())]);
         }
-        self.send(request, path).await
+        self.send_cached(request, path, Some(&cache_key)).await
     }
 
     /// Authenticated GET with a caller-supplied token (no store needed).
@@ -486,7 +559,7 @@ impl EsiClient {
             .http
             .get(self.build_url(path))
             .bearer_auth(access_token.as_str());
-        let (value, _meta) = self.send(request, path).await?;
+        let (value, _meta) = self.send_cached(request, path, Some(path)).await?;
         Ok(value)
     }
 
@@ -743,6 +816,130 @@ mod tests {
         let request = captured.await.expect("captured");
         assert!(request.contains("datasource=tranquility"));
         assert!(!request.to_lowercase().contains("authorization"));
+    }
+
+    #[tokio::test]
+    async fn every_request_carries_compatibility_date_and_user_agent() {
+        let expected_ua = concat!("Alidade/", env!("CARGO_PKG_VERSION"));
+        // GET path.
+        let (base, captured) = mock_server(200, "", r#"{"name":"Fixture"}"#).await;
+        let client = EsiClient::with_http(reqwest::Client::new(), base);
+        let _value: serde_json::Value = client.public_get("/characters/1/").await.expect("get");
+        let request = captured.await.expect("captured get");
+        let lower = request.to_lowercase();
+        assert!(
+            lower.contains("x-compatibility-date: 2026-11-01"),
+            "GET missing compatibility date: {request}"
+        );
+        assert!(
+            lower.contains(&format!("user-agent: {}", expected_ua.to_lowercase())),
+            "GET missing user agent: {request}"
+        );
+        // POST path proves non-GET verbs carry the same headers.
+        let (base2, captured2) = mock_server(200, "", r#"{"ok":true}"#).await;
+        let client2 = EsiClient::with_http(reqwest::Client::new(), base2);
+        let _posted: serde_json::Value = client2
+            .public_post("/universe/names/", &serde_json::json!([34]))
+            .await
+            .expect("post");
+        let post_request = captured2.await.expect("captured post");
+        let post_lower = post_request.to_lowercase();
+        assert!(post_lower.contains("x-compatibility-date: 2026-11-01"));
+        assert!(post_lower.contains(&format!("user-agent: {}", expected_ua.to_lowercase())));
+        assert_eq!(EveConfig::esi_compatibility_date(), "2026-11-01");
+        assert_eq!(EveConfig::USER_AGENT, expected_ua);
+    }
+
+    #[tokio::test]
+    async fn conditional_etag_sends_if_none_match_and_replays_304() {
+        use std::sync::Mutex as StdMutex;
+        let captured: Arc<StdMutex<Vec<String>>> = Arc::new(StdMutex::new(Vec::new()));
+        let captured_task = captured.clone();
+        let listener = TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("bind etag mock");
+        let addr = listener.local_addr().expect("addr");
+        tokio::spawn(async move {
+            for _ in 0..2 {
+                let Ok((mut socket, _)) = listener.accept().await else {
+                    break;
+                };
+                let store = captured_task.clone();
+                tokio::spawn(async move {
+                    let mut buffer = vec![0u8; 16384];
+                    let count = socket.read(&mut buffer).await.unwrap_or(0);
+                    let request = String::from_utf8_lossy(&buffer[..count]).into_owned();
+                    let is_conditional = request.to_lowercase().contains("if-none-match:");
+                    store.lock().expect("captured lock").push(request);
+                    let payload = if is_conditional {
+                        "HTTP/1.1 304 Not Modified\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+                            .to_string()
+                    } else {
+                        let body = r#"{"name":"Fixture"}"#;
+                        format!(
+                            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nETag: \"sde-v1\"\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                            body.len()
+                        )
+                    };
+                    let _ = socket.write_all(payload.as_bytes()).await;
+                    let _ = socket.flush().await;
+                });
+            }
+        });
+        let client = EsiClient::with_http(reqwest::Client::new(), format!("http://{addr}"));
+        let first: serde_json::Value = client
+            .public_get("/characters/1/")
+            .await
+            .expect("first get");
+        assert_eq!(first["name"], "Fixture");
+        let second: serde_json::Value = client
+            .public_get("/characters/1/")
+            .await
+            .expect("304 replayed from cache");
+        assert_eq!(second["name"], "Fixture");
+        let requests = captured.lock().expect("captured lock").clone();
+        assert_eq!(requests.len(), 2);
+        assert!(!requests[0].to_lowercase().contains("if-none-match:"));
+        assert!(
+            requests[1]
+                .to_lowercase()
+                .contains("if-none-match: \"sde-v1\""),
+            "second request must be conditional: {}",
+            requests[1]
+        );
+    }
+
+    #[tokio::test]
+    async fn error_limit_cooldown_trips_at_twenty_remaining() {
+        let (base, _rx) = mock_server(
+            200,
+            "X-ESI-Error-Limit-Remain: 20\r\nX-ESI-Error-Limit-Reset: 60\r\n",
+            r#"{"ok":true}"#,
+        )
+        .await;
+        let client = EsiClient::with_http(reqwest::Client::new(), base);
+        let value: serde_json::Value = client.public_get("/x/").await.expect("first get");
+        assert_eq!(value["ok"], true);
+        assert_eq!(client.error_limit_remain(), 20);
+        assert!(
+            client.is_near_error_limit(),
+            "remain == 20 must trip the warn gate"
+        );
+        let refused: AppResult<serde_json::Value> = client.public_get("/x/").await;
+        assert!(
+            matches!(
+                refused,
+                Err(AppError::Esi(EsiError::ErrorLimitExhausted { .. }))
+            ),
+            "remain <= 20 must trip cooldown, got: {refused:?}"
+        );
+        // Boundary: 21 remaining does not trip.
+        let client2 =
+            EsiClient::with_http(reqwest::Client::new(), "http://127.0.0.1:9".to_string());
+        client2.update_error_limit(21, 60);
+        assert!(!client2.is_near_error_limit());
+        client2.update_error_limit(20, 60);
+        assert!(client2.is_near_error_limit());
     }
 
     #[tokio::test]
