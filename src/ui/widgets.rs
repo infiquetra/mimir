@@ -247,13 +247,13 @@ pub fn metric_tile(ui: &mut egui::Ui, label: &str, value: &str, value_color: egu
             ui.vertical(|ui| {
                 ui.label(
                     egui::RichText::new(label)
-                        .size(11.5)
+                        .size(12.0)
                         .color(theme::TEXT_SECONDARY),
                 );
                 ui.add_space(2.0);
                 ui.label(
                     egui::RichText::new(value)
-                        .size(17.0)
+                        .size(18.0)
                         .strong()
                         .color(value_color),
                 );
@@ -269,7 +269,7 @@ pub fn badge(ui: &mut egui::Ui, text: &str, bg: egui::Color32, fg: egui::Color32
         .corner_radius(egui::CornerRadius::same(10))
         .inner_margin(egui::Margin::symmetric(8, 2))
         .show(ui, |ui| {
-            ui.label(egui::RichText::new(text).size(11.5).strong().color(fg));
+            ui.label(egui::RichText::new(text).size(12.0).strong().color(fg));
         });
 }
 
@@ -277,10 +277,34 @@ pub fn badge(ui: &mut egui::Ui, text: &str, bg: egui::Color32, fg: egui::Color32
 pub fn section_title(ui: &mut egui::Ui, text: &str) {
     ui.label(
         egui::RichText::new(text)
-            .size(15.5)
+            .size(18.0)
             .strong()
             .color(theme::ACCENT_CYAN),
     );
+}
+
+/// Compact `ⓘ` provenance popover (#652): verbose
+/// explanatory prose lives behind this accessible button
+/// instead of as above-the-fold paragraph walls. Counts
+/// and honesty badges stay inline at call sites; only the
+/// long-form explanation moves here. The button label is
+/// the AccessKit name, so headless accessibility queries
+/// find it without pixel hunting.
+pub fn provenance_popover(ui: &mut egui::Ui, title: &str, body: &str) {
+    ui.menu_button("ⓘ", |ui| {
+        ui.set_max_width(360.0);
+        ui.label(
+            egui::RichText::new(title)
+                .size(super::tokens::TOKENS.typography.body)
+                .strong()
+                .color(theme::ACCENT_BRASS),
+        );
+        ui.label(
+            egui::RichText::new(body)
+                .size(super::tokens::TOKENS.typography.small)
+                .color(theme::TEXT_SECONDARY),
+        );
+    });
 }
 
 /// Case-insensitive substring match used by every search box.
@@ -388,6 +412,16 @@ pub fn search_box(ui: &mut egui::Ui, text: &mut String, hint: &str, grab_focus: 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn provenance_popover_renders_without_panic() {
+        let ctx = egui::Context::default();
+        let mut output = ctx.run_ui(egui::RawInput::default(), |ui| {
+            provenance_popover(ui, "About test provenance", "Long explanation body.");
+        });
+        output.textures_delta.clear();
+        assert!(!output.shapes.is_empty());
+    }
 
     fn now() -> DateTime<Utc> {
         parse_esi_date("2026-11-15T12:00:00Z").expect("fixed test date parses")

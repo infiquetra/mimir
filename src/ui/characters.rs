@@ -187,7 +187,7 @@ pub fn show(
                             if !status.is_empty() {
                                 ui.label(
                                     egui::RichText::new(status)
-                                        .size(11.5)
+                                        .size(12.0)
                                         .color(super::theme::TEXT_MUTED),
                                 );
                             }

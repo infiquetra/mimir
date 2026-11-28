@@ -321,6 +321,14 @@ pub struct MimirApp {
     rx: Receiver<BackendMsg>,
     demo_names_loaded: bool,
     persisted_startup_view: Option<String>,
+    /// Dockable workspace trees (#652), one per
+    /// `ui::tiles::Workspace`, lazily built from presets or
+    /// restored layout JSON (live mode only).
+    tiles_trees: [Option<egui_tiles::Tree<View>>; 4],
+    active_workspace: ui::tiles::Workspace,
+    persisted_tiles_layout: Option<String>,
+    quick_sight: ui::quick_sight::QuickSight,
+    quick_sight_index: Vec<ui::quick_sight::QuickSightItem>,
     persisted_sde_base_url: Option<String>,
     persisted_eve_logs_dir: Option<String>,
     persisted_daemon_logs_enabled: Option<String>,
@@ -349,6 +357,8 @@ pub struct MimirApp {
 #[derive(Default)]
 struct KeyActions {
     switch_view: Option<View>,
+    switch_workspace: Option<ui::tiles::Workspace>,
+    toggle_quick_sight: bool,
     refresh: bool,
     focus_search: bool,
     cycle_character: isize,
@@ -852,19 +862,25 @@ fn market_lookup_is_current(state: &AppState, generation: u64, query: &str) -> b
 /// view takes the mnemonic letter E. Deriving the digit from
 /// `(idx + 1) % 10` would print "1" for Exploration, colliding with
 /// Dashboard, so the hint comes from the view itself.
+/// Single-key hint by `View::ALL` position: the first
+/// eleven views keep keys 1-9, 0, E forever; views added
+/// later (index >= 11) get no digit — they are reached
+/// through workspaces and Quick-Sight (#652 extensible
+/// navigation), never by stealing an existing key.
 fn view_key_hint(view: View) -> &'static str {
-    match view {
-        View::Dashboard => "1",
-        View::Characters => "2",
-        View::Skills => "3",
-        View::Wallet => "4",
-        View::Assets => "5",
-        View::Market => "6",
-        View::Industry => "7",
-        View::Planets => "8",
-        View::Fittings => "9",
-        View::Settings => "0",
-        View::Exploration => "E",
+    match view.index() {
+        0 => "1",
+        1 => "2",
+        2 => "3",
+        3 => "4",
+        4 => "5",
+        5 => "6",
+        6 => "7",
+        7 => "8",
+        8 => "9",
+        9 => "0",
+        10 => "E",
+        _ => "·",
     }
 }
 
@@ -1170,6 +1186,9 @@ impl MimirApp {
         };
         let mut demo_bundle = None;
         let mut persisted_startup_view: Option<String> = None;
+        let mut tiles_trees: [Option<egui_tiles::Tree<View>>; 4] = [None, None, None, None];
+        let mut active_workspace = ui::tiles::Workspace::default();
+        let mut persisted_tiles_layout: Option<String> = None;
         let mut persisted_sde_base_url: Option<String> = None;
         let mut persisted_eve_logs_dir: Option<String> = None;
         let mut persisted_daemon_logs_enabled: Option<String> = None;
@@ -1270,6 +1289,21 @@ impl MimirApp {
                             state.daemon_logs_enabled = saved == "true";
                         }
                     }
+                    if let Ok(Some(saved)) = repositories::get_setting(&conn, "tiles_layout") {
+                        match ui::tiles::restore_layouts(&saved) {
+                            Some((restored, active)) => {
+                                tracing::info!("[UI] restored saved workspace layout");
+                                tiles_trees = restored;
+                                active_workspace = active;
+                                persisted_tiles_layout = Some(saved);
+                            }
+                            None => {
+                                tracing::warn!(
+                                    "[UI] saved workspace layout unreadable; using presets"
+                                );
+                            }
+                        }
+                    }
                 }
             }
             if !demo {
@@ -1325,6 +1359,11 @@ impl MimirApp {
             rx,
             demo_names_loaded: false,
             persisted_startup_view,
+            tiles_trees,
+            active_workspace,
+            persisted_tiles_layout,
+            quick_sight: ui::quick_sight::QuickSight::default(),
+            quick_sight_index: Vec::new(),
             persisted_sde_base_url,
             persisted_eve_logs_dir,
             persisted_daemon_logs_enabled,
@@ -1335,6 +1374,10 @@ impl MimirApp {
             auth_task: None,
             portrait_textures: ui::portraits::PortraitImageCache::new(),
         };
+        // The explicit startup view (saved preference or
+        // --view applied later) decides the first workspace;
+        // a restored layout keeps its trees either way.
+        app.active_workspace = ui::tiles::Workspace::for_view(app.state.view);
         app.ensure_demo_names();
         // Skill plans are local data: present before first render,
         // offline included (design section 11.1 call point 1; the
@@ -1366,7 +1409,118 @@ impl MimirApp {
             "[STARTUP] CLI --view override applied view={}",
             view.label()
         );
-        self.state.view = view;
+        self.activate_view(view);
+    }
+
+    /// Tree for `workspace`, building its preset on first use.
+    fn ensure_tree(&mut self, workspace: ui::tiles::Workspace) {
+        let slot = &mut self.tiles_trees[workspace.index()];
+        if slot.is_none() {
+            *slot = Some(ui::tiles::default_tree(workspace));
+        }
+    }
+
+    /// Switch the dock area to `workspace` and focus its
+    /// first visible pane view (state.view follows).
+    fn activate_workspace(&mut self, workspace: ui::tiles::Workspace) {
+        self.active_workspace = workspace;
+        self.ensure_tree(workspace);
+        if let Some(tree) = self.tiles_trees[workspace.index()].as_ref() {
+            for tile_id in tree.active_tiles() {
+                if let Some(egui_tiles::Tile::Pane(view)) = tree.tiles.get(tile_id) {
+                    let view = *view;
+                    self.state.switch_view(view);
+                    break;
+                }
+            }
+        }
+        tracing::debug!("[UI] workspace {}", workspace.label());
+    }
+
+    /// Focus `view`: switch to its preset workspace, make
+    /// its pane the active tab, and record it as the
+    /// current view. A restored layout missing the view
+    /// resets that workspace to its preset (documented
+    /// fallback; tabs are not closable in-session).
+    fn activate_view(&mut self, view: View) {
+        let workspace = ui::tiles::Workspace::for_view(view);
+        self.active_workspace = workspace;
+        self.ensure_tree(workspace);
+        if let Some(tree) = self.tiles_trees[workspace.index()].as_mut() {
+            if !ui::tiles::tree_contains(tree, view) {
+                *tree = ui::tiles::default_tree(workspace);
+            }
+            tree.make_active(|_, tile| matches!(tile, egui_tiles::Tile::Pane(p) if *p == view));
+        }
+        self.state.switch_view(view);
+    }
+
+    /// Rebuild the Quick-Sight index from live state and
+    /// bundled catalogues (names only; ids stay internal).
+    fn rebuild_quick_sight_index(&mut self) {
+        let characters: Vec<(i64, String)> = self
+            .state
+            .characters
+            .iter()
+            .map(|c| (c.character_id, c.name.clone()))
+            .collect();
+        let skill_names: Vec<String> = self.sde.types.iter().map(|t| t.type_name.clone()).collect();
+        let ship_names: Vec<String> = self
+            .fitting_types
+            .as_deref()
+            .map(|catalogue| {
+                catalogue
+                    .types
+                    .iter()
+                    .filter(|t| t.category_id == 6)
+                    .map(|t| t.name.clone())
+                    .collect()
+            })
+            .unwrap_or_default();
+        let fitting_names: Vec<String> = match &self.state.fittings {
+            crate::app::state::LoadState::Ready(data) => match &data.fittings {
+                Ok(fittings) => fittings.iter().map(|f| f.name.clone()).collect(),
+                Err(_) => Vec::new(),
+            },
+            _ => Vec::new(),
+        };
+        self.quick_sight_index =
+            ui::quick_sight::build_index(&characters, &skill_names, &ship_names, &fitting_names);
+    }
+
+    fn apply_quick_sight_action(&mut self, action: ui::quick_sight::QuickSightAction) {
+        use ui::quick_sight::QuickSightAction;
+        match action {
+            QuickSightAction::SwitchView(view) => self.activate_view(view),
+            QuickSightAction::SwitchWorkspace(workspace) => self.activate_workspace(workspace),
+            QuickSightAction::SelectCharacter(character_id) => {
+                tracing::debug!("[UI] Quick-Sight character selected");
+                self.state.set_active_character(character_id);
+            }
+        }
+    }
+
+    /// Persist workspace layouts when they changed (live
+    /// mode only; demo never reads or writes layout state).
+    fn persist_tiles_layout_if_changed(&mut self) {
+        if !ui::tiles::should_persist_layout(self.state.demo) || self.last_demo_mode {
+            return;
+        }
+        let Some(json) = ui::tiles::serialize_layouts(&self.tiles_trees, self.active_workspace)
+        else {
+            return;
+        };
+        if self.persisted_tiles_layout.as_deref() == Some(json.as_str()) {
+            return;
+        }
+        if let Some(backends) = self.backends.as_ref() {
+            if let Ok(conn) = backends.db.lock() {
+                if repositories::set_setting(&conn, "tiles_layout", &json).is_ok() {
+                    tracing::debug!("[UI] persisted workspace layout");
+                    self.persisted_tiles_layout = Some(json);
+                }
+            }
+        }
     }
 
     /// Runtime "Try demo" entry points only seed `AppState`; load the full
@@ -4801,8 +4955,32 @@ impl MimirApp {
             if command_r || i.key_pressed(egui::Key::F5) {
                 actions.refresh = true;
             }
-            if typing {
+            // Quick-Sight toggle (Cmd/Ctrl+K): closes even
+            // while its own field has focus; opens only
+            // under the typing guard like every shortcut.
+            let command_k =
+                i.key_pressed(egui::Key::K) && (i.modifiers.command || i.modifiers.ctrl);
+            if command_k && (self.quick_sight.open || !typing) {
+                actions.toggle_quick_sight = true;
+            }
+            if typing || self.quick_sight.open {
                 return actions;
+            }
+            // Cmd/Ctrl+1..4 switch dockable workspaces.
+            if i.modifiers.command || i.modifiers.ctrl {
+                for (idx, key) in [
+                    egui::Key::Num1,
+                    egui::Key::Num2,
+                    egui::Key::Num3,
+                    egui::Key::Num4,
+                ]
+                .iter()
+                .enumerate()
+                {
+                    if i.key_pressed(*key) {
+                        actions.switch_workspace = ui::tiles::Workspace::from_index(idx);
+                    }
+                }
             }
             for (idx, key) in [
                 egui::Key::Num1,
@@ -4851,9 +5029,20 @@ impl MimirApp {
     }
 
     fn apply_keys(&mut self, actions: KeyActions) {
+        if actions.toggle_quick_sight {
+            let opening = !self.quick_sight.open;
+            self.quick_sight.toggle();
+            if opening {
+                self.rebuild_quick_sight_index();
+            }
+            tracing::debug!("[UI] Quick-Sight toggled open={}", self.quick_sight.open);
+        }
+        if let Some(workspace) = actions.switch_workspace {
+            self.activate_workspace(workspace);
+        }
         if let Some(view) = actions.switch_view {
             tracing::debug!("[UI] keyboard switch to {}", view.label());
-            self.state.switch_view(view);
+            self.activate_view(view);
         }
         if actions.refresh {
             self.state.request_refresh("keyboard");
@@ -5025,9 +5214,9 @@ impl MimirApp {
                 ui.add_space(ui::theme::traffic_light_inset());
                 ui.label(
                     egui::RichText::new("ALIDADE")
-                        .size(17.0)
+                        .size(18.0)
                         .strong()
-                        .color(ui::theme::ACCENT_CYAN),
+                        .color(ui::theme::ACCENT_BRASS),
                 );
                 if self.state.demo {
                     ui::widgets::badge(ui, "DEMO", ui::theme::WARNING_BG, ui::theme::WARNING);
@@ -5046,6 +5235,12 @@ impl MimirApp {
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     if ui.button("Refresh (Ctrl+R)").clicked() {
                         self.state.request_refresh("top-bar button");
+                    }
+                    if ui.button("Quick-Sight (Cmd+K)").clicked() {
+                        self.quick_sight.toggle();
+                        if self.quick_sight.open {
+                            self.rebuild_quick_sight_index();
+                        }
                     }
                     if !self.state.status_message.is_empty() {
                         ui.label(
@@ -5098,7 +5293,7 @@ impl MimirApp {
             .show(ui, |ui| {
                 ui.label(
                     egui::RichText::new("CHARACTERS")
-                        .size(11.0)
+                        .size(12.0)
                         .strong()
                         .color(ui::theme::TEXT_MUTED),
                 );
@@ -5138,7 +5333,7 @@ impl MimirApp {
                     ui.add_space(2.0);
                     ui.label(
                         egui::RichText::new("PageUp/PageDown switches character.")
-                            .size(11.5)
+                            .size(12.0)
                             .color(ui::theme::TEXT_MUTED),
                     );
                 }
@@ -5146,12 +5341,35 @@ impl MimirApp {
                 ui.separator();
                 ui.add_space(4.0);
                 ui.label(
-                    egui::RichText::new("VIEWS (KEYS 1-9, 0, E)")
-                        .size(11.0)
+                    egui::RichText::new("WORKSPACES (CMD+1-4)")
+                        .size(12.0)
                         .strong()
                         .color(ui::theme::TEXT_MUTED),
                 );
                 ui.add_space(4.0);
+                let mut clicked_workspace: Option<ui::tiles::Workspace> = None;
+                ui.with_layout(egui::Layout::top_down_justified(egui::Align::LEFT), |ui| {
+                    for workspace in ui::tiles::Workspace::ALL {
+                        let selected = self.active_workspace == workspace;
+                        if ui.selectable_label(selected, workspace.label()).clicked() {
+                            clicked_workspace = Some(workspace);
+                        }
+                    }
+                });
+                if let Some(workspace) = clicked_workspace {
+                    self.activate_workspace(workspace);
+                }
+                ui.add_space(6.0);
+                ui.separator();
+                ui.add_space(4.0);
+                ui.label(
+                    egui::RichText::new("VIEWS (KEYS 1-9, 0, E)")
+                        .size(12.0)
+                        .strong()
+                        .color(ui::theme::TEXT_MUTED),
+                );
+                ui.add_space(4.0);
+                let mut clicked_view: Option<View> = None;
                 ui.with_layout(egui::Layout::top_down_justified(egui::Align::LEFT), |ui| {
                     for view in View::ALL.iter() {
                         let selected = self.state.view == *view;
@@ -5162,10 +5380,13 @@ impl MimirApp {
                             )
                             .clicked()
                         {
-                            self.state.switch_view(*view);
+                            clicked_view = Some(*view);
                         }
                     }
                 });
+                if let Some(view) = clicked_view {
+                    self.activate_view(view);
+                }
             });
 
         let status_frame = egui::Frame::new()
@@ -5201,9 +5422,9 @@ impl MimirApp {
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         ui.label(
                             egui::RichText::new(
-                                "Keys: 1-9, 0, E views  |  Ctrl+R refresh  |  / search  |  PgUp/PgDn character",
+                                "Keys: 1-9, 0, E views  |  Cmd+1-4 workspaces  |  Cmd+K Quick-Sight  |  Ctrl+R refresh  |  / search  |  PgUp/PgDn character",
                             )
-                            .size(11.5)
+                            .size(12.0)
                             .color(ui::theme::TEXT_MUTED),
                         );
                     });
@@ -5217,73 +5438,138 @@ impl MimirApp {
         egui::CentralPanel::default()
             .frame(canvas_frame)
             .show(ui, |ui| {
-                egui::ScrollArea::vertical().show(ui, |ui| match self.state.view {
-                    View::Dashboard => ui::dashboard::show(
-                        ui,
-                        &mut self.state,
-                        &self.sde,
-                        &self.resolver,
-                        &mut self.portrait_textures,
-                    ),
-                    View::Characters => ui::characters::show(
-                        ui,
-                        &mut self.state,
-                        &self.resolver,
-                        &mut self.portrait_textures,
-                    ),
-                    View::Skills => ui::skills::show(
-                        ui,
-                        &mut self.state,
-                        &self.sde,
-                        &mut self.portrait_textures,
-                    ),
-                    View::Wallet => ui::wallet::show(ui, &mut self.state, &self.resolver),
-                    View::Assets => ui::assets::show(
-                        ui,
-                        &mut self.state,
-                        &self.resolver,
-                        &mut self.portrait_textures,
-                    ),
-                    View::Market => ui::market::show(
-                        ui,
-                        &mut self.state,
-                        &self.resolver,
-                        &mut self.portrait_textures,
-                    ),
-                    View::Industry => ui::industry::show(
-                        ui,
-                        &mut self.state,
-                        &self.resolver,
-                        self.industry_data.as_deref(),
-                        self.fitting_types.as_deref(),
-                    ),
-                    View::Planets => ui::planets::show(
-                        ui,
-                        &mut self.state,
-                        &self.resolver,
-                        self.planet_schematics.as_deref(),
-                    ),
-                    View::Fittings => ui::fittings::show(
-                        ui,
-                        &mut self.state,
-                        &self.resolver,
-                        self.fitting_types.as_deref(),
-                        &self.sde,
-                        &mut self.portrait_textures,
-                    ),
-                    View::Settings => ui::settings::show(ui, &mut self.state),
-                    View::Exploration => ui::exploration::show(ui, &mut self.state),
-                });
+                // Dockable workspace (#652): the active
+                // workspace tree renders its view panes; each
+                // pane scrolls independently.
+                self.ensure_tree(self.active_workspace);
+                let index = self.active_workspace.index();
+                if let Some(mut tree) = self.tiles_trees[index].take() {
+                    let mut behavior = ViewBehavior {
+                        app: self,
+                        focused_view: None,
+                    };
+                    tree.ui(&mut behavior, ui);
+                    let focused = behavior.focused_view;
+                    behavior.app.tiles_trees[index] = Some(tree);
+                    if let Some(view) = focused {
+                        if view != behavior.app.state.view {
+                            behavior.app.state.switch_view(view);
+                        }
+                    }
+                }
             });
+        // Quick-Sight palette (Cmd+K) above the dock area.
+        if let Some(action) =
+            ui::quick_sight::show_palette(&ctx, &mut self.quick_sight, &self.quick_sight_index)
+        {
+            self.apply_quick_sight_action(action);
+        }
+        if self.quick_sight.open {
+            self.state.text_input_focused = true;
+        }
         // Persist startup-view edits made inside Settings during this frame and
         // wake egui immediately whenever view rendering or apply_keys queued work
         // after the top-of-frame drain_requests() pass.
         self.persist_startup_view_if_changed();
+        self.persist_tiles_layout_if_changed();
         self.persist_sde_base_url_if_changed();
         self.persist_eve_logs_dir_if_changed();
         self.persist_daemon_logs_enabled_if_changed();
         if self.has_pending_work() {
             ctx.request_repaint();
+        }
+    }
+}
+
+/// `egui_tiles` behavior rendering each `View` pane with
+/// the shell's existing per-view dispatch. Panes scroll
+/// independently; a pointer press inside a pane records
+/// it as the focused view so `state.view` (keys, status
+/// bar, startup persistence) follows the dock focus.
+struct ViewBehavior<'a> {
+    app: &'a mut MimirApp,
+    focused_view: Option<View>,
+}
+
+impl egui_tiles::Behavior<View> for ViewBehavior<'_> {
+    fn pane_ui(
+        &mut self,
+        ui: &mut egui::Ui,
+        _tile_id: egui_tiles::TileId,
+        pane: &mut View,
+    ) -> egui_tiles::UiResponse {
+        let view = *pane;
+        if ui.ui_contains_pointer() && ui.ctx().input(|i| i.pointer.any_pressed()) {
+            self.focused_view = Some(view);
+        }
+        egui::ScrollArea::vertical()
+            .id_salt(("pane", view.label()))
+            .show(ui, |ui| self.app.show_view_pane(ui, view));
+        egui_tiles::UiResponse::None
+    }
+
+    fn tab_title_for_pane(&mut self, pane: &View) -> egui::WidgetText {
+        pane.label().into()
+    }
+}
+
+impl MimirApp {
+    /// Render one view's body (the pre-#652 central
+    /// dispatch, now per dock pane).
+    fn show_view_pane(&mut self, ui: &mut egui::Ui, view: View) {
+        match view {
+            View::Dashboard => ui::dashboard::show(
+                ui,
+                &mut self.state,
+                &self.sde,
+                &self.resolver,
+                &mut self.portrait_textures,
+            ),
+            View::Characters => ui::characters::show(
+                ui,
+                &mut self.state,
+                &self.resolver,
+                &mut self.portrait_textures,
+            ),
+            View::Skills => {
+                ui::skills::show(ui, &mut self.state, &self.sde, &mut self.portrait_textures)
+            }
+            View::Wallet => ui::wallet::show(ui, &mut self.state, &self.resolver),
+            View::Assets => ui::assets::show(
+                ui,
+                &mut self.state,
+                &self.resolver,
+                &mut self.portrait_textures,
+            ),
+            View::Market => ui::market::show(
+                ui,
+                &mut self.state,
+                &self.resolver,
+                &mut self.portrait_textures,
+            ),
+            View::Industry => ui::industry::show(
+                ui,
+                &mut self.state,
+                &self.resolver,
+                self.industry_data.as_deref(),
+                self.fitting_types.as_deref(),
+            ),
+            View::Planets => ui::planets::show(
+                ui,
+                &mut self.state,
+                &self.resolver,
+                self.planet_schematics.as_deref(),
+            ),
+            View::Fittings => ui::fittings::show(
+                ui,
+                &mut self.state,
+                &self.resolver,
+                self.fitting_types.as_deref(),
+                &self.sde,
+                &mut self.portrait_textures,
+            ),
+            View::Settings => ui::settings::show(ui, &mut self.state),
+            View::Exploration => ui::exploration::show(ui, &mut self.state),
         }
     }
 }
@@ -7714,7 +8000,9 @@ mod tests {
         let mut app = MimirApp::new(true, Arc::new(Mutex::new(Vec::new())), None, None);
         let ctx = egui::Context::default();
         for view in View::ALL {
-            app.state.switch_view(view);
+            // Activate through the workspace dock so the
+            // view's pane is the visible one under test.
+            app.activate_view(view);
             let mut output = ctx.run_ui(shell_test_input(Vec::new()), |ui| {
                 app.show_shell(ui);
             });
@@ -7730,6 +8018,69 @@ mod tests {
                 view.label()
             );
         }
+    }
+
+    #[test]
+    fn quick_sight_and_workspace_keys_respect_text_focus_guard() {
+        // #652 focus guard regression: Cmd+K and Cmd+1..4
+        // must not fire while text input owns the keyboard,
+        // and must fire when it does not.
+        fn cmd_key(key: egui::Key) -> egui::Event {
+            egui::Event::Key {
+                key,
+                physical_key: None,
+                pressed: true,
+                repeat: false,
+                modifiers: egui::Modifiers {
+                    command: true,
+                    ctrl: true,
+                    mac_cmd: true,
+                    ..Default::default()
+                },
+            }
+        }
+        let mut app = MimirApp::new(true, Arc::new(Mutex::new(Vec::new())), None, None);
+        let ctx = egui::Context::default();
+        let frame = |app: &mut MimirApp, events: Vec<egui::Event>| {
+            // egui derives InputState.modifiers from the
+            // ModifiersChanged event stream, not per-event
+            // Key fields alone.
+            let mut with_mods = vec![egui::Event::ModifiersChanged(egui::Modifiers {
+                command: true,
+                ctrl: true,
+                mac_cmd: true,
+                ..Default::default()
+            })];
+            with_mods.extend(events);
+            let mut output = ctx.run_ui(shell_test_input(with_mods), |ui| {
+                app.show_shell(ui);
+            });
+            output.textures_delta.clear();
+        };
+        frame(&mut app, Vec::new());
+        // Typing: neither shortcut fires.
+        app.state.text_input_focused = true;
+        frame(&mut app, vec![cmd_key(egui::Key::K)]);
+        assert!(!app.quick_sight.open, "Cmd+K must not open while typing");
+        app.state.text_input_focused = true;
+        frame(&mut app, vec![cmd_key(egui::Key::Num2)]);
+        assert_eq!(
+            app.active_workspace,
+            ui::tiles::Workspace::CommandDeck,
+            "Cmd+2 must not switch workspace while typing"
+        );
+        // Not typing: both fire.
+        frame(&mut app, vec![cmd_key(egui::Key::Num2)]);
+        assert_eq!(app.active_workspace, ui::tiles::Workspace::FittingHangar);
+        frame(&mut app, vec![cmd_key(egui::Key::K)]);
+        assert!(
+            app.quick_sight.open,
+            "Cmd+K opens Quick-Sight when not typing"
+        );
+        assert!(
+            !app.quick_sight_index.is_empty(),
+            "opening builds the search index"
+        );
     }
 
     #[test]

@@ -4459,7 +4459,14 @@ fn fittings_import_controls_panel(
 ) {
     widgets::card(ui, |ui| {
         widgets::section_title(ui, "Import a fitting from EFT or DNA text");
-        ui.label("Paste an EFT block (the [Ship, Fitting name] text format) or a DNA fitting link (the single line of separated numbers the EVE client copies). The imported fitting stays in Mimir on this device unless you save it to EVE below, and it is gone when you switch characters or close Mimir.");
+        ui.horizontal(|ui| {
+            ui.label("Paste EFT or DNA text.");
+            widgets::provenance_popover(
+                ui,
+                "About imported fittings",
+                "Paste an EFT block (the [Ship, Fitting name] text format) or a DNA fitting link (the single line of separated numbers the EVE client copies). The imported fitting stays in Mimir on this device unless you save it to EVE below, and it is gone when you switch characters or close Mimir.",
+            );
+        });
         let Some(catalogue) = fitting_types else {
             ui.label("Could not import: Mimir's bundled item data failed to load. Restart Mimir and try again.");
             return;
@@ -4728,7 +4735,11 @@ fn show_saved_fitting_detail(
                 SavedCopyOutcome::Refused(reason) => apply_copied_refusal(state, reason),
             }
         }
-        ui.label("Editing a copy changes only the copy in Mimir and replaces the fitting above, if there is one. The saved fitting in EVE stays as it is, and saving the copy adds a new fitting.");
+        widgets::provenance_popover(
+            ui,
+            "About editing a copy",
+            "Editing a copy changes only the copy in Mimir and replaces the fitting above, if there is one. The saved fitting in EVE stays as it is, and saving the copy adds a new fitting.",
+        );
     }
     if render_write_in_flight(ui, state) {
         return;

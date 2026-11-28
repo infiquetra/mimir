@@ -296,13 +296,13 @@ fn render_ops_tile(ui: &mut egui::Ui, label: &str, metric: &OpsMetric, button_la
             ui.set_width(ui.available_width());
             ui.label(
                 egui::RichText::new(label)
-                    .size(11.5)
+                    .size(12.0)
                     .color(theme::TEXT_SECONDARY),
             );
             ui.add_space(2.0);
             ui.label(
                 egui::RichText::new(&metric.value)
-                    .size(15.0)
+                    .size(18.0)
                     .strong()
                     .color(metric.tone.color()),
             );
