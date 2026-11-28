@@ -161,3 +161,22 @@ CREATE INDEX IF NOT EXISTS idx_sde_solar_systems_region
     ON sde_solar_systems (region_id);
 CREATE INDEX IF NOT EXISTS idx_sde_stargates_system
     ON sde_stargates (system_id);
+-- Cross-character Pantry asset index (card #642). Additive only:
+-- one row per owned item instance across every linked character.
+-- Deleting a character cascades (foreign_keys pragma is ON in
+-- db::configure; delete_character also deletes explicitly).
+CREATE TABLE IF NOT EXISTS character_assets (
+    character_id INTEGER NOT NULL,
+    item_id INTEGER NOT NULL,
+    type_id INTEGER NOT NULL,
+    location_id INTEGER NOT NULL,
+    location_flag TEXT NOT NULL,
+    quantity INTEGER NOT NULL,
+    is_singleton INTEGER NOT NULL,
+    PRIMARY KEY (character_id, item_id),
+    FOREIGN KEY (character_id) REFERENCES characters(character_id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_character_assets_character
+    ON character_assets (character_id);
+CREATE INDEX IF NOT EXISTS idx_character_assets_type
+    ON character_assets (type_id);

@@ -69,6 +69,9 @@ fn configure(conn: &rusqlite::Connection) -> AppResult<()> {
     // locked" failures when refresh and render overlap.
     conn.pragma_update(None, "journal_mode", "WAL")?;
     conn.pragma_update(None, "synchronous", "NORMAL")?;
+    // SQLite ships with foreign-key enforcement OFF per connection;
+    // character_assets relies on ON DELETE CASCADE from characters.
+    conn.pragma_update(None, "foreign_keys", "ON")?;
     conn.busy_timeout(std::time::Duration::from_secs(5))?;
     Ok(())
 }

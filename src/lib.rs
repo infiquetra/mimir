@@ -20,6 +20,7 @@ pub mod esi;
 pub mod fitting;
 pub mod invention_calculator;
 pub mod names;
+pub mod pantry;
 pub mod portraits;
 pub mod production_chain;
 pub mod reaction_calculator;

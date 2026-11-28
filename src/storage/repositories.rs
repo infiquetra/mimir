@@ -242,6 +242,7 @@ pub fn delete_character(conn: &rusqlite::Connection, character_id: i64) -> AppRe
     tracing::info!("[CHAR] delete_character character_id={}", character_id);
     let tx = conn.unchecked_transaction()?;
     for table in [
+        "character_assets",
         "skill_plan_entries",
         "skill_plans",
         "skill_queue",
@@ -269,6 +270,115 @@ pub fn character_count(conn: &rusqlite::Connection) -> AppResult<i64> {
     tracing::debug!("[DB] character_count entry");
     let count: i64 = conn.query_row("SELECT COUNT(*) FROM characters", [], |r| r.get(0))?;
     Ok(count)
+}
+
+// ---------------------------------------------------------------------------
+// Character assets (Pantry index, card #642)
+// ---------------------------------------------------------------------------
+
+/// One persisted Pantry row: a single owned item instance.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct CharacterAssetRow {
+    pub character_id: i64,
+    pub item_id: i64,
+    pub type_id: i64,
+    pub location_id: i64,
+    pub location_flag: String,
+    pub quantity: i64,
+    pub is_singleton: bool,
+}
+
+/// Replace one character's Pantry rows atomically: a failed refresh
+/// never leaves a half-written asset list behind.
+pub fn replace_character_assets(
+    conn: &rusqlite::Connection,
+    character_id: i64,
+    rows: &[CharacterAssetRow],
+) -> AppResult<()> {
+    tracing::debug!(
+        "[PANTRY] replace_character_assets character_id={} count={}",
+        character_id,
+        rows.len()
+    );
+    let tx = conn.unchecked_transaction()?;
+    tx.execute(
+        "DELETE FROM character_assets WHERE character_id = ?1",
+        params![character_id],
+    )?;
+    {
+        let mut stmt = tx.prepare(
+            "INSERT INTO character_assets \
+             (character_id, item_id, type_id, location_id, location_flag, quantity, is_singleton) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+        )?;
+        for row in rows {
+            stmt.execute(params![
+                character_id,
+                row.item_id,
+                row.type_id,
+                row.location_id,
+                row.location_flag,
+                row.quantity,
+                row.is_singleton as i64
+            ])?;
+        }
+    }
+    tx.commit()?;
+    Ok(())
+}
+
+fn query_character_assets(
+    conn: &rusqlite::Connection,
+    sql: &str,
+    character_id: Option<i64>,
+) -> AppResult<Vec<CharacterAssetRow>> {
+    let mut stmt = conn.prepare(sql)?;
+    let map_row = |row: &rusqlite::Row<'_>| {
+        Ok(CharacterAssetRow {
+            character_id: row.get(0)?,
+            item_id: row.get(1)?,
+            type_id: row.get(2)?,
+            location_id: row.get(3)?,
+            location_flag: row.get(4)?,
+            quantity: row.get(5)?,
+            is_singleton: row.get::<_, i64>(6)? != 0,
+        })
+    };
+    let rows = match character_id {
+        Some(id) => stmt.query_map(params![id], map_row)?,
+        None => stmt.query_map([], map_row)?,
+    };
+    let mut out = Vec::new();
+    for row in rows {
+        out.push(row?);
+    }
+    Ok(out)
+}
+
+pub fn list_character_assets(
+    conn: &rusqlite::Connection,
+    character_id: i64,
+) -> AppResult<Vec<CharacterAssetRow>> {
+    tracing::debug!(
+        "[PANTRY] list_character_assets character_id={}",
+        character_id
+    );
+    query_character_assets(
+        conn,
+        "SELECT character_id, item_id, type_id, location_id, location_flag, quantity, is_singleton \
+         FROM character_assets WHERE character_id = ?1 ORDER BY item_id",
+        Some(character_id),
+    )
+}
+
+pub fn list_all_character_assets(conn: &rusqlite::Connection) -> AppResult<Vec<CharacterAssetRow>> {
+    tracing::debug!("[PANTRY] list_all_character_assets entry");
+    query_character_assets(
+        conn,
+        "SELECT character_id, item_id, type_id, location_id, location_flag, quantity, is_singleton \
+         FROM character_assets ORDER BY character_id, item_id",
+        None,
+    )
 }
 
 // ---------------------------------------------------------------------------
