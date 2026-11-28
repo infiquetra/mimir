@@ -38,6 +38,7 @@ arboard = "3.7"
 egui_tiles = "0.18"
 
 [dev-dependencies]
+egui_kittest = { version = "0.37", features = ["snapshot", "wgpu"] }
 tempfile = "3"
 # Test-only fixture signing (design J7): both already transitive via
 # jsonwebtoken/rust_crypto; pinned to the same majors. Never in release.

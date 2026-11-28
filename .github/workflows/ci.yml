@@ -50,10 +50,24 @@ jobs:
       - name: Install Linux GUI build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libxkbcommon-dev libwayland-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libdbus-1-dev pkg-config
+          sudo apt-get install -y libxkbcommon-dev libwayland-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libdbus-1-dev pkg-config mesa-vulkan-drivers
+
+      - name: Verify Muse skill bundle
+        run: python3 scripts/stage-muse-skills.py --check
 
       - name: Test
         run: cargo test
+
+      - name: UI kittest snapshots (Tier 1)
+        run: cargo test --test ui_kittest --locked
+
+      - name: Upload snapshot artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-snapshots
+          path: tests/snapshots/
+          if-no-files-found: ignore
 
       - name: Build
         run: cargo build

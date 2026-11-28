@@ -37,3 +37,8 @@ graphify-out/
 .cursor/*
 !.cursor/skills
 !.cursor/skills/**
+
+# egui_kittest snapshot by-products (goldens are committed)
+**/tests/snapshots/**/*.diff.png
+**/tests/snapshots/**/*.new.png
+**/tests/snapshots/**/*.old.png

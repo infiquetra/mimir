@@ -29,6 +29,16 @@
 
 ---
 
+## 2026-11-28
+
+### Headless kittest finds real unlabeled inputs, and layout rects are not rendered rects (#653)
+
+**Author.** Muse (card #653)
+**Evidence.** First structural run failed on Settings: three `TextInput` nodes (SDE base URL, EVE logs directory, log filter) had no accessible name; fixed by tying each field to its visible label with `Response::labelled_by` in `src/ui/settings.rs`. Dashboard AccessKit bounds for journal amounts extend past 1440px inside the horizontal scroll area, and egui emits inverted clip rects for hidden tab panes; both are layout/clip facts, not rendered overflow. The `wgpu` crate's `glow` package comes from `wgpu-hal` on `origin/main` already — `egui_glow` and `openssl-sys` remain absent from the tree.
+**Mechanism.** egui AccessKit bounds are unclipped layout rects, while paint shapes carry the clip rect that actually bounds rendering; a screen-contains assertion belongs on non-empty clip rects, not on scroll content. Text fields get their screen-reader name from `labelled_by` (or a placeholder), never from a neighbouring label alone.
+**Generalizable rule.** In kittest suites, assert names and raw-id patterns on AccessKit labels, finite layout rects on all nodes, and screen containment on paint clip rects; treat every unnamed interactive widget the harness reports as a product bug to fix at the call site, not a test to relax.
+**Refs.** `tests/ui_kittest/harness.rs` (`assert_structural`), `src/ui/settings.rs`, `src/app/shell.rs` (`show_shell_for_kittest`).
+
 ## 2026-11-21
 
 ### Single-flight write locks, spawn-time refetch generations, and atomic compare-and-save token rotation

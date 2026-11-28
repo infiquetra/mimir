@@ -1411,6 +1411,14 @@ impl MimirApp {
         self.tx.attach_ctx(ctx);
     }
 
+    /// Render one shell frame for the headless `egui_kittest`
+    /// harness (`tests/ui_kittest/`); production frames go
+    /// through `eframe::App::ui`, which needs a real `Frame`.
+    pub fn show_shell_for_kittest(&mut self, ui: &mut egui::Ui) {
+        tracing::debug!("[UI] kittest shell frame view={}", self.state.view.label());
+        self.show_shell(ui);
+    }
+
     /// Override the active view from CLI startup options (`--view`).
     pub fn apply_initial_view(&mut self, view: View) {
         tracing::info!(
