@@ -48,6 +48,9 @@ pub fn show_view(harness: &mut Harness<'_, MimirApp>, view: View) {
 }
 
 /// Per-card snapshot name, e.g. `card_653/dashboard_1440x900`.
+/// Downstream per-area suites use this; card_653 itself uses
+/// [`workspace_snapshot_name`].
+#[allow(dead_code)]
 pub fn snapshot_name(card: &str, view: View, size: (f32, f32)) -> String {
     format!(
         "{card}/{}_{}x{}",
@@ -77,20 +80,86 @@ pub fn contains_raw_eve_id(text: &str) -> bool {
     trimmed.len() >= 7 && trimmed.bytes().all(|b| b.is_ascii_digit())
 }
 
+/// Paint-layer clipped-bounds proof. For every clipped shape:
+/// a shape that is (partially) visible must lie inside the
+/// screen (extending past an interior scroll clip is normal;
+/// extending past the SCREEN edge is a cut-off widget), and
+/// a shape clipped entirely away is legitimate only when its
+/// clip is an interior scroll clip — when the clip covers the
+/// whole screen the shape was placed off-screen, not scrolled
+/// away. Returns `Err` describing the first violation so
+/// regression tests can assert failure without panic-catching.
+pub fn check_paint_bounds(
+    shapes: &[egui::epaint::ClippedShape],
+    size: (f32, f32),
+) -> Result<(), String> {
+    let screen = egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(size.0, size.1));
+    for clipped in shapes {
+        let clip = clipped.clip_rect;
+        // Inverted clip rects are egui's empty clip (hidden
+        // tab panes): they render nothing by design.
+        if clip.min.x > clip.max.x || clip.min.y > clip.max.y {
+            continue;
+        }
+        let bounds = clipped.shape.visual_bounding_rect();
+        if !bounds.is_finite() || bounds.is_negative() {
+            continue;
+        }
+        let visible = bounds.intersect(clip);
+        if visible.is_positive() {
+            // Overflow past an interior scroll clip is
+            // contained and legitimate; overflow past the
+            // SCREEN on a side where the clip itself reaches
+            // that screen edge means the window cuts the
+            // widget with nothing containing it.
+            let escapes = (bounds.max.x > screen.max.x + BOUNDS_TOLERANCE
+                && clip.max.x >= screen.max.x - BOUNDS_TOLERANCE)
+                || (bounds.min.x < screen.min.x - BOUNDS_TOLERANCE
+                    && clip.min.x <= screen.min.x + BOUNDS_TOLERANCE)
+                || (bounds.max.y > screen.max.y + BOUNDS_TOLERANCE
+                    && clip.max.y >= screen.max.y - BOUNDS_TOLERANCE)
+                || (bounds.min.y < screen.min.y - BOUNDS_TOLERANCE
+                    && clip.min.y <= screen.min.y + BOUNDS_TOLERANCE);
+            if escapes {
+                return Err(format!(
+                    "paint shape {bounds:?} is visible inside clip {clip:?} but escapes screen {screen:?} on an uncontained edge"
+                ));
+            }
+        } else if clip
+            .expand(BOUNDS_TOLERANCE)
+            .contains_rect(screen.shrink(1.0))
+        {
+            return Err(format!(
+                "paint shape {bounds:?} is placed entirely off-screen (clip {clip:?} covers the screen)"
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// Raw-EVE-id scan over painter text galleys: canvas-drawn
+/// text never reaches AccessKit, so the AccessKit label scan
+/// alone would miss painter-shown `#<digits>` strings.
+pub fn painter_texts(shapes: &[egui::epaint::ClippedShape]) -> Vec<String> {
+    let mut texts = Vec::new();
+    for clipped in shapes {
+        if let egui::Shape::Text(text) = &clipped.shape {
+            texts.push(text.galley.job.text.clone());
+        }
+    }
+    texts
+}
+
 /// Assert the cross-OS structural contract for the current frame:
 /// every interactive widget has an accessible name (the harness
-/// accessibility check panics otherwise), every paint clip rect
-/// stays inside the screen rect (within [`BOUNDS_TOLERANCE`]),
-/// and no AccessKit name or value carries a raw EVE identifier.
-/// AccessKit bounds are unclipped layout rects: scroll-area and
-/// tile-pane content legitimately extends past the screen, so
-/// rendered bounds are proven at the paint layer (every non-empty
-/// clip rect inside the screen) while AccessKit rects must only
-/// be finite.
+/// accessibility check panics otherwise), paint bounds obey
+/// [`check_paint_bounds`], and no AccessKit name/value or
+/// painter text carries a raw EVE identifier. AccessKit bounds
+/// are unclipped layout rects (scroll content legitimately
+/// extends past the screen), so they must only be finite;
+/// rendered clipping is proven at the paint layer.
 pub fn assert_structural(harness: &Harness<'_, MimirApp>, view: View, size: (f32, f32)) {
     harness.check_accessibility();
-    let screen = egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(size.0, size.1));
-    let allowed = screen.expand(BOUNDS_TOLERANCE);
 
     let root = harness.root();
     let mut nodes = 0usize;
@@ -173,28 +242,27 @@ pub fn assert_structural(harness: &Harness<'_, MimirApp>, view: View, size: (f32
         view.label()
     );
 
-    // Paint-level clipped bounds: every clipped shape must be
-    // clipped to a rect inside the screen (same tolerance).
+    // Paint-level clipped bounds + painter raw-id scan.
     assert!(
         !harness.output().shapes.is_empty(),
         "[UI_KITTEST] view {} produced no paint shapes",
         view.label()
     );
-    for clipped in &harness.output().shapes {
-        // Inverted clip rects are egui's empty clip (hidden tab
-        // panes): they render nothing, so they cannot clip out.
-        if clipped.clip_rect.min.x > clipped.clip_rect.max.x
-            || clipped.clip_rect.min.y > clipped.clip_rect.max.y
-        {
-            continue;
-        }
-        assert!(
-            allowed.contains_rect(clipped.clip_rect),
-            "[UI_KITTEST] view {} at {}x{}: paint clip rect {:?} escapes screen {screen:?} beyond {BOUNDS_TOLERANCE}pt tolerance",
+    if let Err(violation) = check_paint_bounds(&harness.output().shapes, size) {
+        panic!(
+            "[UI_KITTEST] view {} at {}x{}: {violation}",
             view.label(),
             size.0,
-            size.1,
-            clipped.clip_rect
+            size.1
+        );
+    }
+    for text in painter_texts(&harness.output().shapes) {
+        assert!(
+            !contains_raw_eve_id(&text),
+            "[UI_KITTEST] view {} at {}x{}: painter text {text:?} looks like a raw EVE id",
+            view.label(),
+            size.0,
+            size.1
         );
     }
 }

@@ -97,7 +97,7 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState, resolver: &NameResolver) {
     let snapshot = state.wallet.clone();
     match snapshot {
         LoadState::Ready(w) => {
-            let now = Utc::now();
+            let now = state.now_utc();
             if w.journal.is_empty() && w.transactions.is_empty() {
                 widgets::card(ui, |ui| {
                     ui.label(widgets::numeric_text(format!(

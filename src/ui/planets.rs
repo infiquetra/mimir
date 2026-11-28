@@ -595,7 +595,7 @@ fn show_detail_section(
         Err(error) => section_error_label(ui, "colony detail", error, panel_shown),
         Ok(detail) => {
             let pins = &detail.pins;
-            let now = Utc::now();
+            let now = state.now_utc();
             let reported_pins = match &bundle.colonies {
                 Ok(colonies) => colonies
                     .iter()

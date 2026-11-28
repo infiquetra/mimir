@@ -394,7 +394,7 @@ pub fn show(
     }
 
     // --- Top KPI summary row ---
-    let now = Utc::now();
+    let now = state.now_utc();
     let active_id = state.active_character_id;
     let active_balance = state.wallet.as_ready().map(|w| w.balance);
     let combined = combined_wallet_balance(
@@ -817,7 +817,7 @@ mod tests {
     #[test]
     fn character_training_cells_distinguishes_unloaded_empty_queue_and_active_training() {
         let sde = Sde::load_bundled().expect("bundled SDE loads");
-        let now = Utc::now();
+        let now = AppState::new(true).now_utc();
 
         let (tr, tr_m, fin, fin_m) = character_training_cells(None, None, &sde, now);
         assert_eq!(
@@ -890,7 +890,7 @@ mod tests {
     fn operations_snapshot_handles_loading_empty_and_reauthorize_states() {
         use crate::app::state::{FittingsData, IndustryData, PlanetaryData, SectionError};
 
-        let now = Utc::now();
+        let now = AppState::new(true).now_utc();
         let loading_state = AppState::new(false);
         let ops = operations_snapshot(&loading_state, now);
         assert_eq!(ops.industry.value, "Loading...");
@@ -940,7 +940,7 @@ mod tests {
         use crate::esi::models::{CharacterSkills, SkillQueueItem};
 
         let sde = Sde::load_bundled().expect("bundled SDE loads");
-        let now = Utc::now();
+        let now = AppState::new(true).now_utc();
         let finished_skill_id = 3300;
         let running_skill_id = 3301;
         let stale_summary = CharacterSummary {
