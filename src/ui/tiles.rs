@@ -80,7 +80,7 @@ impl Workspace {
     pub fn for_view(view: View) -> Workspace {
         match view {
             View::Dashboard | View::Characters | View::Wallet => Workspace::CommandDeck,
-            View::Fittings | View::Assets => Workspace::FittingHangar,
+            View::Fittings | View::Assets | View::Pantry => Workspace::FittingHangar,
             View::Industry | View::Planets | View::Market => Workspace::IndustryTrade,
             View::Exploration | View::Skills | View::Settings => Workspace::ExplorationOps,
         }
@@ -92,7 +92,7 @@ impl Workspace {
     pub fn preset_views(&self) -> &'static [View] {
         match self {
             Workspace::CommandDeck => &[View::Dashboard, View::Characters, View::Wallet],
-            Workspace::FittingHangar => &[View::Fittings, View::Assets],
+            Workspace::FittingHangar => &[View::Fittings, View::Assets, View::Pantry],
             Workspace::IndustryTrade => &[View::Industry, View::Planets, View::Market],
             Workspace::ExplorationOps => &[View::Exploration, View::Skills, View::Settings],
         }

@@ -1256,6 +1256,25 @@ impl MimirApp {
                             }
                             state.active_character_id = active;
                             state.characters = rows;
+                            match repositories::list_all_character_assets(&conn) {
+                                Ok(asset_rows) => {
+                                    tracing::debug!(
+                                        "[PANTRY] loaded persisted stockpile rows={}",
+                                        asset_rows.len()
+                                    );
+                                    state.pantry =
+                                        LoadState::Ready(crate::pantry::PantrySnapshot {
+                                            items: asset_rows
+                                                .iter()
+                                                .map(crate::pantry::indexer::PantryItem::from_row)
+                                                .collect(),
+                                            step_up_character_ids: Vec::new(),
+                                        });
+                                }
+                                Err(e) => {
+                                    tracing::warn!("[PANTRY] stockpile load failed: {}", e)
+                                }
+                            }
                         }
                         Err(e) => tracing::warn!("[CHAR] list_characters failed: {}", e),
                     }
@@ -2188,6 +2207,50 @@ impl MimirApp {
                         });
                         match assets {
                             Ok(data) => {
+                                // Pantry ingestion (card #642): persist the
+                                // landed assets and reload the cross-character
+                                // snapshot. Short DB lock only, never across
+                                // an await; demo never reaches this arm.
+                                if crate::pantry::should_persist_pantry(self.state.demo) {
+                                    if let Some(backends) = &self.backends {
+                                        let pantry_items: Vec<crate::pantry::indexer::PantryItem> =
+                                            data.items
+                                                .iter()
+                                                .map(|item| {
+                                                    crate::pantry::indexer::PantryItem::from_asset(
+                                                        character_id,
+                                                        item,
+                                                    )
+                                                })
+                                                .collect();
+                                        match crate::pantry::persist_and_reload(
+                                            &backends.db,
+                                            character_id,
+                                            &pantry_items,
+                                        ) {
+                                            Ok(mut snapshot) => {
+                                                snapshot.step_up_character_ids =
+                                                    match &self.state.pantry {
+                                                        LoadState::Ready(previous) => previous
+                                                            .step_up_character_ids
+                                                            .iter()
+                                                            .copied()
+                                                            .filter(|id| *id != character_id)
+                                                            .collect(),
+                                                        _ => Vec::new(),
+                                                    };
+                                                self.state.pantry = LoadState::Ready(snapshot);
+                                            }
+                                            Err(e) => {
+                                                tracing::warn!(
+                                                    "[PANTRY] persist failed character_id={} error={}",
+                                                    character_id,
+                                                    e
+                                                );
+                                            }
+                                        }
+                                    }
+                                }
                                 self.state.assets = LoadState::Ready(*data);
                                 self.state.assets_needs_reauthorize = false;
                             }
@@ -2196,6 +2259,17 @@ impl MimirApp {
                                 // stale rows rather than present them current.
                                 self.state.assets = LoadState::Error(message);
                                 self.state.assets_needs_reauthorize = true;
+                                // Pantry keeps every authorized character and
+                                // badges only the one missing the scope.
+                                let mut snapshot = match self.state.pantry.clone() {
+                                    LoadState::Ready(previous) => previous,
+                                    _ => crate::pantry::PantrySnapshot::default(),
+                                };
+                                if !snapshot.step_up_character_ids.contains(&character_id) {
+                                    snapshot.step_up_character_ids.push(character_id);
+                                    snapshot.step_up_character_ids.sort_unstable();
+                                }
+                                self.state.pantry = LoadState::Ready(snapshot);
                             }
                             Err(message) => {
                                 self.state.assets_needs_reauthorize = false;
@@ -5631,6 +5705,12 @@ impl MimirApp {
             ),
             View::Settings => ui::settings::show(ui, &mut self.state),
             View::Exploration => ui::exploration::show(ui, &mut self.state),
+            View::Pantry => ui::pantry::show(
+                ui,
+                &mut self.state,
+                &self.resolver,
+                &mut self.portrait_textures,
+            ),
         }
     }
 }
@@ -6236,11 +6316,14 @@ mod tests {
         assert_eq!(view_key_hint(View::Fittings), "9");
         assert_eq!(view_key_hint(View::Settings), "0");
         assert_eq!(view_key_hint(View::Exploration), "E");
+        // Views past the eleventh keep the placeholder: index-based
+        // keys give Pantry no digit (card #642).
+        assert_eq!(view_key_hint(View::Pantry), "\u{b7}");
         let mut hints: Vec<&str> = View::ALL.iter().map(|v| view_key_hint(*v)).collect();
-        assert_eq!(hints.len(), 11);
+        assert_eq!(hints.len(), 12);
         hints.sort_unstable();
         hints.dedup();
-        assert_eq!(hints.len(), 11, "every view hint is unique");
+        assert_eq!(hints.len(), 12, "every view hint is unique");
     }
 
     #[test]
@@ -8057,7 +8140,7 @@ mod tests {
 
     #[test]
     fn full_shell_smoke_renders_every_view_without_panic() {
-        assert_eq!(View::ALL.len(), 11);
+        assert_eq!(View::ALL.len(), 12);
         let mut app = MimirApp::new(true, Arc::new(Mutex::new(Vec::new())), None, None);
         let ctx = egui::Context::default();
         for view in View::ALL {

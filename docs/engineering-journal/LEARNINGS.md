@@ -38,6 +38,16 @@
 **Mechanism.** egui AccessKit bounds are unclipped layout rects, while paint shapes carry both their visual bounding rect and the clip that bounds rendering. A real clipped-bounds proof compares the shape's own rect against its clip and the screen: visible shapes must lie inside the screen, and fully-clipped shapes are legitimate only behind interior scroll clips. Text fields get their screen-reader name from `labelled_by` (or a placeholder), never from a neighbouring label alone.
 **Generalizable rule.** In kittest suites, assert names and raw-id patterns on AccessKit labels AND painter text galleys, finite layout rects on all nodes, and shape-vs-clip-vs-screen containment at the paint layer; mutation-test every new checker with a deliberately broken widget, and treat every unnamed interactive widget the harness reports as a product bug to fix at the call site, not a test to relax.
 **Refs.** `tests/ui_kittest/harness.rs` (`assert_structural`), `src/ui/settings.rs`, `src/app/shell.rs` (`show_shell_for_kittest`).
+### Pantry 25,000-row filter budget is met by index split plus trigram prefilter, not faster string scans
+
+**Author.** builder-muse (Wave 2B, card #642)
+**Context.** The Pantry virtualization bench requires filtering a 25,000-row synthetic stockpile in under 2.0 ms (best of N) inside the debug `cargo test` binary, where naive per-row string work measures far over budget (~40 ms for cached-name scans, ~10 ms just to sort 25,000 `i64` keys).
+**Evidence.** `src/pantry/indexer.rs` (`build_display_rows`, `filter_row_indices`, `trigram_mask`), `src/pantry/mod.rs` (`pantry::virtualization_bench::filters_and_sorts_25000_rows_under_2ms_best_of_n`, mirrors the Quick-Sight best-of-N pattern in `src/ui/quick_sight.rs`).
+**Mechanism.** Row building (name resolution, sort, lowercase search keys, byte-trigram masks) happens once per snapshot; per-keystroke filtering then rejects most rows with one integer AND on a 64-bit trigram Bloom mask and verifies only candidates with the exact substring scan, so results stay exact while per-row cost drops to a few integer ops.
+**Fix.** Split row preparation into `build_display_rows` (snapshot landing) plus `filter_row_indices` (per keystroke), and added the trigram prefilter; the `egui_table` delegate renders only visible index ranges and queues at most 100 new type icons per frame.
+**Validation.** `cargo test --locked pantry` — 14 passed including the bench (best of 9 under the 2.0 ms budget), indexer/readiness/demo-isolation suites green.
+**Generalizable rule.** In debug egui test binaries, meet frame budgets by moving string work to build time and rejecting rows with integer masks; never try to out-optimize per-row string scans at opt-level 0.
+**Refs.** Issue #642; `docs/engineering-journal/DECISIONS.md` (Assets truncation history).
 
 ## 2026-11-21
 

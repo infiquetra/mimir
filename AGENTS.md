@@ -60,7 +60,7 @@ Key directories:
 
 ## Repo-Specific Invariants
 
-1. **Tracing logs**: Every code change MUST include appropriate `tracing` debug logging with a bracketed feature tag from `LOG_TAGS`: `[AUTH]`, `[ESI]`, `[ASSETS]`, `[WALLET]`, `[SKILLS]`, `[CHAR]`, `[MARKET]`, `[INDUSTRY]`, `[PI]`, `[FITTING]`, `[EXPLORE]`, `[DB]`, `[DEMO]`, `[PORTRAIT]`, `[UI]`, `[STARTUP]`, `[PLANS]`, `[SDE]`, `[DAEMON]`. Never log access/refresh tokens, API keys, or CSRF state values.
+1. **Tracing logs**: Every code change MUST include appropriate `tracing` debug logging with a bracketed feature tag from `LOG_TAGS`: `[AUTH]`, `[ESI]`, `[ASSETS]`, `[WALLET]`, `[SKILLS]`, `[CHAR]`, `[MARKET]`, `[INDUSTRY]`, `[PI]`, `[FITTING]`, `[EXPLORE]`, `[DB]`, `[DEMO]`, `[PORTRAIT]`, `[UI]`, `[STARTUP]`, `[PLANS]`, `[SDE]`, `[DAEMON]`, `[PANTRY]`. Never log access/refresh tokens, API keys, or CSRF state values.
 2. **EVE ID resolution**: Never display raw numeric EVE IDs in UI or logs. Use `Sde::skill_name` / `Sde::skill_name_quiet` for skills and `NameResolver` (`name` -> `Unknown Item`, `location_name` -> `Unknown Location`) otherwise.
 3. **Async/UI discipline**: Keep `AppState` transitions atomic on character switches, removals, and demo exit so stale character data cannot bleed across characters or into live SQLite.
 4. **Keyboard focus and text input**: Gate single-key navigation (`1`-`9`, `0`, `E`, `/`, PageUp/PageDown) with `self.state.text_input_focused || ctx.wants_keyboard_input()`.
