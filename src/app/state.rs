@@ -993,6 +993,10 @@ pub struct AppState {
     // u64 hash of the last-seen text), and the suggestion carries
     // only the typed `ClipboardKind`. Log events are session-only.
     pub daemon_logs_enabled: bool,
+    /// Set when the Settings logs toggle changes; the shell persists
+    /// it through `app_settings` in live mode only. Clipboard opt-in
+    /// has no such flag: it stays session-only and defaults off.
+    pub daemon_logs_enabled_persist_requested: bool,
     pub clipboard_opt_in: bool,
     pub eve_logs_dir: String,
     pub eve_logs_dir_persist_requested: bool,
@@ -1698,6 +1702,11 @@ impl AppState {
         self.market_lookup_requested = None;
         self.sde_sync_requested = false;
         self.clipboard_suggestion = None;
+        self.clipboard_last_hash = 0;
+        // Live log bodies/speakers and counts must not bleed into
+        // demo (or back into live) across a mode switch.
+        self.recent_log_events.clear();
+        self.daemon_event_count = 0;
         self.focus_search = false;
     }
 
@@ -4584,5 +4593,30 @@ mod tests {
         state.reset_for_mode_switch();
         assert!(state.fittings_write_in_flight.is_some());
         assert_eq!(state.fittings_write_generation, 7);
+    }
+
+    #[test]
+    fn reset_for_mode_switch_clears_daemon_log_state() {
+        let mut state = AppState::new(false);
+        state.push_log_event(crate::daemon::LogEvent {
+            source: crate::daemon::LogSource::GameLog,
+            kind: crate::daemon::LogEventKind::Combat,
+            timestamp: None,
+            listener: Some("Jane Capsuleer".to_string()),
+            channel: None,
+            speaker: None,
+            body: "live hit".to_string(),
+        });
+        state.clipboard_suggestion = Some(crate::daemon::ClipboardKind::ShipDna {
+            ship: "Rifter".to_string(),
+        });
+        state.clipboard_last_hash = 42;
+        assert_eq!(state.daemon_event_count, 1);
+        assert_eq!(state.recent_log_events.len(), 1);
+        state.reset_for_mode_switch();
+        assert!(state.recent_log_events.is_empty());
+        assert_eq!(state.daemon_event_count, 0);
+        assert!(state.clipboard_suggestion.is_none());
+        assert_eq!(state.clipboard_last_hash, 0);
     }
 }

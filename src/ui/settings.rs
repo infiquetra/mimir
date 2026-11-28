@@ -198,6 +198,7 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
                 logs_enabled
             );
             state.daemon_logs_enabled = logs_enabled;
+            state.daemon_logs_enabled_persist_requested = true;
         }
         if state.demo {
             ui.label("Demo mode: log watcher and clipboard monitoring are off.");
@@ -243,7 +244,8 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
             egui::RichText::new(
                 "Privacy: clipboard text is classified in memory only. It is never \
                  logged, never saved, and only a recognized fit/scan shows as a \
-                 dismissible suggestion - it never overwrites an open fitting.",
+                 dismissible suggestion - it never overwrites an open fitting. \
+                 The Watch EVE logs choice is saved; clipboard opt-in is session-only.",
             )
             .color(super::theme::TEXT_SECONDARY),
         );

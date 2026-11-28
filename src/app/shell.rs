@@ -21,7 +21,7 @@ use crate::auth::oauth;
 use crate::auth::token_store::{StoredTokens, TokenStore};
 use crate::config::EveConfig;
 use crate::daemon::{
-    clipboard_text_hash, poll_clipboard_once, ClipboardGuard, ClipboardKind, LogWatcher,
+    clipboard_text_hash, poll_clipboard_once, ClipboardGuard, ClipboardKind, LogEvent, LogWatcher,
 };
 use crate::demo::data::DemoBundle;
 use crate::esi::endpoints::{self, WriteFailureClass};
@@ -221,6 +221,10 @@ enum BackendMsg {
     SdeSynced {
         summary: Result<SdeSyncSummary, String>,
     },
+    /// One EVE log line from the log-worker thread (card #655).
+    LogEvent(LogEvent),
+    /// Human-readable daemon status label from the log-worker thread.
+    DaemonStatus(String),
 }
 
 /// Outcome of one background SDE sync, carried by `BackendMsg::SdeSynced`.
@@ -248,6 +252,32 @@ fn should_run_log_watcher(demo: bool, logs_enabled: bool) -> bool {
 fn eve_log_subdirs(logs_dir: &str) -> (PathBuf, PathBuf) {
     let base = PathBuf::from(logs_dir.trim());
     (base.join("Gamelogs"), base.join("Chatlogs"))
+}
+
+/// Handle for the dedicated EVE log-worker thread (card #655).
+/// The thread owns the `LogWatcher`/`LogTailer`, reads files off the
+/// UI thread, and forwards lines as `BackendMsg::LogEvent` through
+/// `BackendSender` (which repaints). Stopping sets the flag the
+/// worker checks at least every 200 ms, then joins it: bounded.
+struct LogWorker {
+    stop: Arc<std::sync::atomic::AtomicBool>,
+    handle: Option<std::thread::JoinHandle<()>>,
+    dir: String,
+}
+
+impl LogWorker {
+    fn stop_and_join(&mut self) {
+        self.stop.store(true, std::sync::atomic::Ordering::SeqCst);
+        if let Some(handle) = self.handle.take() {
+            let _ = handle.join();
+        }
+    }
+}
+
+impl Drop for LogWorker {
+    fn drop(&mut self) {
+        self.stop_and_join();
+    }
 }
 
 /// Dismiss the clipboard suggestion without importing anything; a
@@ -293,11 +323,15 @@ pub struct MimirApp {
     persisted_startup_view: Option<String>,
     persisted_sde_base_url: Option<String>,
     persisted_eve_logs_dir: Option<String>,
-    /// Live EVE log watcher (card #655). `None` in demo mode, when
-    /// log watching is disabled, or before the first start. Polled
-    /// synchronously on the repaint cadence; holds no DB lock.
-    log_watcher: Option<LogWatcher>,
-    log_watcher_dir: Option<String>,
+    persisted_daemon_logs_enabled: Option<String>,
+    /// Live EVE log worker thread (card #655). `None` in demo mode,
+    /// when log watching is disabled, or before the first start.
+    /// Owns the watcher on its own thread; holds no DB lock.
+    log_worker: Option<LogWorker>,
+    /// EVE logs directory the worker was last committed to: the
+    /// persisted (lost_focus/Enter) value, never the live keystrokes
+    /// in the Settings text field.
+    committed_eve_logs_dir: Option<String>,
     /// Lazily created OS clipboard handle: constructed only when
     /// the clipboard guard may poll (live + opt-in), never in demo.
     clipboard: Option<arboard::Clipboard>,
@@ -1138,6 +1172,7 @@ impl MimirApp {
         let mut persisted_startup_view: Option<String> = None;
         let mut persisted_sde_base_url: Option<String> = None;
         let mut persisted_eve_logs_dir: Option<String> = None;
+        let mut persisted_daemon_logs_enabled: Option<String> = None;
         if let Some(b) = &backends {
             if let Ok(conn) = b.db.lock() {
                 // Demo data stays in memory from the bundled fixtures; it is
@@ -1228,6 +1263,13 @@ impl MimirApp {
                             state.eve_logs_dir = saved;
                         }
                     }
+                    if let Ok(saved) = repositories::get_setting(&conn, "daemon_logs_enabled") {
+                        persisted_daemon_logs_enabled = saved.clone();
+                        if let Some(saved) = saved {
+                            tracing::info!("[DAEMON] applying saved log watcher preference");
+                            state.daemon_logs_enabled = saved == "true";
+                        }
+                    }
                 }
             }
             if !demo {
@@ -1285,8 +1327,9 @@ impl MimirApp {
             persisted_startup_view,
             persisted_sde_base_url,
             persisted_eve_logs_dir,
-            log_watcher: None,
-            log_watcher_dir: None,
+            persisted_daemon_logs_enabled,
+            log_worker: None,
+            committed_eve_logs_dir: None,
             clipboard: None,
             last_clipboard_poll: None,
             auth_task: None,
@@ -2383,6 +2426,21 @@ impl MimirApp {
                         }
                     }
                 }
+                BackendMsg::LogEvent(event) => {
+                    if self.state.demo {
+                        tracing::debug!("[DAEMON] dropping log event in demo mode");
+                        continue;
+                    }
+                    tracing::debug!("[DAEMON] log event drained kind={:?}", event.kind);
+                    self.state.push_log_event(event);
+                }
+                BackendMsg::DaemonStatus(label) => {
+                    if self.state.demo {
+                        continue;
+                    }
+                    tracing::debug!("[DAEMON] daemon status update");
+                    self.state.daemon_status = label;
+                }
             }
         }
         // Drain logout/delete FIRST so any active-character promotion runs
@@ -2474,6 +2532,12 @@ impl MimirApp {
                             self.persisted_eve_logs_dir = saved.clone();
                             if let Some(saved) = saved {
                                 self.state.eve_logs_dir = saved;
+                            }
+                        }
+                        if let Ok(saved) = repositories::get_setting(&conn, "daemon_logs_enabled") {
+                            self.persisted_daemon_logs_enabled = saved.clone();
+                            if let Some(saved) = saved {
+                                self.state.daemon_logs_enabled = saved == "true";
                             }
                         }
                         if let Ok(build) = local_build_number(&conn) {
@@ -2779,16 +2843,105 @@ impl MimirApp {
         }
     }
 
-    /// Drive the log watcher and clipboard poller for this frame.
-    /// Synchronous polling on the repaint cadence: no async, no DB
-    /// lock anywhere in the daemon path. Demo mode is a hard off:
-    /// watcher dropped, clipboard handle dropped, suggestion cleared.
+    fn persist_daemon_logs_enabled_if_changed(&mut self) {
+        if !self.state.daemon_logs_enabled_persist_requested {
+            return;
+        }
+        self.state.daemon_logs_enabled_persist_requested = false;
+        if self.state.demo || self.last_demo_mode {
+            return;
+        }
+        let value = if self.state.daemon_logs_enabled {
+            "true"
+        } else {
+            "false"
+        };
+        if self.persisted_daemon_logs_enabled.as_deref() == Some(value) {
+            return;
+        }
+        if let Some(backends) = self.backends.as_ref() {
+            if let Ok(conn) = backends.db.lock() {
+                if repositories::set_setting(&conn, "daemon_logs_enabled", value).is_ok() {
+                    tracing::debug!("[DAEMON] persisted log watcher preference");
+                    self.persisted_daemon_logs_enabled = Some(value.to_string());
+                }
+            }
+        }
+    }
+
+    /// Spawn the log-worker thread for `dir` (committed value only).
+    fn spawn_log_worker(&mut self, dir: &str) {
+        let (gamelogs, chatlogs) = eve_log_subdirs(dir);
+        let stop = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let worker_stop = stop.clone();
+        let tx = self.tx.clone();
+        tracing::info!("[DAEMON] log watcher starting");
+        let handle = std::thread::Builder::new()
+            .name("alidade-log-watcher".to_string())
+            .spawn(move || {
+                let mut watcher = LogWatcher::start(&gamelogs, &chatlogs);
+                tx.send(BackendMsg::DaemonStatus(
+                    watcher.status().label().to_string(),
+                ));
+                let mut last_status = watcher.status().clone();
+                let mut last_fallback = Instant::now();
+                while !worker_stop.load(std::sync::atomic::Ordering::SeqCst) {
+                    // Wait on notify (200 ms slices so the stop flag
+                    // bounds join time); read only affected files.
+                    let events = watcher.poll_notified(Duration::from_millis(200));
+                    for event in events {
+                        tx.send(BackendMsg::LogEvent(event));
+                    }
+                    if watcher.status() != &last_status {
+                        last_status = watcher.status().clone();
+                        tx.send(BackendMsg::DaemonStatus(
+                            watcher.status().label().to_string(),
+                        ));
+                    }
+                    // Slow fallback rescan on the worker only (covers
+                    // missed notifications and folders appearing
+                    // later); quiet/missing folders send nothing and
+                    // never wake the UI.
+                    if last_fallback.elapsed() >= Duration::from_secs(2) {
+                        last_fallback = Instant::now();
+                        let events = watcher.poll_once();
+                        for event in events {
+                            tx.send(BackendMsg::LogEvent(event));
+                        }
+                        if watcher.status() != &last_status {
+                            last_status = watcher.status().clone();
+                            tx.send(BackendMsg::DaemonStatus(
+                                watcher.status().label().to_string(),
+                            ));
+                        }
+                    }
+                }
+                tracing::info!("[DAEMON] log watcher thread stopped");
+            })
+            .ok();
+        self.log_worker = Some(LogWorker {
+            stop,
+            handle,
+            dir: dir.to_string(),
+        });
+    }
+
+    fn stop_log_worker(&mut self) {
+        if let Some(mut worker) = self.log_worker.take() {
+            worker.stop_and_join();
+        }
+    }
+
+    /// Reconcile the log-worker thread and clipboard poller for this
+    /// frame. No file I/O and no DB lock in the daemon path on the UI
+    /// thread: the worker owns the watcher, the UI only spawns/stops
+    /// it and drains `BackendMsg::LogEvent`. Demo mode is a hard off:
+    /// worker stopped and joined, handle dropped, suggestion cleared.
     fn sync_daemon_state(&mut self) {
         if self.state.demo {
-            if self.log_watcher.is_some() {
+            if self.log_worker.is_some() {
                 tracing::info!("[DAEMON] log watcher stopped: demo mode");
-                self.log_watcher = None;
-                self.log_watcher_dir = None;
+                self.stop_log_worker();
             }
             self.clipboard = None;
             self.state.clipboard_suggestion = None;
@@ -2800,42 +2953,51 @@ impl MimirApp {
             self.clipboard = None;
             self.state.clipboard_suggestion = None;
         }
-        let dir = self.state.eve_logs_dir.trim().to_string();
-        if should_run_log_watcher(false, self.state.daemon_logs_enabled) {
-            let need_start = match &self.log_watcher {
+        // Committed directory: updated only on the Settings
+        // edit-finished signal (lost_focus/Enter, persisted like the
+        // SDE base URL), never per keystroke.
+        if self.state.eve_logs_dir_persist_requested {
+            let committed = self.state.eve_logs_dir.trim().to_string();
+            let committed = if committed.is_empty() {
+                crate::daemon::default_eve_logs_dir()
+                    .to_string_lossy()
+                    .into_owned()
+            } else {
+                committed
+            };
+            tracing::debug!("[DAEMON] committed EVE logs directory changed");
+            self.committed_eve_logs_dir = Some(committed);
+        } else if self.committed_eve_logs_dir.is_none() {
+            self.committed_eve_logs_dir = Some(self.state.eve_logs_dir.trim().to_string());
+        }
+        let committed_dir = self.committed_eve_logs_dir.clone().unwrap_or_default();
+        if should_run_log_watcher(false, self.state.daemon_logs_enabled)
+            && !committed_dir.is_empty()
+        {
+            let need_start = match &self.log_worker {
                 None => true,
-                Some(_) => self.log_watcher_dir.as_deref() != Some(dir.as_str()),
+                Some(worker) => worker.dir != committed_dir,
             };
             if need_start {
-                let (gamelogs, chatlogs) = eve_log_subdirs(&dir);
-                tracing::info!("[DAEMON] log watcher starting");
-                let watcher = LogWatcher::start(&gamelogs, &chatlogs);
-                self.state.daemon_status = watcher.status().label().to_string();
-                self.log_watcher = Some(watcher);
-                self.log_watcher_dir = Some(dir.clone());
+                self.stop_log_worker();
+                self.spawn_log_worker(&committed_dir);
             }
-        } else if self.log_watcher.is_some() {
+        } else if self.log_worker.is_some() {
             tracing::info!("[DAEMON] log watcher stopped: disabled in Settings");
-            self.log_watcher = None;
-            self.log_watcher_dir = None;
+            self.stop_log_worker();
             self.state.daemon_status = "Log watcher off.".to_string();
-        }
-        if let Some(watcher) = &mut self.log_watcher {
-            let events = watcher.poll_once();
-            if !events.is_empty() {
-                // Counts and variants only: never log bodies or names.
-                tracing::debug!("[DAEMON] log events drained count={}", events.len());
-                for event in events {
-                    self.state.push_log_event(event);
-                }
-            }
-            self.state.daemon_status = watcher.status().label().to_string();
         }
         let guard = ClipboardGuard {
             demo: false,
             clipboard_opt_in: self.state.clipboard_opt_in,
         };
         if guard.may_poll() {
+            // Catalogue for validated classification: already loaded
+            // at startup; load bundled once lazily if it failed then.
+            if self.fitting_types.is_none() {
+                tracing::debug!("[DAEMON] loading bundled fitting types for clipboard");
+                self.fitting_types = fitting_types_load(FittingTypes::load_bundled());
+            }
             if self.clipboard.is_none() {
                 self.clipboard = arboard::Clipboard::new().ok();
             }
@@ -2845,10 +3007,12 @@ impl MimirApp {
                 .unwrap_or(true);
             if due {
                 self.last_clipboard_poll = Some(Instant::now());
-                if let Some(clipboard) = &mut self.clipboard {
+                if let (Some(clipboard), Some(types)) =
+                    (&mut self.clipboard, self.fitting_types.clone())
+                {
                     let last_hash = self.state.clipboard_last_hash;
                     let mut new_hash: Option<u64> = None;
-                    let kind = poll_clipboard_once(guard, || {
+                    let kind = poll_clipboard_once(guard, &types, || {
                         let text = clipboard.get_text().ok()?;
                         let hash = clipboard_text_hash(&text);
                         if hash == last_hash {
@@ -4704,7 +4868,7 @@ impl MimirApp {
     }
 
     fn needs_tick(&self) -> bool {
-        if self.log_watcher.is_some() || (!self.state.demo && self.state.clipboard_opt_in) {
+        if !self.state.demo && self.state.clipboard_opt_in {
             return true;
         }
         if self.state.auth.is_busy() {
@@ -4810,6 +4974,7 @@ impl MimirApp {
         self.persist_startup_view_if_changed();
         self.persist_sde_base_url_if_changed();
         self.persist_eve_logs_dir_if_changed();
+        self.persist_daemon_logs_enabled_if_changed();
         let actions = self.collect_keys(&ctx);
         self.apply_keys(actions);
         // Reset after key handling; views re-set it while rendering so the
@@ -4819,10 +4984,10 @@ impl MimirApp {
         if self.needs_tick() {
             ctx.request_repaint_after(Duration::from_secs(1));
         }
-        // Daemon polling cadence: well under the 250 ms event budget
-        // without busy-looping when frames render faster.
-        if self.log_watcher.is_some() || (!self.state.demo && self.state.clipboard_opt_in) {
-            ctx.request_repaint_after(Duration::from_millis(200));
+        // Clipboard polling cadence only: the log worker wakes the
+        // UI itself via BackendSender, so there is no watcher tick.
+        if !self.state.demo && self.state.clipboard_opt_in {
+            ctx.request_repaint_after(Duration::from_millis(250));
         }
 
         // Mirror the captured tracing output for the settings log view.
@@ -4900,10 +5065,12 @@ impl MimirApp {
 
         if let Some(suggestion) = self.state.clipboard_suggestion.clone() {
             let text = match &suggestion {
-                ClipboardKind::EftFit { ship, name } => {
-                    format!("Clipboard: EFT fit recognized - {ship}, {name}.")
+                ClipboardKind::EftFit { ship } => {
+                    format!("Clipboard: EFT fit recognized - {ship}.")
                 }
-                ClipboardKind::ShipDna => "Clipboard: ship DNA fit link recognized.".to_string(),
+                ClipboardKind::ShipDna { ship } => {
+                    format!("Clipboard: ship DNA fit recognized - {ship}.")
+                }
                 ClipboardKind::SurveyScan { rows } => {
                     format!("Clipboard: survey scan recognized ({rows} rows).")
                 }
@@ -5114,9 +5281,18 @@ impl MimirApp {
         self.persist_startup_view_if_changed();
         self.persist_sde_base_url_if_changed();
         self.persist_eve_logs_dir_if_changed();
+        self.persist_daemon_logs_enabled_if_changed();
         if self.has_pending_work() {
             ctx.request_repaint();
         }
+    }
+}
+
+impl Drop for MimirApp {
+    fn drop(&mut self) {
+        // Bounded join: the worker checks its stop flag at least
+        // every 200 ms, so this never hangs app exit or tests.
+        self.stop_log_worker();
     }
 }
 
@@ -5816,6 +5992,10 @@ mod tests {
 
     #[test]
     fn clipboard_hash_dedupe_surfaces_same_text_once() {
+        let types = FittingTypes::from_json(
+            r#"{"types":[{"typeId":587,"typeName":"Rifter","categoryId":6,"slotEffects":[]}]}"#,
+        )
+        .expect("fixture catalogue");
         let guard = ClipboardGuard {
             demo: false,
             clipboard_opt_in: true,
@@ -5823,7 +6003,7 @@ mod tests {
         let mut last_hash = 0u64;
         let mut surfaced = 0usize;
         for _ in 0..2 {
-            let kind = poll_clipboard_once(guard, || {
+            let kind = poll_clipboard_once(guard, &types, || {
                 let text = "[Rifter, Brawl]\n200mm AutoCannon I\n";
                 let hash = clipboard_text_hash(text);
                 if hash == last_hash {
@@ -5843,8 +6023,13 @@ mod tests {
     #[test]
     fn clipboard_suggestion_dismiss_and_opt_out_clear_it() {
         let mut app = MimirApp::new(false, Arc::new(Mutex::new(Vec::new())), None, None);
+        app.state.daemon_logs_enabled = false; // test isolation: never watch real EVE logs
+                                               // Test isolation: never watch the operator's real EVE logs.
+        app.state.daemon_logs_enabled = false;
         app.state.clipboard_opt_in = true;
-        app.state.clipboard_suggestion = Some(ClipboardKind::ShipDna);
+        app.state.clipboard_suggestion = Some(ClipboardKind::ShipDna {
+            ship: "Rifter".to_string(),
+        });
         dismiss_clipboard_suggestion(&mut app.state);
         assert!(app.state.clipboard_suggestion.is_none());
         app.state.clipboard_suggestion = Some(ClipboardKind::SurveyScan { rows: 2 });
@@ -5852,6 +6037,74 @@ mod tests {
         app.sync_daemon_state();
         assert!(app.state.clipboard_suggestion.is_none());
         assert!(app.clipboard.is_none(), "opt-out must drop the handle");
+        assert!(
+            app.log_worker.is_none(),
+            "disabled logs must hold no worker"
+        );
+    }
+
+    #[test]
+    fn log_worker_thread_delivers_backend_log_event_within_250ms() {
+        use std::io::Write as _;
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let game = tmp.path().join("Gamelogs");
+        let chat = tmp.path().join("Chatlogs");
+        std::fs::create_dir_all(&game).unwrap();
+        std::fs::create_dir_all(&chat).unwrap();
+        let path = game.join("20261128_100000.txt");
+        std::fs::write(
+            &path,
+            "------------------------------------------------------------\n  Gamelog\n  Listener:  Jane Capsuleer\n  Session Started: 2026.11.28 10:00:00\n------------------------------------------------------------\n",
+        )
+        .unwrap();
+        let mut app = MimirApp::new(false, Arc::new(Mutex::new(Vec::new())), None, None);
+        app.state.daemon_logs_enabled = false; // test isolation: never watch real EVE logs
+        app.state.daemon_logs_enabled = true;
+        app.state.clipboard_opt_in = false;
+        app.state.eve_logs_dir = tmp.path().to_string_lossy().into_owned();
+        app.committed_eve_logs_dir = Some(app.state.eve_logs_dir.clone());
+        app.sync_daemon_state();
+        assert!(app.log_worker.is_some(), "live+enabled must spawn worker");
+        // Wait until the worker has finished its initial scan (it
+        // reports Watching only after the header-only pass), so the
+        // append below is not mistaken for pre-existing history.
+        let ready_deadline = Instant::now() + Duration::from_millis(250);
+        while app.state.daemon_status != "Watching EVE logs" && Instant::now() < ready_deadline {
+            app.drain_requests();
+            if app.state.daemon_status != "Watching EVE logs" {
+                std::thread::sleep(Duration::from_millis(5));
+            }
+        }
+        assert_eq!(app.state.daemon_status, "Watching EVE logs");
+        let mut f = std::fs::OpenOptions::new()
+            .append(true)
+            .open(&path)
+            .unwrap();
+        writeln!(f, "[ 2026.11.28 10:05:00 ] (combat) worker thread hit").unwrap();
+        f.flush().unwrap();
+        drop(f);
+        // Bounded deadline loop: drain BackendMsg until the worker's
+        // LogEvent lands (or the 250 ms budget expires).
+        let deadline = Instant::now() + Duration::from_millis(250);
+        while app.state.recent_log_events.is_empty() && Instant::now() < deadline {
+            app.drain_requests();
+            if app.state.recent_log_events.is_empty() {
+                std::thread::sleep(Duration::from_millis(5));
+            }
+        }
+        assert_eq!(
+            app.state.recent_log_events.len(),
+            1,
+            "worker must deliver BackendMsg::LogEvent within 250ms"
+        );
+        assert!(app.state.recent_log_events[0]
+            .body
+            .contains("worker thread hit"));
+        assert_eq!(app.state.daemon_event_count, 1);
+        // Disable stops and joins the worker cleanly.
+        app.state.daemon_logs_enabled = false;
+        app.sync_daemon_state();
+        assert!(app.log_worker.is_none(), "disable must stop worker");
     }
 
     #[test]
@@ -5865,7 +6118,7 @@ mod tests {
             });
             output.textures_delta.clear();
         }
-        assert!(app.log_watcher.is_none(), "demo must hold no log watcher");
+        assert!(app.log_worker.is_none(), "demo must hold no log worker");
         assert!(
             app.clipboard.is_none(),
             "demo must hold no clipboard handle"
@@ -6676,6 +6929,7 @@ mod tests {
     #[test]
     fn refreshed_updates_character_corp_and_alliance_in_roster() {
         let mut app = MimirApp::new(false, Arc::new(Mutex::new(Vec::new())), None, None);
+        app.state.daemon_logs_enabled = false; // test isolation: never watch real EVE logs
         app.state.characters = vec![
             CharacterRow {
                 character_id: 101,
@@ -6745,6 +6999,7 @@ mod tests {
     #[test]
     fn has_pending_work_detects_queued_portraits_and_clears_after_drain() {
         let mut app = MimirApp::new(false, Arc::new(Mutex::new(Vec::new())), None, None);
+        app.state.daemon_logs_enabled = false; // test isolation: never watch real EVE logs
         app.state.characters = vec![CharacterRow {
             character_id: 42,
             name: "Pilot".to_string(),
@@ -6891,6 +7146,7 @@ mod tests {
             None,
             Some(backends),
         );
+        app.state.daemon_logs_enabled = false; // test isolation: never watch real EVE logs
         assert_eq!(app.state.startup_view, View::Wallet);
 
         // Enter demo and edit startup_view while in demo mode.
@@ -6927,6 +7183,7 @@ mod tests {
         use crate::esi::models::{ExtractorDetails, PlanetColonyDetail, PlanetPin};
 
         let mut app = MimirApp::new(false, Arc::new(Mutex::new(Vec::new())), None, None);
+        app.state.daemon_logs_enabled = false; // test isolation: never watch real EVE logs
         app.state.active_character_id = Some(42);
         app.state.planetary_selected_planet_id = Some(700000002);
         app.state.planetary = LoadState::Ready(PlanetaryData {
@@ -7010,6 +7267,7 @@ mod tests {
     #[test]
     fn market_lookup_does_not_invalidate_in_flight_market_fetch() {
         let mut app = MimirApp::new(false, Arc::new(Mutex::new(Vec::new())), None, None);
+        app.state.daemon_logs_enabled = false; // test isolation: never watch real EVE logs
         app.state.active_character_id = Some(42);
         app.last_active_id = Some(42);
         app.state.set_market_selection(34, "Tritanium".to_string());
@@ -7105,6 +7363,7 @@ mod tests {
     #[test]
     fn logged_in_preserves_signed_in_refreshing_status_message() {
         let mut app = MimirApp::new(false, Arc::new(Mutex::new(Vec::new())), None, None);
+        app.state.daemon_logs_enabled = false; // test isolation: never watch real EVE logs
         app.tx.send(BackendMsg::LoggedIn {
             row: CharacterRow {
                 character_id: 777,
@@ -7123,6 +7382,7 @@ mod tests {
     #[test]
     fn fitting_write_survives_mode_switch_as_single_flight_and_drops_stale_landing() {
         let mut app = MimirApp::new(false, Arc::new(Mutex::new(Vec::new())), None, None);
+        app.state.daemon_logs_enabled = false; // test isolation: never watch real EVE logs
         app.state.characters = vec![CharacterRow {
             character_id: 90000001,
             name: "Live Pilot".to_string(),
@@ -7200,6 +7460,7 @@ mod tests {
     #[test]
     fn market_and_planetary_refetches_bump_generation_and_drop_older_results() {
         let mut app = MimirApp::new(false, Arc::new(Mutex::new(Vec::new())), None, None);
+        app.state.daemon_logs_enabled = false; // test isolation: never watch real EVE logs
         app.state.active_character_id = Some(42);
         app.last_active_id = Some(42);
 
@@ -7320,6 +7581,7 @@ mod tests {
     #[test]
     fn stepup_for_non_active_character_sets_truthful_status_without_refresh() {
         let mut app = MimirApp::new(false, Arc::new(Mutex::new(Vec::new())), None, None);
+        app.state.daemon_logs_enabled = false; // test isolation: never watch real EVE logs
         app.state.characters = vec![
             CharacterRow {
                 character_id: 1,
@@ -7406,6 +7668,7 @@ mod tests {
         );
 
         app.state = standings_state();
+        app.state.daemon_logs_enabled = false; // test isolation: never watch real EVE logs
         crate::ui::portraits::ensure_logo_requested(&mut app.state, ImageKind::Faction, 500001);
         assert!(matches!(
             app.state.portrait_state(ImageKind::Faction, 500001),
