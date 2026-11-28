@@ -10,7 +10,7 @@ use chrono::Utc;
 use super::widgets;
 use crate::app::state::{
     AppState, BlueprintKindFilter, BlueprintsData, IndustryData, IndustryJobsData, LoadState,
-    SectionError, StepUpRequest,
+    SectionError, StepUpRequest, View,
 };
 use crate::config::EveConfig;
 use crate::esi::models::{CharacterBlueprint, IndustryJob};
@@ -463,10 +463,10 @@ fn show_blueprints_section(
                 ui,
                 &mut state.industry_search,
                 "Filter blueprints by item or location (press / to focus)",
-                state.focus_search,
+                state.focus_search && state.view == View::Industry,
             );
             state.text_input_focused |= focus;
-            if focus {
+            if focus && state.view == View::Industry {
                 state.focus_search = false;
             }
             ui.horizontal_wrapped(|ui| {

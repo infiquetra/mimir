@@ -72,10 +72,11 @@ impl Workspace {
         Workspace::ALL.get(index).copied()
     }
 
-    /// The workspace whose preset contains `view`. Every
-    /// current view belongs to exactly one preset; a
-    /// future view added to no preset falls back to the
-    /// Command Deck and is added there by the shell.
+    /// The workspace whose preset contains `view`. The
+    /// match is exhaustive on purpose: adding a `View`
+    /// variant is a compile error here until it is
+    /// consciously assigned to a workspace (and its
+    /// preset), which is the extensibility contract.
     pub fn for_view(view: View) -> Workspace {
         match view {
             View::Dashboard | View::Characters | View::Wallet => Workspace::CommandDeck,
@@ -160,18 +161,45 @@ pub fn serialize_layouts(trees: &[Option<Tree<View>>], active: Workspace) -> Opt
     .ok()
 }
 
+/// Whether a restored tree is safe to render for
+/// `workspace`: non-empty, only that workspace's preset
+/// views, each at most once. Anything else (foreign
+/// views after a preset reshuffle, duplicates that would
+/// double-render a view and clash egui ids, empty trees)
+/// falls back to the preset for that workspace.
+fn tree_is_valid_for(tree: &Tree<View>, workspace: Workspace) -> bool {
+    let views = tree_views(tree);
+    if views.is_empty() {
+        return false;
+    }
+    let mut seen: Vec<View> = Vec::new();
+    for view in views {
+        if !workspace.preset_views().contains(&view) || seen.contains(&view) {
+            return false;
+        }
+        seen.push(view);
+    }
+    true
+}
+
 /// Restore layouts from persisted JSON. ANY error —
 /// corrupt JSON, wrong version, wrong arity, unknown
 /// view variant — returns `None` and the caller falls
-/// back to [`default_tree`] presets.
+/// back to [`default_tree`] presets. Individually invalid
+/// trees (foreign or duplicate panes) are replaced by
+/// their workspace preset while valid siblings restore.
 pub fn restore_layouts(json: &str) -> Option<([Option<Tree<View>>; 4], Workspace)> {
     let persisted: PersistedLayouts = serde_json::from_str(json).ok()?;
     if persisted.version != LAYOUT_VERSION || persisted.trees.len() != Workspace::ALL.len() {
         return None;
     }
     let mut trees: [Option<Tree<View>>; 4] = [None, None, None, None];
-    for (slot, tree) in trees.iter_mut().zip(persisted.trees) {
-        *slot = tree;
+    for (index, (slot, tree)) in trees.iter_mut().zip(persisted.trees).enumerate() {
+        *slot = match tree {
+            Some(tree) if tree_is_valid_for(&tree, Workspace::ALL[index]) => Some(tree),
+            Some(_) => Some(default_tree(Workspace::ALL[index])),
+            None => None,
+        };
     }
     Some((trees, persisted.active))
 }
@@ -180,6 +208,26 @@ pub fn restore_layouts(json: &str) -> Option<([Option<Tree<View>>; 4], Workspace
 /// reads) zero disk state (AGENTS.md invariant 5).
 pub fn should_persist_layout(demo: bool) -> bool {
     !demo
+}
+
+/// Debounced layout-write decision: never write (or even
+/// serialize) while the pointer is down mid-drag; write
+/// on the release edge, or once a pending change has
+/// settled for at least a second. Split fractions change
+/// every drag frame, so per-frame writes would hammer
+/// SQLite on the UI thread.
+pub fn layout_write_due(
+    pointer_down: bool,
+    just_released: bool,
+    pending_age: Option<std::time::Duration>,
+) -> bool {
+    if pointer_down {
+        return false;
+    }
+    if just_released {
+        return true;
+    }
+    pending_age.is_some_and(|age| age >= std::time::Duration::from_secs(1))
 }
 
 #[cfg(test)]
@@ -252,6 +300,53 @@ mod tests {
         for view in Workspace::CommandDeck.preset_views() {
             assert!(tree_contains(deck, *view));
         }
+    }
+
+    #[test]
+    fn foreign_or_duplicate_panes_fall_back_per_workspace() {
+        // A Command Deck tree smuggling a Fittings pane
+        // (plus a duplicate Dashboard) must reset to the
+        // preset while a valid sibling restores untouched.
+        let mut tiles = Tiles::default();
+        let first = tiles.insert_pane(View::Dashboard);
+        let duplicate = tiles.insert_pane(View::Dashboard);
+        let foreign_pane = tiles.insert_pane(View::Fittings);
+        let root = tiles.insert_tab_tile(vec![first, duplicate, foreign_pane]);
+        let foreign = Tree::new(egui::Id::unique("foreign"), root, tiles);
+        let trees: [Option<Tree<View>>; 4] = [
+            Some(foreign),
+            Some(default_tree(Workspace::FittingHangar)),
+            None,
+            None,
+        ];
+        let json = serialize_layouts(&trees, Workspace::CommandDeck).expect("serialize");
+        let (restored, _) = restore_layouts(&json).expect("restore");
+        let deck = restored[0].as_ref().expect("deck reset to preset");
+        for view in Workspace::CommandDeck.preset_views() {
+            assert!(tree_contains(deck, *view));
+        }
+        assert!(!tree_contains(deck, View::Fittings));
+        assert!(restored[1].is_some(), "valid sibling restored");
+    }
+
+    #[test]
+    fn layout_write_is_debounced_off_drag_frames() {
+        use std::time::Duration;
+        assert!(!layout_write_due(true, false, None), "never mid-drag");
+        assert!(
+            !layout_write_due(true, true, None),
+            "down wins over release flag"
+        );
+        assert!(layout_write_due(false, true, None), "release edge writes");
+        assert!(!layout_write_due(false, false, None), "no pending change");
+        assert!(
+            !layout_write_due(false, false, Some(Duration::from_millis(300))),
+            "still settling"
+        );
+        assert!(
+            layout_write_due(false, false, Some(Duration::from_secs(1))),
+            "settled change writes"
+        );
     }
 
     #[test]

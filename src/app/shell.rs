@@ -327,6 +327,12 @@ pub struct MimirApp {
     tiles_trees: [Option<egui_tiles::Tree<View>>; 4],
     active_workspace: ui::tiles::Workspace,
     persisted_tiles_layout: Option<String>,
+    /// Debounce state for layout writes: when a change was
+    /// first seen settled, and whether the pointer was down
+    /// last frame (release-edge detection). No serialization
+    /// or SQLite write ever happens mid-drag.
+    tiles_persist_pending_since: Option<Instant>,
+    tiles_last_pointer_down: bool,
     quick_sight: ui::quick_sight::QuickSight,
     quick_sight_index: Vec<ui::quick_sight::QuickSightItem>,
     persisted_sde_base_url: Option<String>,
@@ -1362,6 +1368,8 @@ impl MimirApp {
             tiles_trees,
             active_workspace,
             persisted_tiles_layout,
+            tiles_persist_pending_since: None,
+            tiles_last_pointer_down: false,
             quick_sight: ui::quick_sight::QuickSight::default(),
             quick_sight_index: Vec::new(),
             persisted_sde_base_url,
@@ -1502,8 +1510,18 @@ impl MimirApp {
 
     /// Persist workspace layouts when they changed (live
     /// mode only; demo never reads or writes layout state).
-    fn persist_tiles_layout_if_changed(&mut self) {
+    /// Debounced: while the pointer is down (divider/tab
+    /// drag) nothing is serialized or written; the write
+    /// lands on pointer release or after 1s settled, and
+    /// the frame loop repaints to revisit a pending write.
+    fn persist_tiles_layout_if_changed(&mut self, pointer_down: bool) {
+        let just_released = self.tiles_last_pointer_down && !pointer_down;
+        self.tiles_last_pointer_down = pointer_down;
         if !ui::tiles::should_persist_layout(self.state.demo) || self.last_demo_mode {
+            self.tiles_persist_pending_since = None;
+            return;
+        }
+        if pointer_down {
             return;
         }
         let Some(json) = ui::tiles::serialize_layouts(&self.tiles_trees, self.active_workspace)
@@ -1511,6 +1529,14 @@ impl MimirApp {
             return;
         };
         if self.persisted_tiles_layout.as_deref() == Some(json.as_str()) {
+            self.tiles_persist_pending_since = None;
+            return;
+        }
+        let pending_age = self
+            .tiles_persist_pending_since
+            .get_or_insert_with(Instant::now)
+            .elapsed();
+        if !ui::tiles::layout_write_due(false, just_released, Some(pending_age)) {
             return;
         }
         if let Some(backends) = self.backends.as_ref() {
@@ -1518,6 +1544,7 @@ impl MimirApp {
                 if repositories::set_setting(&conn, "tiles_layout", &json).is_ok() {
                     tracing::debug!("[UI] persisted workspace layout");
                     self.persisted_tiles_layout = Some(json);
+                    self.tiles_persist_pending_since = None;
                 }
             }
         }
@@ -2694,6 +2721,29 @@ impl MimirApp {
                                 self.state.daemon_logs_enabled = saved == "true";
                             }
                         }
+                        // Demo-time layout drags never bleed
+                        // into live state: restore the
+                        // persisted live layout (or presets)
+                        // wholesale on demo exit.
+                        match repositories::get_setting(&conn, "tiles_layout") {
+                            Ok(Some(saved)) => match ui::tiles::restore_layouts(&saved) {
+                                Some((restored, active)) => {
+                                    self.tiles_trees = restored;
+                                    self.active_workspace = active;
+                                    self.persisted_tiles_layout = Some(saved);
+                                }
+                                None => {
+                                    self.tiles_trees = [None, None, None, None];
+                                    self.persisted_tiles_layout = None;
+                                }
+                            },
+                            _ => {
+                                self.tiles_trees = [None, None, None, None];
+                                self.persisted_tiles_layout = None;
+                            }
+                        }
+                        self.tiles_persist_pending_since = None;
+                        self.active_workspace = ui::tiles::Workspace::for_view(self.state.view);
                         if let Ok(build) = local_build_number(&conn) {
                             self.state.sde_build_number = build;
                         }
@@ -5214,7 +5264,7 @@ impl MimirApp {
                 ui.add_space(ui::theme::traffic_light_inset());
                 ui.label(
                     egui::RichText::new("ALIDADE")
-                        .size(18.0)
+                        .size(ui::tokens::TOKENS.typography.heading)
                         .strong()
                         .color(ui::theme::ACCENT_BRASS),
                 );
@@ -5245,7 +5295,7 @@ impl MimirApp {
                     if !self.state.status_message.is_empty() {
                         ui.label(
                             egui::RichText::new(&self.state.status_message)
-                                .size(12.0)
+                                .size(ui::tokens::TOKENS.typography.small)
                                 .color(ui::theme::TEXT_SECONDARY),
                         );
                     }
@@ -5293,9 +5343,9 @@ impl MimirApp {
             .show(ui, |ui| {
                 ui.label(
                     egui::RichText::new("CHARACTERS")
-                        .size(12.0)
+                        .size(ui::tokens::TOKENS.typography.small)
                         .strong()
-                        .color(ui::theme::TEXT_MUTED),
+                        .color(ui::theme::TEXT_SECONDARY),
                 );
                 ui.add_space(4.0);
                 if self.state.characters.is_empty() {
@@ -5333,8 +5383,8 @@ impl MimirApp {
                     ui.add_space(2.0);
                     ui.label(
                         egui::RichText::new("PageUp/PageDown switches character.")
-                            .size(12.0)
-                            .color(ui::theme::TEXT_MUTED),
+                            .size(ui::tokens::TOKENS.typography.small)
+                            .color(ui::theme::TEXT_SECONDARY),
                     );
                 }
                 ui.add_space(6.0);
@@ -5342,9 +5392,9 @@ impl MimirApp {
                 ui.add_space(4.0);
                 ui.label(
                     egui::RichText::new("WORKSPACES (CMD+1-4)")
-                        .size(12.0)
+                        .size(ui::tokens::TOKENS.typography.small)
                         .strong()
-                        .color(ui::theme::TEXT_MUTED),
+                        .color(ui::theme::TEXT_SECONDARY),
                 );
                 ui.add_space(4.0);
                 let mut clicked_workspace: Option<ui::tiles::Workspace> = None;
@@ -5364,9 +5414,9 @@ impl MimirApp {
                 ui.add_space(4.0);
                 ui.label(
                     egui::RichText::new("VIEWS (KEYS 1-9, 0, E)")
-                        .size(12.0)
+                        .size(ui::tokens::TOKENS.typography.small)
                         .strong()
-                        .color(ui::theme::TEXT_MUTED),
+                        .color(ui::theme::TEXT_SECONDARY),
                 );
                 ui.add_space(4.0);
                 let mut clicked_view: Option<View> = None;
@@ -5400,7 +5450,7 @@ impl MimirApp {
                 ui.horizontal(|ui| {
                     ui.label(
                         egui::RichText::new(format!("View: {}", self.state.view.label()))
-                            .size(12.0)
+                            .size(ui::tokens::TOKENS.typography.small)
                             .color(ui::theme::TEXT_SECONDARY),
                     );
                     ui.label(
@@ -5408,7 +5458,7 @@ impl MimirApp {
                             "Characters: {}",
                             self.state.characters.len()
                         ))
-                        .size(12.0)
+                        .size(ui::tokens::TOKENS.typography.small)
                         .color(ui::theme::TEXT_SECONDARY),
                     );
                     if self.state.refresh_requested {
@@ -5424,8 +5474,8 @@ impl MimirApp {
                             egui::RichText::new(
                                 "Keys: 1-9, 0, E views  |  Cmd+1-4 workspaces  |  Cmd+K Quick-Sight  |  Ctrl+R refresh  |  / search  |  PgUp/PgDn character",
                             )
-                            .size(12.0)
-                            .color(ui::theme::TEXT_MUTED),
+                            .size(ui::tokens::TOKENS.typography.small)
+                            .color(ui::theme::TEXT_SECONDARY),
                         );
                     });
                 });
@@ -5471,10 +5521,13 @@ impl MimirApp {
         // wake egui immediately whenever view rendering or apply_keys queued work
         // after the top-of-frame drain_requests() pass.
         self.persist_startup_view_if_changed();
-        self.persist_tiles_layout_if_changed();
+        self.persist_tiles_layout_if_changed(ctx.input(|i| i.pointer.any_down()));
         self.persist_sde_base_url_if_changed();
         self.persist_eve_logs_dir_if_changed();
         self.persist_daemon_logs_enabled_if_changed();
+        if self.tiles_persist_pending_since.is_some() {
+            ctx.request_repaint_after(Duration::from_millis(250));
+        }
         if self.has_pending_work() {
             ctx.request_repaint();
         }
@@ -8080,6 +8133,41 @@ mod tests {
         assert!(
             !app.quick_sight_index.is_empty(),
             "opening builds the search index"
+        );
+    }
+
+    #[test]
+    fn slash_focuses_only_the_focused_panes_search_box() {
+        // P2-2: with Fittings and Assets panes co-visible
+        // in Fitting & Hangar, '/' must focus the ACTIVE
+        // pane's search box, never whichever renders first.
+        // The focused widget id differs per pane, so the
+        // two scenarios must land on different ids.
+        fn focused_after_slash(view: View) -> Option<egui::Id> {
+            let mut app = MimirApp::new(true, Arc::new(Mutex::new(Vec::new())), None, None);
+            let ctx = egui::Context::default();
+            let run = |app: &mut MimirApp, events: Vec<egui::Event>| {
+                let mut output = ctx.run_ui(shell_test_input(events), |ui| {
+                    app.show_shell(ui);
+                });
+                output.textures_delta.clear();
+            };
+            run(&mut app, Vec::new());
+            app.activate_view(view);
+            run(&mut app, Vec::new());
+            run(&mut app, vec![egui::Event::Text("/".to_string())]);
+            // One more frame so request_focus lands.
+            run(&mut app, Vec::new());
+            assert!(!app.state.focus_search, "slash must be consumed");
+            ctx.memory(|m| m.focused())
+        }
+        let fittings_focus = focused_after_slash(View::Fittings);
+        let assets_focus = focused_after_slash(View::Assets);
+        assert!(fittings_focus.is_some(), "fittings search takes focus");
+        assert!(assets_focus.is_some(), "assets search takes focus");
+        assert_ne!(
+            fittings_focus, assets_focus,
+            "slash must route to the focused pane, not the first rendered"
         );
     }
 

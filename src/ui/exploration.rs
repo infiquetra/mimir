@@ -7,7 +7,7 @@
 //! IDs) are state and keys only, never rendered.
 
 use super::widgets;
-use crate::app::state::{AppState, DestinationFilter, ExplorationSection, LoadState};
+use crate::app::state::{AppState, DestinationFilter, ExplorationSection, LoadState, View};
 use std::sync::Arc;
 
 use crate::names::exploration_ref::{
@@ -496,7 +496,7 @@ fn show_types(ui: &mut egui::Ui, state: &mut AppState, reference: &ExplorationRe
         });
         ui.label(
             egui::RichText::new(CAPITAL_QUALIFICATION)
-                .size(12.0)
+                .size(super::tokens::TOKENS.typography.small)
                 .color(super::theme::TEXT_SECONDARY),
         );
     });
@@ -711,10 +711,14 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
             .color(super::theme::TEXT_SECONDARY),
         );
         let hint = search_hint(state.exploration_section);
-        let focus =
-            widgets::search_box(ui, &mut state.exploration_search, hint, state.focus_search);
+        let focus = widgets::search_box(
+            ui,
+            &mut state.exploration_search,
+            hint,
+            state.focus_search && state.view == View::Exploration,
+        );
         state.text_input_focused |= focus;
-        if focus {
+        if focus && state.view == View::Exploration {
             state.focus_search = false;
         }
         ui.horizontal_wrapped(|ui| {

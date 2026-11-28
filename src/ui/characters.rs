@@ -64,7 +64,7 @@ pub fn show(
     });
     if state.auth == AuthState::Error {
         ui.colored_label(
-            egui::Color32::LIGHT_RED,
+            super::theme::NEGATIVE,
             "Sign-in failed. Check the log in Settings (key 0), then try again.",
         );
     }
@@ -187,8 +187,8 @@ pub fn show(
                             if !status.is_empty() {
                                 ui.label(
                                     egui::RichText::new(status)
-                                        .size(12.0)
-                                        .color(super::theme::TEXT_MUTED),
+                                        .size(super::tokens::TOKENS.typography.small)
+                                        .color(super::theme::TEXT_SECONDARY),
                                 );
                             }
                         }

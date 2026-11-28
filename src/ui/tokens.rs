@@ -195,14 +195,20 @@ mod tests {
 
     #[test]
     fn wcag_aa_contrast_for_body_text_on_surfaces() {
-        // Acceptance: >= 4.5:1 for primary and muted text
-        // against both panel surfaces. Hand-computed
-        // references: primary on panel 14.94, muted on
-        // elevated 5.66 (the tightest pair).
+        // Acceptance: >= 4.5:1 for primary and muted
+        // (informational secondary) text against panel,
+        // card, and elevated surfaces — card is where most
+        // text actually sits. Hand-computed references:
+        // primary on panel 14.94, muted on elevated 5.66
+        // (the tightest pair).
         for (label, ratio) in [
             (
                 "primary/panel",
                 contrast_ratio(TOKENS.text_primary, TOKENS.bg_panel),
+            ),
+            (
+                "primary/card",
+                contrast_ratio(TOKENS.text_primary, TOKENS.bg_card),
             ),
             (
                 "primary/elevated",
@@ -211,6 +217,10 @@ mod tests {
             (
                 "muted/panel",
                 contrast_ratio(TOKENS.text_muted, TOKENS.bg_panel),
+            ),
+            (
+                "muted/card",
+                contrast_ratio(TOKENS.text_muted, TOKENS.bg_card),
             ),
             (
                 "muted/elevated",
@@ -251,13 +261,25 @@ mod tests {
         }
     }
 
-    /// Permanent guard (#652): `Color32::from_rgb` may
-    /// exist only in this file. The needle is assembled
-    /// from parts so this test never trips itself; this
-    /// file is excluded by path regardless.
+    /// Permanent guard (#652): no color literal or named
+    /// egui color constant may exist outside this file
+    /// (repair-extended: `from_gray`/`from_black_alpha`/
+    /// `from_white_alpha`/`from_hex` and named constants
+    /// like `LIGHT_RED` included; only `TRANSPARENT` is
+    /// allowed as it carries no palette decision).
+    /// Needles are assembled from parts so this test never
+    /// trips itself; this file is excluded by path anyway.
     #[test]
     fn no_inline_rgb_literals_outside_tokens() {
-        let needle = ["Color32::from", "_rgb"].concat();
+        let needles: Vec<String> = [
+            ["Color32::from", "_rgb"].concat(),
+            ["Color32::from", "_gray"].concat(),
+            ["Color32::from", "_black_alpha"].concat(),
+            ["Color32::from", "_white_alpha"].concat(),
+            ["Color32::from", "_hex"].concat(),
+        ]
+        .into_iter()
+        .collect();
         let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
         let tokens_path = manifest.join("src/ui/tokens.rs");
         let mut files = Vec::new();
@@ -272,13 +294,63 @@ mod tests {
             let Ok(text) = std::fs::read_to_string(&file) else {
                 continue;
             };
-            if text.contains(&needle) {
+            if needles.iter().any(|needle| text.contains(needle.as_str())) {
                 violations.push(file.display().to_string());
+                continue;
+            }
+            // Named Color32 constants (LIGHT_RED et al.):
+            // any `Color32::UPPERCASE` other than
+            // TRANSPARENT bypasses the tokens.
+            for (at, _) in text.match_indices("Color32::") {
+                let rest = &text[at + "Color32::".len()..];
+                let ident: String = rest
+                    .chars()
+                    .take_while(|c| c.is_ascii_uppercase() || *c == '_')
+                    .collect();
+                if ident.len() >= 3 && ident != "TRANSPARENT" {
+                    violations.push(format!("{} (Color32::{ident})", file.display()));
+                    break;
+                }
             }
         }
         assert!(
             violations.is_empty(),
-            "inline RGB literals outside src/ui/tokens.rs: {violations:?}"
+            "inline color literals/constants outside src/ui/tokens.rs: {violations:?}"
+        );
+    }
+
+    /// Typography guard: no literal `.size(<number>)`
+    /// outside tokens/theme (sizes resolve through
+    /// `TOKENS.typography`).
+    #[test]
+    fn no_literal_text_sizes_outside_tokens_and_theme() {
+        let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let allowed = [
+            manifest.join("src/ui/tokens.rs"),
+            manifest.join("src/ui/theme.rs"),
+        ];
+        let mut files = Vec::new();
+        rust_files(&manifest.join("src/ui"), &mut files);
+        rust_files(&manifest.join("src/app"), &mut files);
+        let mut violations: Vec<String> = Vec::new();
+        for file in files {
+            if allowed.contains(&file) {
+                continue;
+            }
+            let Ok(text) = std::fs::read_to_string(&file) else {
+                continue;
+            };
+            for (at, _) in text.match_indices(".size(") {
+                let rest = &text[at + ".size(".len()..];
+                if rest.starts_with(|c: char| c.is_ascii_digit()) {
+                    violations.push(file.display().to_string());
+                    break;
+                }
+            }
+        }
+        assert!(
+            violations.is_empty(),
+            "literal text sizes outside tokens/theme: {violations:?}"
         );
     }
 }

@@ -12,7 +12,7 @@ use super::portraits::{
 };
 use super::widgets;
 use crate::app::state::{
-    market_region_name, AppState, LoadState, MarketData, SectionError, StepUpRequest,
+    market_region_name, AppState, LoadState, MarketData, SectionError, StepUpRequest, View,
     MARKET_REGIONS,
 };
 use crate::config::EveConfig;
@@ -310,7 +310,7 @@ fn show_picker(ui: &mut egui::Ui, state: &mut AppState, resolver: &NameResolver)
             if response.changed() {
                 state.clear_market_lookup();
             }
-            if state.focus_search {
+            if state.focus_search && state.view == View::Market {
                 response.request_focus();
                 state.focus_search = false;
             }

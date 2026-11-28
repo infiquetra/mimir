@@ -247,13 +247,13 @@ pub fn metric_tile(ui: &mut egui::Ui, label: &str, value: &str, value_color: egu
             ui.vertical(|ui| {
                 ui.label(
                     egui::RichText::new(label)
-                        .size(12.0)
+                        .size(super::tokens::TOKENS.typography.small)
                         .color(theme::TEXT_SECONDARY),
                 );
                 ui.add_space(2.0);
                 ui.label(
-                    egui::RichText::new(value)
-                        .size(18.0)
+                    numeric_text(value)
+                        .size(super::tokens::TOKENS.typography.heading)
                         .strong()
                         .color(value_color),
                 );
@@ -269,7 +269,12 @@ pub fn badge(ui: &mut egui::Ui, text: &str, bg: egui::Color32, fg: egui::Color32
         .corner_radius(egui::CornerRadius::same(10))
         .inner_margin(egui::Margin::symmetric(8, 2))
         .show(ui, |ui| {
-            ui.label(egui::RichText::new(text).size(12.0).strong().color(fg));
+            ui.label(
+                egui::RichText::new(text)
+                    .size(super::tokens::TOKENS.typography.small)
+                    .strong()
+                    .color(fg),
+            );
         });
 }
 
@@ -277,21 +282,32 @@ pub fn badge(ui: &mut egui::Ui, text: &str, bg: egui::Color32, fg: egui::Color32
 pub fn section_title(ui: &mut egui::Ui, text: &str) {
     ui.label(
         egui::RichText::new(text)
-            .size(18.0)
+            .size(super::tokens::TOKENS.typography.heading)
             .strong()
             .color(theme::ACCENT_CYAN),
     );
 }
 
-/// Compact `ⓘ` provenance popover (#652): verbose
-/// explanatory prose lives behind this accessible button
-/// instead of as above-the-fold paragraph walls. Counts
-/// and honesty badges stay inline at call sites; only the
-/// long-form explanation moves here. The button label is
-/// the AccessKit name, so headless accessibility queries
-/// find it without pixel hunting.
+/// Tabular numeric readout text: token monospace font so
+/// digit columns never shift as values tick. Every ISK,
+/// DPS/EHP, volume, and countdown label should build its
+/// value through here (or `RichText::monospace`).
+pub fn numeric_text(text: impl Into<String>) -> egui::RichText {
+    egui::RichText::new(text).font(super::tokens::TOKENS.typography.mono_font())
+}
+
+/// Compact provenance popover (#652): verbose explanatory
+/// prose lives behind this accessible "Info" pill button
+/// instead of as above-the-fold paragraph walls. (The
+/// circled-i glyph U+24D8 is absent from every font egui
+/// 0.37 bundles — verified by the reviewer with fc-query —
+/// so the label is plain covered text, never a tofu box.)
+/// Counts and honesty badges stay inline at call sites;
+/// only the long-form explanation moves here. Each button
+/// carries a distinct AccessKit name (`"<title> info"`)
+/// so headless accessibility queries find the right one.
 pub fn provenance_popover(ui: &mut egui::Ui, title: &str, body: &str) {
-    ui.menu_button("ⓘ", |ui| {
+    let response = ui.menu_button("Info", |ui| {
         ui.set_max_width(360.0);
         ui.label(
             egui::RichText::new(title)
@@ -304,6 +320,9 @@ pub fn provenance_popover(ui: &mut egui::Ui, title: &str, body: &str) {
                 .size(super::tokens::TOKENS.typography.small)
                 .color(theme::TEXT_SECONDARY),
         );
+    });
+    response.response.widget_info(|| {
+        egui::WidgetInfo::labeled(egui::Role::Button, true, format!("{title} info"))
     });
 }
 
@@ -327,13 +346,13 @@ pub fn empty_panel(ui: &mut egui::Ui, label: &str) {
 /// retry (for example bundled data that failed validation).
 pub fn error_panel(ui: &mut egui::Ui, message: &str) {
     tracing::debug!("[UI] error panel without retry shown");
-    ui.colored_label(egui::Color32::LIGHT_RED, message);
+    ui.colored_label(theme::NEGATIVE, message);
 }
 
 /// Error panel whose Retry button reports the click back to the caller so
 /// the view can set `AppState::retry_requested` for the integrator.
 pub fn error_panel_with_retry(ui: &mut egui::Ui, message: &str) -> bool {
-    ui.colored_label(egui::Color32::LIGHT_RED, message);
+    ui.colored_label(theme::NEGATIVE, message);
     if ui.button("Retry").clicked() {
         tracing::info!("[UI] retry clicked");
         return true;
@@ -412,6 +431,38 @@ pub fn search_box(ui: &mut egui::Ui, text: &mut String, hint: &str, grab_focus: 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn numeric_text_uses_tabular_monospace_family() {
+        // Render a metric tile and inspect the laid-out
+        // galley: the value's font family must be the
+        // token monospace (tabular) family at heading size.
+        let ctx = egui::Context::default();
+        let mut output = ctx.run_ui(egui::RawInput::default(), |ui| {
+            metric_tile(ui, "Balance", "1,234.5 ISK", egui::Color32::TRANSPARENT);
+        });
+        output.textures_delta.clear();
+        let families: Vec<egui::FontFamily> = output
+            .shapes
+            .iter()
+            .filter_map(|shape| match &shape.shape {
+                egui::Shape::Text(text) => Some(text),
+                _ => None,
+            })
+            .flat_map(|text| {
+                text.galley
+                    .job
+                    .sections
+                    .iter()
+                    .map(|section| section.format.font_id.family.clone())
+                    .collect::<Vec<_>>()
+            })
+            .collect();
+        assert!(
+            families.contains(&egui::FontFamily::Monospace),
+            "metric tile value must render tabular monospace, got {families:?}"
+        );
+    }
 
     #[test]
     fn provenance_popover_renders_without_panic() {
