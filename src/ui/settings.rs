@@ -4,7 +4,7 @@
 use crate::app::state::{AppState, AuthState, View};
 
 /// Bracketed feature tags the log filter can select (design section 1).
-pub const LOG_TAGS: [&str; 20] = [
+pub const LOG_TAGS: [&str; 21] = [
     "[AUTH]",
     "[ESI]",
     "[ASSETS]",

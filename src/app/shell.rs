@@ -8686,7 +8686,7 @@ mod tests {
 
     #[test]
     fn full_shell_smoke_renders_every_view_without_panic() {
-        assert_eq!(View::ALL.len(), 12);
+        assert_eq!(View::ALL.len(), 13);
         let mut app = MimirApp::new(true, Arc::new(Mutex::new(Vec::new())), None, None);
         let ctx = egui::Context::default();
         for view in View::ALL {

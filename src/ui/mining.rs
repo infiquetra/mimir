@@ -100,7 +100,7 @@ pub fn show(
 
     widgets::card(ui, |ui| {
         widgets::section_title(ui, "Live session");
-        ui.horizontal(|ui| {
+        ui.horizontal_wrapped(|ui| {
             draw_arc_gauge(
                 ui,
                 "Yield share",
@@ -130,16 +130,22 @@ pub fn show(
                 .and_then(|h| h.iter().rev().find(|e| e.average > 0.0))
                 .map(|e| e.average)
         });
-        match hub_valuation(session.yield_m3, elapsed_secs, hub_price) {
-            HubValuation::AwaitingHubQuote => {
-                widgets::badge(ui, "Awaiting Hub Quote", TOKENS.warning_bg, TOKENS.warning);
-            }
-            HubValuation::Priced {
-                isk_per_hour,
-                total_isk,
-            } => {
-                ui.label(mono(format!("{} / hr", widgets::format_isk(isk_per_hour))));
-                ui.label(mono(widgets::format_isk(total_isk)));
+        if session.yield_m3 <= 0.0 {
+            // An empty session has no rate to quote; never
+            // render a misleading "0.00 ISK / hr".
+            ui.label("No mining yield this session yet.");
+        } else {
+            match hub_valuation(session.yield_m3, elapsed_secs, hub_price) {
+                HubValuation::AwaitingHubQuote => {
+                    widgets::badge(ui, "Awaiting Hub Quote", TOKENS.warning_bg, TOKENS.warning);
+                }
+                HubValuation::Priced {
+                    isk_per_hour,
+                    total_isk,
+                } => {
+                    ui.label(mono(format!("{} / hr", widgets::format_isk(isk_per_hour))));
+                    ui.label(mono(widgets::format_isk(total_isk)));
+                }
             }
         }
     });
@@ -232,12 +238,14 @@ pub fn show(
 
     widgets::card(ui, |ui| {
         widgets::section_title(ui, "Survey Scanner");
-        ui.label("Paste a Survey Scanner result (tab-separated):");
-        let response = ui.add(
-            egui::TextEdit::multiline(&mut state.mining_survey_text)
-                .desired_rows(4)
-                .font(TOKENS.typography.mono_font()),
-        );
+        let label = ui.label("Paste a Survey Scanner result (tab-separated):");
+        let response = ui
+            .add(
+                egui::TextEdit::multiline(&mut state.mining_survey_text)
+                    .desired_rows(4)
+                    .font(TOKENS.typography.mono_font()),
+            )
+            .labelled_by(label.id);
         state.text_input_focused |= response.has_focus();
         let parsed = parse_survey_scan(&state.mining_survey_text);
         if parsed.rows.is_empty() {

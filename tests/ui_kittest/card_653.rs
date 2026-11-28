@@ -59,7 +59,7 @@ fn bounds_checker_rejects_deliberately_offscreen_and_cutoff_widgets() {
 
 #[test]
 fn every_view_structural_contract_at_both_viewports() {
-    assert_eq!(View::ALL.len(), 12);
+    assert_eq!(View::ALL.len(), 13);
     let started = Instant::now();
     for size in harness::VIEWPORTS {
         let mut harness = harness::shell_harness(harness::demo_app(), size);
