@@ -76,6 +76,10 @@ pub struct PantryItem {
     pub quantity: i64,
     pub is_singleton: bool,
     pub is_blueprint_copy: bool,
+    /// ESI carried `is_blueprint_copy` at all: this item is a
+    /// blueprint. `Some(false)` originals count as blueprints;
+    /// `None` (the field absent) marks a non-blueprint type.
+    pub is_blueprint: bool,
 }
 
 impl PantryItem {
@@ -90,6 +94,7 @@ impl PantryItem {
             quantity: item.quantity,
             is_singleton: item.is_singleton,
             is_blueprint_copy: item.is_blueprint_copy == Some(true),
+            is_blueprint: item.is_blueprint_copy.is_some(),
         }
     }
 
@@ -100,10 +105,11 @@ impl PantryItem {
             type_id: row.type_id,
             location_id: row.location_id,
             location_flag: row.location_flag.clone(),
-            location_type: String::new(),
+            location_type: row.location_type.clone(),
             quantity: row.quantity,
             is_singleton: row.is_singleton,
-            is_blueprint_copy: false,
+            is_blueprint_copy: row.is_blueprint_copy,
+            is_blueprint: row.is_blueprint,
         }
     }
 
@@ -114,8 +120,11 @@ impl PantryItem {
             type_id: self.type_id,
             location_id: self.location_id,
             location_flag: self.location_flag.clone(),
+            location_type: self.location_type.clone(),
             quantity: self.quantity,
             is_singleton: self.is_singleton,
+            is_blueprint_copy: self.is_blueprint_copy,
+            is_blueprint: self.is_blueprint,
         }
     }
 }
@@ -223,7 +232,13 @@ pub fn build_buckets(
                 .map(|i| i.type_id)
                 .collect::<HashSet<_>>()
                 .len();
-            let blueprint_count = bucket_items.iter().filter(|i| i.is_blueprint_copy).count();
+            // Originals and copies both count as blueprints; a
+            // copy implies a blueprint even for rows persisted
+            // before `is_blueprint` existed.
+            let blueprint_count = bucket_items
+                .iter()
+                .filter(|i| i.is_blueprint || i.is_blueprint_copy)
+                .count();
             LocationBucket {
                 location_id,
                 display_name,
@@ -253,6 +268,41 @@ pub fn build_buckets(
 pub fn aggregate_by_type(items: &[PantryItem]) -> BTreeMap<i64, i64> {
     let mut totals: BTreeMap<i64, i64> = BTreeMap::new();
     for item in items {
+        let entry = totals.entry(item.type_id).or_insert(0);
+        *entry = entry.saturating_add(item.quantity);
+    }
+    totals
+}
+
+/// Fitted-slot flag prefixes: modules and rigs currently bolted
+/// to a ship. They are owned, but they are not stock a new fit
+/// can consume (rigs are destroyed on removal), so Fit-Readiness
+/// must never count them as available.
+const FITTED_FLAG_PREFIXES: [&str; 5] = ["HiSlot", "MedSlot", "LoSlot", "RigSlot", "SubSystemSlot"];
+
+/// Whether one item counts as available stock for Fit-Readiness:
+/// hangar, container, and `InfrastructureHold`-class holdings
+/// count; fitted slots and ship `Cargo` / `DroneBay` contents do
+/// not (they are already committed to a hull). The bay signal is
+/// the ESI `location_flag`; nesting does not change it, so a
+/// module inside a hangar container (flag `Hangar`) still counts.
+pub fn is_available_stock(item: &PantryItem) -> bool {
+    let flag = item.location_flag.as_str();
+    if flag == "Cargo" || flag == "DroneBay" {
+        return false;
+    }
+    !FITTED_FLAG_PREFIXES
+        .iter()
+        .any(|prefix| flag.starts_with(prefix))
+}
+
+/// Per-type totals over available stock only (see
+/// [`is_available_stock`]): the numbers Fit-Readiness solves
+/// against, unlike [`aggregate_by_type`] which counts every
+/// owned instance including fitted gear.
+pub fn aggregate_available_by_type(items: &[PantryItem]) -> BTreeMap<i64, i64> {
+    let mut totals: BTreeMap<i64, i64> = BTreeMap::new();
+    for item in items.iter().filter(|i| is_available_stock(i)) {
         let entry = totals.entry(item.type_id).or_insert(0);
         *entry = entry.saturating_add(item.quantity);
     }
@@ -302,7 +352,12 @@ pub struct PantryDisplayRow {
     pub type_id: i64,
     pub type_name: String,
     pub character_name: String,
+    /// Resolved name of the row's ROOT place (container parents
+    /// walked): contents of a container inside a named station
+    /// show the station, never the container's item id.
     pub location_name: String,
+    /// State-only root place id behind `location_name`; never rendered.
+    pub root_location_id: i64,
     pub location_flag: String,
     pub quantity: i64,
     pub is_singleton: bool,
@@ -329,16 +384,19 @@ fn trigram_mask(bytes: &[u8]) -> u64 {
 }
 
 /// Build the full display-row set for a snapshot: names resolve
-/// once per distinct id (cached), rows sort by resolved type
-/// name then location then item id, and each row precomputes its
-/// lowercase search key. This is snapshot-landing work, done
-/// once per refresh — never the per-keystroke cost.
+/// once per distinct id (cached), each row's location resolves
+/// through its ROOT place (container parents walked, exactly
+/// like [`build_buckets`]), rows sort by resolved type name
+/// then location then item id, and each row precomputes its
+/// lowercase search key. This is cache-rebuild work, done once
+/// per data change — never the per-frame or per-keystroke cost.
 pub fn build_display_rows(
     items: &[PantryItem],
     type_name: impl Fn(i64) -> String,
     character_name: impl Fn(i64) -> String,
     location_name: impl Fn(i64) -> String,
 ) -> Vec<PantryDisplayRow> {
+    let by_item: HashMap<i64, &PantryItem> = items.iter().map(|i| (i.item_id, i)).collect();
     let mut type_cache: FastMap<i64, String> = FastMap::default();
     let mut character_cache: Vec<(i64, String)> = Vec::new();
     let mut location_cache: Vec<(i64, String)> = Vec::new();
@@ -350,8 +408,9 @@ pub fn build_display_rows(
             .clone();
         let resolved_character =
             resolve_linear(&mut character_cache, item.character_id, &character_name).to_string();
+        let root_id = root_location_id(item, &by_item);
         let resolved_location =
-            resolve_linear(&mut location_cache, item.location_id, &location_name).to_string();
+            resolve_linear(&mut location_cache, root_id, &location_name).to_string();
         let search_key = format!(
             "{} {} {}",
             resolved_type.to_lowercase(),
@@ -365,6 +424,7 @@ pub fn build_display_rows(
             type_name: resolved_type,
             character_name: resolved_character,
             location_name: resolved_location,
+            root_location_id: root_id,
             location_flag: item.location_flag.clone(),
             quantity: item.quantity,
             is_singleton: item.is_singleton,
@@ -435,6 +495,132 @@ pub fn select_new_icon_fetches(
     chosen
 }
 
+/// FxHash-style combine: rotate-xor-multiply per word. The
+/// fingerprint pass runs every frame over every row, so it
+/// must stay at a few ops per field even in unoptimized debug
+/// builds (a splitmix avalanche per field measured ~5 ms over
+/// 25,000 rows and blew the 2 ms frame budget on its own).
+fn mix_u64(state: u64, value: u64) -> u64 {
+    (state.rotate_left(5) ^ value).wrapping_mul(0x517C_C1B7_2722_0A95)
+}
+
+/// One splitmix avalanche at the end of a fingerprint so the
+/// final key is well distributed without paying per field.
+fn finalize_mix(state: u64) -> u64 {
+    let mut z = state.wrapping_add(0x9E37_79B9_7F4A_7C15);
+    z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+    z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+    z ^ (z >> 31)
+}
+
+fn mix_str(state: u64, value: &str) -> u64 {
+    // Fold bytes FNV-style into one word, then combine once.
+    let mut folded: u64 = 0xCBF2_9CE4_8422_2325;
+    for byte in value.bytes() {
+        folded = (folded ^ u64::from(byte)).wrapping_mul(0x0100_0000_01B3);
+    }
+    mix_u64(state, folded ^ (value.len() as u64))
+}
+
+/// Order-sensitive fingerprint of every display-relevant item
+/// field. Computed by `PantrySnapshot` at construction and on
+/// every mutation (per data change, never per frame) so
+/// [`PantryCache`] invalidation is an O(1) key comparison in
+/// the frame loop: any content change changes the key.
+pub fn items_fingerprint(items: &[PantryItem]) -> u64 {
+    let mut state = mix_u64(0x5041_4E54_5259_0001, items.len() as u64);
+    for item in items {
+        state = mix_u64(state, item.character_id as u64);
+        state = mix_u64(state, item.item_id as u64);
+        state = mix_u64(state, item.type_id as u64);
+        state = mix_u64(state, item.location_id as u64);
+        state = mix_str(state, &item.location_flag);
+        state = mix_str(state, &item.location_type);
+        state = mix_u64(state, item.quantity as u64);
+        state = mix_u64(
+            state,
+            u64::from(item.is_singleton)
+                | (u64::from(item.is_blueprint_copy) << 1)
+                | (u64::from(item.is_blueprint) << 2),
+        );
+    }
+    finalize_mix(state)
+}
+
+/// Fingerprint of the linked-character roster (ids + display
+/// names): display rows embed character names, so a rename or
+/// roster change must rebuild them.
+pub fn characters_fingerprint(characters: &[(i64, &str)]) -> u64 {
+    let mut state = mix_u64(0x5041_4E54_5259_0002, characters.len() as u64);
+    for (character_id, name) in characters {
+        state = mix_u64(state, *character_id as u64);
+        state = mix_str(state, name);
+    }
+    finalize_mix(state)
+}
+
+/// Identity of the inputs a [`PantryCache`] was built from.
+/// `resolver_len` is the `NameResolver` entry count: names only
+/// ever get added or filled in as resolution lands, so a count
+/// change is the rebuild signal for newly resolved labels.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PantryCacheKey {
+    pub items_fingerprint: u64,
+    pub resolver_len: usize,
+    pub characters_fingerprint: u64,
+}
+
+/// Derived Pantry view data, rebuilt only when its
+/// [`PantryCacheKey`] changes: display rows (resolved, sorted,
+/// search-keyed), root-location buckets, available per-type
+/// totals for Fit-Readiness, and the search-filtered row
+/// indices (re-filtered only when the query or the rows
+/// change). A cache-hit frame pays one key comparison plus
+/// the visible-row slice — never a rebuild, sort, or aggregate.
+#[derive(Debug, Clone, Default)]
+pub struct PantryCache {
+    pub key: Option<PantryCacheKey>,
+    pub rows: Vec<PantryDisplayRow>,
+    pub buckets: Vec<LocationBucket>,
+    pub available_by_type: HashMap<i64, i64>,
+    pub filtered: Vec<usize>,
+    pub filtered_query: String,
+    pub filtered_key: Option<PantryCacheKey>,
+}
+
+impl PantryCache {
+    /// Rebuild when `key` differs from the cached key, then
+    /// re-filter when the query (or a rebuild) requires it.
+    /// Returns true when a full rebuild ran (the per-data-change
+    /// path measured separately by the virtualization bench).
+    #[allow(clippy::too_many_arguments)]
+    pub fn ensure(
+        &mut self,
+        key: PantryCacheKey,
+        items: &[PantryItem],
+        query: &str,
+        type_name: impl Fn(i64) -> String,
+        character_name: impl Fn(i64) -> String,
+        location_name: impl Fn(i64) -> String,
+        is_unresolved_structure: impl Fn(i64) -> bool,
+    ) -> bool {
+        let rebuilt = self.key != Some(key);
+        if rebuilt {
+            tracing::debug!("[PANTRY] rebuilding display cache rows={}", items.len());
+            self.buckets = build_buckets(items, &location_name, &is_unresolved_structure);
+            self.rows = build_display_rows(items, type_name, character_name, location_name);
+            self.available_by_type = aggregate_available_by_type(items).into_iter().collect();
+            self.key = Some(key);
+        }
+        if rebuilt || self.filtered_key != Some(key) || self.filtered_query != query {
+            self.filtered = filter_row_indices(&self.rows, query);
+            self.filtered_query = query.to_string();
+            self.filtered_key = Some(key);
+        }
+        rebuilt
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -458,6 +644,7 @@ mod tests {
             quantity,
             is_singleton: false,
             is_blueprint_copy: false,
+            is_blueprint: false,
         }
     }
 
@@ -575,6 +762,130 @@ mod tests {
         assert_eq!(badges.len(), 1);
         assert_eq!(badges[0].character_name, "Bravo");
         assert_eq!(badges[0].missing_scope, ASSETS_SCOPE);
+    }
+
+    #[test]
+    fn blueprint_count_includes_originals_and_excludes_non_blueprints() {
+        // Original: ESI `is_blueprint_copy == Some(false)` maps to
+        // is_blueprint without the copy flag. Copy: both flags.
+        // Plain stock: neither flag, never counted.
+        let mut original = item(1, 10, 681, 60003760, "Hangar", "station", 1);
+        original.is_blueprint = true;
+        let mut copy = item(1, 11, 681, 60003760, "Hangar", "station", 1);
+        copy.is_blueprint = true;
+        copy.is_blueprint_copy = true;
+        let items = vec![
+            original,
+            copy,
+            item(1, 12, 34, 60003760, "Hangar", "station", 500),
+        ];
+        let buckets = build_buckets(&items, |_| "Jita Station".to_string(), |_| false);
+        assert_eq!(buckets.len(), 1);
+        assert_eq!(buckets[0].blueprint_count, 2, "original + copy count");
+    }
+
+    #[test]
+    fn display_rows_resolve_location_through_root_place() {
+        // Container 300 sits in the NPC station; item 301 lives
+        // inside container 300. The row must show the station
+        // name (the root), never the container's item id.
+        let items = vec![
+            item(1, 300, 3465, 60003760, "Hangar", "station", 1),
+            item(1, 301, 34, 300, "Hangar", "item", 40),
+        ];
+        let rows = build_display_rows(
+            &items,
+            |type_id| format!("Type {type_id}"),
+            |_| "Pilot".to_string(),
+            |location_id| match location_id {
+                60003760 => "Jita Station".to_string(),
+                _ => "Unknown Location".to_string(),
+            },
+        );
+        let nested = rows
+            .iter()
+            .find(|r| r.item_id == 301)
+            .expect("nested row present");
+        assert_eq!(nested.location_name, "Jita Station");
+        assert_eq!(nested.root_location_id, 60003760);
+    }
+
+    #[test]
+    fn available_stock_excludes_fitted_and_ship_bays() {
+        let items = vec![
+            // Hangar stock counts (including a hangar blueprint copy).
+            item(1, 1, 100, 60003760, "Hangar", "station", 4),
+            item(1, 2, 681, 60003760, "Hangar", "station", 1),
+            item(1, 3, 100, 1_060_000_002, "InfrastructureHold", "item", 2),
+            // Fitted gear and ship bays never count.
+            item(1, 4, 100, 900, "HiSlot0", "item", 1),
+            item(1, 5, 100, 900, "MedSlot1", "item", 1),
+            item(1, 6, 200, 900, "RigSlot0", "item", 3),
+            item(1, 7, 100, 900, "Cargo", "item", 10),
+            item(1, 8, 300, 900, "DroneBay", "item", 5),
+            item(1, 9, 100, 900, "SubSystemSlot0", "item", 1),
+        ];
+        let available = aggregate_available_by_type(&items);
+        assert_eq!(available.get(&100), Some(&6), "hangar + infra hold only");
+        assert_eq!(available.get(&681), Some(&1), "hangar copy counts");
+        assert_eq!(available.get(&200), None, "fitted rigs never count");
+        assert_eq!(available.get(&300), None, "drone bay never counts");
+        // The all-owned aggregate still sees everything.
+        assert_eq!(aggregate_by_type(&items).get(&100), Some(&19));
+    }
+
+    #[test]
+    fn cache_rebuilds_only_when_key_or_query_changes() {
+        let items = vec![
+            item(1, 1, 34, 60003760, "Hangar", "station", 10),
+            item(1, 2, 35, 60003760, "Hangar", "station", 5),
+        ];
+        let key = PantryCacheKey {
+            items_fingerprint: items_fingerprint(&items),
+            resolver_len: 3,
+            characters_fingerprint: characters_fingerprint(&[(1, "Pilot")]),
+        };
+        let mut cache = PantryCache::default();
+        let rebuilt = cache.ensure(
+            key,
+            &items,
+            "",
+            |type_id| format!("Type {type_id}"),
+            |_| "Pilot".to_string(),
+            |_| "Jita Station".to_string(),
+            |_| false,
+        );
+        assert!(rebuilt, "first ensure builds");
+        assert_eq!(cache.rows.len(), 2);
+        assert_eq!(cache.filtered.len(), 2);
+        assert_eq!(cache.available_by_type.get(&34), Some(&10));
+        // Same key + same query: no rebuild, filter preserved.
+        let rebuilt = cache.ensure(
+            key,
+            &items,
+            "",
+            |type_id| format!("Type {type_id}"),
+            |_| "Pilot".to_string(),
+            |_| "Jita Station".to_string(),
+            |_| false,
+        );
+        assert!(!rebuilt, "cache-hit frame must not rebuild");
+        // Same key, new query: re-filter only.
+        let rebuilt = cache.ensure(
+            key,
+            &items,
+            "type 34",
+            |type_id| format!("Type {type_id}"),
+            |_| "Pilot".to_string(),
+            |_| "Jita Station".to_string(),
+            |_| false,
+        );
+        assert!(!rebuilt);
+        assert_eq!(cache.filtered.len(), 1);
+        // Content change (quantity) changes the fingerprint.
+        let mut changed = items.clone();
+        changed[0].quantity = 99;
+        assert_ne!(items_fingerprint(&changed), key.items_fingerprint);
     }
 
     #[test]

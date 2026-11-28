@@ -167,6 +167,14 @@ impl DesignTokens {
 /// The single token instance every surface consumes.
 pub const TOKENS: DesignTokens = DesignTokens::astrometric();
 
+/// Shared `egui_table` metrics (Pantry and Assets virtualized
+/// tables): one header height and one fixed row height so every
+/// stock table keeps the same instrument rhythm. Lives beside
+/// [`TOKENS`] because table geometry is a cross-view decision,
+/// unlike per-view column widths.
+pub const TABLE_HEADER_HEIGHT: f32 = 28.0;
+pub const TABLE_ROW_HEIGHT: f32 = 28.0;
+
 /// WCAG relative luminance of an opaque color.
 pub fn relative_luminance(color: Color32) -> f64 {
     fn linear(channel: u8) -> f64 {

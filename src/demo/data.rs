@@ -1355,8 +1355,8 @@ pub fn seed_demo_state(state: &mut AppState) {
 
             // Demo Pantry: aggregate every demo character's bundled
             // assets in memory only — zero live-DB reads or writes.
-            state.pantry = LoadState::Ready(crate::pantry::PantrySnapshot {
-                items: bundle
+            state.pantry = LoadState::Ready(crate::pantry::PantrySnapshot::new(
+                bundle
                     .data
                     .iter()
                     .flat_map(|(character_id, per)| {
@@ -1365,8 +1365,8 @@ pub fn seed_demo_state(state: &mut AppState) {
                         })
                     })
                     .collect(),
-                step_up_character_ids: Vec::new(),
-            });
+                Vec::new(),
+            ));
             if let Some(first_id) = bundle.first_character_id() {
                 state.set_active_character(first_id);
                 apply_character(state, &bundle, first_id);

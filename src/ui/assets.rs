@@ -1,19 +1,52 @@
 //! Assets: the active character's item list grouped by location, with
 //! text search and singleton custom names. Every rendered string is a
 //! resolved EVE name (or the resolver's Unknown fallback), never a raw ID.
+//!
+//! Rendering is a virtualized `egui_table` over every filtered
+//! row (group order preserved, location carried per row): there
+//! is no render cap, so every row is reachable by scrolling.
+//! The per-frame type-icon fetch cap (100) still applies through
+//! the delegate's visible-row prefetch, exactly as in Pantry.
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
+
+use egui_table::{
+    AutoSizeMode, CellInfo, Column, HeaderCellInfo, HeaderRow, PrefetchInfo, Table, TableDelegate,
+};
 
 use super::portraits::{
     ensure_type_icon_requested, show_type_icon, PortraitImageCache, TYPE_ICON_PX,
 };
+use super::tokens::{TABLE_HEADER_HEIGHT, TABLE_ROW_HEIGHT, TOKENS};
 use super::widgets;
 use crate::app::state::{AppState, AssetsData, LoadState, StepUpRequest, View};
 use crate::config::EveConfig;
 use crate::esi::models::AssetItem;
 use crate::names::resolver::NameResolver;
+use crate::pantry::indexer::{select_new_icon_fetches, MAX_NEW_ICON_FETCHES_PER_FRAME};
+use crate::portraits::ImageKind;
 
-pub const ASSETS_RENDER_MAX: usize = 100;
+/// Column basis widths at the reference pane width (Item,
+/// Location, Bay, Quantity) with legibility floors, mirroring
+/// the Pantry table so both stock tables scale identically.
+const COL_BASIS_WIDTHS: [f32; 4] = [300.0, 230.0, 140.0, 100.0];
+const COL_MIN_WIDTHS: [f32; 4] = [170.0, 130.0, 70.0, 64.0];
+const COL_BASIS_TOTAL: f32 = 770.0;
+const COL_MIN_PANE_WIDTH: f32 = 320.0;
+
+/// Pane-scaled columns with explicit `Column::range` floors
+/// (see the Pantry table for why the floor is load-bearing).
+fn asset_columns(available_width: f32) -> Vec<Column> {
+    let unit = available_width.max(COL_MIN_PANE_WIDTH) / COL_BASIS_TOTAL;
+    COL_BASIS_WIDTHS
+        .iter()
+        .zip(COL_MIN_WIDTHS)
+        .map(|(basis, floor)| {
+            Column::new((basis * unit).max(floor))
+                .range(floor..=(basis * 2.0 * unit).max(floor * 1.5))
+        })
+        .collect()
+}
 
 /// One display row: names already resolved, never a raw numeric ID.
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -163,6 +196,156 @@ pub fn filter_groups(groups: &[AssetLocationGroup], query: &str) -> Vec<AssetLoc
     out
 }
 
+/// One virtualized table row: a grouped asset row plus its
+/// resolved location name, so the flat table never loses the
+/// grouping context the location cards used to carry.
+#[derive(Debug, Clone, PartialEq)]
+pub struct AssetDisplayRow {
+    pub row: AssetRow,
+    pub location_name: String,
+}
+
+/// Flatten location groups into table order (group order, then
+/// in-group display order). Every filtered row is present:
+/// virtualization replaced the old 100-row render truncation,
+/// so the row count here is the table's `num_rows`.
+pub fn flatten_groups(groups: &[AssetLocationGroup]) -> Vec<AssetDisplayRow> {
+    let total: usize = groups.iter().map(|g| g.rows.len()).sum();
+    let mut rows = Vec::with_capacity(total);
+    for group in groups {
+        for row in &group.rows {
+            rows.push(AssetDisplayRow {
+                row: row.clone(),
+                location_name: group.location_name.clone(),
+            });
+        }
+    }
+    rows
+}
+
+struct AssetsDelegate<'a> {
+    rows: Vec<AssetDisplayRow>,
+    state: &'a mut AppState,
+    cache: &'a mut PortraitImageCache,
+}
+
+impl TableDelegate for AssetsDelegate<'_> {
+    fn prepare(&mut self, info: &PrefetchInfo) {
+        // Queue icons for visible rows only, capped per frame
+        // (the same 100-per-frame contract the truncated list
+        // honored, now scoped to what is actually on screen).
+        let start = (info.visible_rows.start as usize).min(self.rows.len());
+        let end = (info.visible_rows.end as usize).min(self.rows.len());
+        let visible_type_ids: Vec<i64> = self.rows[start..end]
+            .iter()
+            .map(|display| display.row.type_id)
+            .collect();
+        let mut already: HashSet<i64> = self
+            .state
+            .portrait_requests
+            .iter()
+            .filter(|(kind, _)| *kind == ImageKind::Type)
+            .map(|(_, id)| *id)
+            .collect();
+        already.extend(
+            self.state
+                .portraits
+                .keys()
+                .filter(|(kind, _)| *kind == ImageKind::Type)
+                .map(|(_, id)| *id),
+        );
+        let chosen =
+            select_new_icon_fetches(&visible_type_ids, &already, MAX_NEW_ICON_FETCHES_PER_FRAME);
+        if !chosen.is_empty() {
+            tracing::debug!(
+                "[ASSETS] queueing {} new type icons this frame",
+                chosen.len()
+            );
+        }
+        for type_id in chosen {
+            ensure_type_icon_requested(self.state, type_id);
+        }
+    }
+
+    fn header_cell_ui(&mut self, ui: &mut egui::Ui, cell: &HeaderCellInfo) {
+        let label = match cell.col_range.start {
+            0 => "Item",
+            1 => "Location",
+            2 => "Bay",
+            _ => "Quantity",
+        };
+        ui.add(
+            egui::Label::new(
+                egui::RichText::new(label)
+                    .color(TOKENS.text_muted)
+                    .font(TOKENS.typography.small_font()),
+            )
+            .truncate(),
+        );
+    }
+
+    fn cell_ui(&mut self, ui: &mut egui::Ui, cell: &CellInfo) {
+        let Some(display) = self.rows.get(cell.row_nr as usize) else {
+            return;
+        };
+        // Clone the row's display fields so the icon call below
+        // can borrow state and cache mutably.
+        let display = display.clone();
+        let row = &display.row;
+        match cell.col_nr {
+            0 => {
+                show_type_icon(ui, self.cache, self.state, row.type_id, TYPE_ICON_PX);
+                let label = if row.has_custom_name {
+                    format!("{} ({})", row.display_name, row.type_name)
+                } else {
+                    row.display_name.clone()
+                };
+                ui.add(
+                    egui::Label::new(
+                        egui::RichText::new(label)
+                            .color(TOKENS.text_primary)
+                            .font(TOKENS.typography.body_font()),
+                    )
+                    .truncate(),
+                );
+            }
+            1 => {
+                ui.add(
+                    egui::Label::new(
+                        egui::RichText::new(&display.location_name)
+                            .color(TOKENS.text_muted)
+                            .font(TOKENS.typography.small_font()),
+                    )
+                    .truncate(),
+                );
+            }
+            2 => {
+                ui.add(
+                    egui::Label::new(
+                        egui::RichText::new(&row.location_flag)
+                            .color(TOKENS.text_muted)
+                            .font(TOKENS.typography.small_font()),
+                    )
+                    .truncate(),
+                );
+            }
+            _ => {
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    ui.label(
+                        egui::RichText::new(widgets::format_count(row.quantity))
+                            .color(TOKENS.brass_sight)
+                            .font(TOKENS.typography.mono_font()),
+                    );
+                });
+            }
+        }
+    }
+
+    fn default_row_height(&self) -> f32 {
+        TABLE_ROW_HEIGHT
+    }
+}
+
 /// Step-up guidance with a real Re-authorize button: the button only
 /// sets the shell's step-up request flag for the active character.
 fn reauthorize_panel(ui: &mut egui::Ui, state: &mut AppState) {
@@ -297,59 +480,54 @@ pub fn show(
                 widgets::empty_panel(ui, "No assets match the search.");
                 return;
             }
-            let total_filtered: usize = groups.iter().map(|g| g.rows.len()).sum();
-            let mut remaining = ASSETS_RENDER_MAX;
-            for group in &groups {
-                if remaining == 0 {
-                    break;
-                }
-                let type_noun = if group.type_count == 1 {
-                    "item type"
-                } else {
-                    "item types"
-                };
-                let item_noun = if group.item_count == 1 {
-                    "total item"
-                } else {
-                    "total items"
-                };
-                widgets::card(ui, |ui| {
-                    widgets::section_title(
-                        ui,
-                        &format!(
+            // Location summary chips keep the per-location counts
+            // the group card headers carried; the table below
+            // holds every filtered row (no render truncation).
+            ui.horizontal_wrapped(|ui| {
+                for group in groups.iter().take(8) {
+                    let type_noun = if group.type_count == 1 {
+                        "item type"
+                    } else {
+                        "item types"
+                    };
+                    let item_noun = if group.item_count == 1 {
+                        "total item"
+                    } else {
+                        "total items"
+                    };
+                    ui.label(
+                        egui::RichText::new(format!(
                             "{} — {} {}, {} {}",
                             group.location_name,
                             widgets::format_count(group.type_count as i64),
                             type_noun,
                             widgets::format_count(group.item_count),
                             item_noun
-                        ),
+                        ))
+                        .color(TOKENS.text_muted)
+                        .font(TOKENS.typography.small_font()),
                     );
-                    ui.add_space(4.0);
-                    let to_render = remaining.min(group.rows.len());
-                    for row in group.rows.iter().take(to_render) {
-                        ensure_type_icon_requested(state, row.type_id);
-                        let qty = widgets::format_count(row.quantity);
-                        let label = if row.has_custom_name {
-                            format!("{} x{} ({})", row.display_name, qty, row.type_name)
-                        } else {
-                            format!("{} x{}", row.display_name, qty)
-                        };
-                        ui.horizontal(|ui| {
-                            show_type_icon(ui, cache, state, row.type_id, TYPE_ICON_PX);
-                            ui.label(label);
-                        });
-                    }
-                    remaining -= to_render;
-                });
-            }
-            if total_filtered > ASSETS_RENDER_MAX {
-                ui.label(format!(
-                    "Showing {} of {} items.",
-                    total_filtered.min(ASSETS_RENDER_MAX),
-                    total_filtered
-                ));
-            }
+                }
+            });
+            let rows = flatten_groups(&groups);
+            ui.label(
+                egui::RichText::new(format!(
+                    "{} asset rows across {} location(s)",
+                    widgets::format_count(rows.len() as i64),
+                    groups.len()
+                ))
+                .color(TOKENS.text_muted)
+                .font(TOKENS.typography.small_font()),
+            );
+            let row_count = rows.len() as u64;
+            let mut delegate = AssetsDelegate { rows, state, cache };
+            Table::new()
+                .id_salt("assets_table")
+                .num_rows(row_count)
+                .columns(asset_columns(ui.available_width()))
+                .auto_size_mode(AutoSizeMode::OnParentResize)
+                .headers(vec![HeaderRow::new(TABLE_HEADER_HEIGHT)])
+                .show(ui, &mut delegate);
         }
         LoadState::Loading => widgets::loading_panel(ui, "Loading assets..."),
         LoadState::Empty => widgets::empty_panel(ui, "No assets data yet."),
@@ -512,8 +690,41 @@ mod tests {
     }
 
     #[test]
-    fn assets_render_max_is_100() {
-        assert_eq!(ASSETS_RENDER_MAX, 100);
+    fn flatten_reaches_every_filtered_row_without_truncation() {
+        // Virtualization contract (replaces the old 100-row
+        // render cap): flattening keeps group order, carries
+        // each row's location name, and drops nothing — the
+        // table's num_rows is exactly this length, so every
+        // filtered row is reachable by scrolling.
+        let groups = group_assets(&data(), &resolver());
+        let flat = flatten_groups(&groups);
+        assert_eq!(flat.len(), 4);
+        assert_eq!(flat[0].location_name, "Jita Station");
+        assert_eq!(flat[0].row.display_name, "Aria's Rifter");
+        assert!(flat.iter().all(|d| !d.location_name.is_empty()));
+        // 125 rows in one location: all 125 survive grouping,
+        // filtering, and flattening (no 100-row window).
+        let mut big = AssetsData {
+            items: Vec::new(),
+            custom_names: HashMap::new(),
+        };
+        for n in 0..125 {
+            big.items
+                .push(item(n + 1, 1001 + n, 1, 60003760, false, None));
+        }
+        let mut big_resolver = NameResolver::new();
+        big_resolver.insert(60003760, "Jita Station".to_string());
+        for n in 0..125 {
+            big_resolver.insert(1001 + n, format!("Item {}", 1001 + n));
+        }
+        let flat_big = flatten_groups(&filter_groups(&group_assets(&big, &big_resolver), ""));
+        assert_eq!(flat_big.len(), 125);
+        // Every asset column carries a legibility floor.
+        for width in [420.0, 770.0] {
+            for (column, floor) in asset_columns(width).iter().zip(COL_MIN_WIDTHS) {
+                assert_eq!(column.range.min, floor);
+            }
+        }
     }
 
     #[test]
@@ -544,6 +755,25 @@ mod tests {
             state
         }
 
+        // `egui_table` runs a discarded sizing pass on its first
+        // frame in a fresh context, and each pass may queue up
+        // to the cap. Warm the table state up with a one-row
+        // render so measured frames below are single-pass steady
+        // frames — the regime the per-frame cap contract binds.
+        fn warm_table(ctx: &egui::Context) {
+            let mut state = state_with_assets(vec![item(1, 9999, 1, 60003760, false, None)]);
+            let resolver = numbered_resolver(&[9999], &[(60003760, "Jita Station")]);
+            let mut cache = PortraitImageCache::new();
+            for _ in 0..2 {
+                let mut full_output = ctx.run_ui(egui::RawInput::default(), |ui| {
+                    egui::CentralPanel::default().show(ui, |ui| {
+                        show(ui, &mut state, &resolver, &mut cache);
+                    });
+                });
+                full_output.textures_delta.clear();
+            }
+        }
+
         fn numbered_resolver(type_ids: &[i64], locations: &[(i64, &str)]) -> NameResolver {
             let mut r = NameResolver::new();
             for id in type_ids {
@@ -571,7 +801,12 @@ mod tests {
             assert!(cache.is_empty());
         }
 
-        // 125 rows in one location: exactly one full 100-row window.
+        // 125 rows in one location under virtualization: the
+        // first frame queues only visible rows' icons and never
+        // more than the 100-per-frame cap; the last row (1125,
+        // sorted last) is not among them. Filtering to that row
+        // makes it visible and queues exactly its icon — every
+        // row stays reachable, with no duplicate queue entries.
         {
             let ids: Vec<i64> = (1001..=1125).collect();
             let items: Vec<AssetItem> = ids
@@ -583,28 +818,23 @@ mod tests {
             let resolver = numbered_resolver(&ids, &[(60003760, "Jita Station")]);
             let mut cache = PortraitImageCache::new();
             let ctx = egui::Context::default();
+            warm_table(&ctx);
             let mut full_output = ctx.run_ui(egui::RawInput::default(), |ui| {
                 egui::CentralPanel::default().show(ui, |ui| {
                     show(ui, &mut state, &resolver, &mut cache);
                 });
             });
             full_output.textures_delta.clear();
-            assert_eq!(state.portrait_requests.len(), 100);
+            let after_first = state.portrait_requests.len();
+            assert!(
+                (1..=100).contains(&after_first),
+                "first frame queues visible icons within the cap, got {after_first}"
+            );
             assert!(cache.is_empty());
             assert!(!state.portrait_requests.contains(&(ImageKind::Type, 1125)));
-            // Every queued key has left NotRequested; a second frame
-            // queues nothing new.
-            let mut full_output = ctx.run_ui(egui::RawInput::default(), |ui| {
-                egui::CentralPanel::default().show(ui, |ui| {
-                    show(ui, &mut state, &resolver, &mut cache);
-                });
-            });
-            full_output.textures_delta.clear();
-            assert_eq!(state.portrait_requests.len(), 100);
-            assert!(cache.is_empty());
-            // Filter before the cap: searching for the 125th row's
-            // name reveals the row beyond the window and queues
-            // exactly that one additional key.
+            // Filter before scrolling: searching for the 125th
+            // row's name reveals it and queues its icon (the
+            // per-frame growth still respects the cap).
             state.assets_search = "Item 1125".to_string();
             let mut full_output = ctx.run_ui(egui::RawInput::default(), |ui| {
                 egui::CentralPanel::default().show(ui, |ui| {
@@ -612,12 +842,26 @@ mod tests {
                 });
             });
             full_output.textures_delta.clear();
-            assert_eq!(state.portrait_requests.len(), 101);
             assert!(state.portrait_requests.contains(&(ImageKind::Type, 1125)));
+            assert!(state.portrait_requests.len() - after_first <= 100);
+            // A steady frame queues nothing new and never
+            // duplicates a key.
+            let settled = state.portrait_requests.len();
+            let mut full_output = ctx.run_ui(egui::RawInput::default(), |ui| {
+                egui::CentralPanel::default().show(ui, |ui| {
+                    show(ui, &mut state, &resolver, &mut cache);
+                });
+            });
+            full_output.textures_delta.clear();
+            assert_eq!(state.portrait_requests.len(), settled);
+            let unique: std::collections::HashSet<_> = state.portrait_requests.iter().collect();
+            assert_eq!(unique.len(), state.portrait_requests.len());
+            assert!(cache.is_empty());
         }
 
-        // 60 + 60 rows across two locations: still exactly 100,
-        // proving the budget is global rather than per group.
+        // 60 + 60 rows across two locations: the first frame
+        // still respects the single global 100-per-frame cap
+        // (one flat table, one prefetch budget).
         {
             let ids_a: Vec<i64> = (2001..=2060).collect();
             let ids_b: Vec<i64> = (3001..=3060).collect();
@@ -637,13 +881,18 @@ mod tests {
             );
             let mut cache = PortraitImageCache::new();
             let ctx = egui::Context::default();
+            warm_table(&ctx);
             let mut full_output = ctx.run_ui(egui::RawInput::default(), |ui| {
                 egui::CentralPanel::default().show(ui, |ui| {
                     show(ui, &mut state, &resolver, &mut cache);
                 });
             });
             full_output.textures_delta.clear();
-            assert_eq!(state.portrait_requests.len(), 100);
+            assert!(
+                (1..=100).contains(&state.portrait_requests.len()),
+                "global per-frame cap holds across locations, got {}",
+                state.portrait_requests.len()
+            );
             assert!(cache.is_empty());
         }
 

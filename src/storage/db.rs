@@ -92,6 +92,43 @@ fn pk_col_count(conn: &rusqlite::Connection, table: &str) -> AppResult<usize> {
     Ok(count.max(0) as usize)
 }
 
+fn column_exists(conn: &rusqlite::Connection, table: &str, column: &str) -> AppResult<bool> {
+    let count: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM pragma_table_info(?1) WHERE name = ?2",
+        rusqlite::params![table, column],
+        |row| row.get(0),
+    )?;
+    Ok(count > 0)
+}
+
+/// Additive Pantry columns for `character_assets` tables created
+/// before `location_type` / blueprint flags were persisted: the
+/// `CREATE TABLE IF NOT EXISTS` in `SCHEMA_SQL` cannot add columns
+/// to an existing table, so each missing column is added with an
+/// idempotent `ALTER TABLE` (defaults match the fresh DDL).
+fn migrate_character_assets_columns(conn: &rusqlite::Connection) -> AppResult<()> {
+    for (column, ddl) in [
+        (
+            "location_type",
+            "ALTER TABLE character_assets ADD COLUMN location_type TEXT NOT NULL DEFAULT ''",
+        ),
+        (
+            "is_blueprint_copy",
+            "ALTER TABLE character_assets ADD COLUMN is_blueprint_copy INTEGER NOT NULL DEFAULT 0",
+        ),
+        (
+            "is_blueprint",
+            "ALTER TABLE character_assets ADD COLUMN is_blueprint INTEGER NOT NULL DEFAULT 0",
+        ),
+    ] {
+        if !column_exists(conn, "character_assets", column)? {
+            tracing::info!("[DB] migrating character_assets: adding column {}", column);
+            conn.execute(ddl, [])?;
+        }
+    }
+    Ok(())
+}
+
 /// Upgrade v1/v2 single-column wallet PKs (`id` / `transaction_id`) to composite
 /// `(character_id, ...)` PKs so two characters trading together keep both rows.
 fn migrate_wallet_composite_pks(conn: &rusqlite::Connection) -> AppResult<()> {
@@ -170,6 +207,7 @@ pub fn migrate(conn: &rusqlite::Connection) -> AppResult<()> {
     }
     conn.execute_batch(SCHEMA_SQL)?;
     migrate_wallet_composite_pks(conn)?;
+    migrate_character_assets_columns(conn)?;
     if current <= SCHEMA_VERSION {
         conn.pragma_update(None, "user_version", SCHEMA_VERSION)?;
     }
@@ -360,5 +398,52 @@ mod tests {
                 .len(),
             1
         );
+    }
+
+    #[test]
+    fn migrate_adds_pantry_columns_to_old_shape_character_assets() {
+        // Pre-repair table shape (seven columns, no location_type
+        // or blueprint flags) with one live row: migrate() must
+        // add the columns in place, keep the row, and apply the
+        // documented defaults. A second migrate stays a no-op.
+        let conn = rusqlite::Connection::open_in_memory().expect("in-memory db opens");
+        conn.execute_batch(
+            "CREATE TABLE characters (\
+               character_id INTEGER PRIMARY KEY, name TEXT NOT NULL DEFAULT '', \
+               corporation_id INTEGER NOT NULL DEFAULT 0, alliance_id INTEGER, \
+               is_active INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL DEFAULT '');\
+             INSERT INTO characters (character_id, name) VALUES (7, 'Tester');\
+             CREATE TABLE character_assets (\
+               character_id INTEGER NOT NULL, item_id INTEGER NOT NULL, \
+               type_id INTEGER NOT NULL, location_id INTEGER NOT NULL, \
+               location_flag TEXT NOT NULL, quantity INTEGER NOT NULL, \
+               is_singleton INTEGER NOT NULL, \
+               PRIMARY KEY (character_id, item_id), \
+               FOREIGN KEY (character_id) REFERENCES characters(character_id) ON DELETE CASCADE);\
+             INSERT INTO character_assets \
+               (character_id, item_id, type_id, location_id, location_flag, quantity, is_singleton) \
+               VALUES (7, 100, 34, 60003760, 'Hangar', 10, 0);",
+        )
+        .expect("old-shape table");
+        migrate(&conn).expect("upgrade migrate");
+        for column in ["location_type", "is_blueprint_copy", "is_blueprint"] {
+            assert!(
+                column_exists(&conn, "character_assets", column).expect("column check"),
+                "column {column} must exist after migrate"
+            );
+        }
+        let (location_type, copy, blueprint, quantity): (String, i64, i64, i64) = conn
+            .query_row(
+                "SELECT location_type, is_blueprint_copy, is_blueprint, quantity \
+                 FROM character_assets WHERE character_id = 7 AND item_id = 100",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+            )
+            .expect("row survived with defaults");
+        assert_eq!(location_type, "");
+        assert_eq!(copy, 0);
+        assert_eq!(blueprint, 0);
+        assert_eq!(quantity, 10);
+        migrate(&conn).expect("second migrate is idempotent");
     }
 }

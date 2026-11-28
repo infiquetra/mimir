@@ -16,13 +16,16 @@ fn pantry_structural_contract_at_both_viewports() {
         harness::assert_structural(&harness, View::Pantry, size);
         // The readiness surface must actually render in
         // demo mode (seeded characters + fittings), not an
-        // empty shell: a readiness or stockpile label is
-        // present in painter text.
+        // empty shell: the readiness card title or its
+        // buildable count is present in painter text. (The
+        // bare word "Pantry" is not accepted: the heading and
+        // navigation rail always contain it, so it could
+        // never fail.)
         let texts = harness::painter_texts(&harness.output().shapes);
         assert!(
-            texts.iter().any(|t| t.contains("Pantry")
-                || t.contains("Fit-Readiness")
-                || t.contains("Readiness")),
+            texts
+                .iter()
+                .any(|t| t.contains("Fit readiness") || t.contains("buildable")),
             "pantry readiness surface missing at {size:?}: {texts:?}"
         );
     }

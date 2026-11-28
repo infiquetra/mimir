@@ -171,8 +171,11 @@ CREATE TABLE IF NOT EXISTS character_assets (
     type_id INTEGER NOT NULL,
     location_id INTEGER NOT NULL,
     location_flag TEXT NOT NULL,
+    location_type TEXT NOT NULL DEFAULT '',
     quantity INTEGER NOT NULL,
     is_singleton INTEGER NOT NULL,
+    is_blueprint_copy INTEGER NOT NULL DEFAULT 0,
+    is_blueprint INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (character_id, item_id),
     FOREIGN KEY (character_id) REFERENCES characters(character_id) ON DELETE CASCADE
 );

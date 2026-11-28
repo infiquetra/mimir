@@ -284,8 +284,15 @@ pub struct CharacterAssetRow {
     pub type_id: i64,
     pub location_id: i64,
     pub location_flag: String,
+    pub location_type: String,
     pub quantity: i64,
     pub is_singleton: bool,
+    pub is_blueprint_copy: bool,
+    /// ESI carried `is_blueprint_copy` at all (`Some`): this row
+    /// is a blueprint (copy or original). Persisted separately
+    /// because `is_blueprint_copy == false` alone cannot tell
+    /// an original apart from a non-blueprint after reload.
+    pub is_blueprint: bool,
 }
 
 /// Replace one character's Pantry rows atomically: a failed refresh
@@ -308,8 +315,8 @@ pub fn replace_character_assets(
     {
         let mut stmt = tx.prepare(
             "INSERT INTO character_assets \
-             (character_id, item_id, type_id, location_id, location_flag, quantity, is_singleton) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+             (character_id, item_id, type_id, location_id, location_flag, location_type, quantity, is_singleton, is_blueprint_copy, is_blueprint) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
         )?;
         for row in rows {
             stmt.execute(params![
@@ -318,8 +325,11 @@ pub fn replace_character_assets(
                 row.type_id,
                 row.location_id,
                 row.location_flag,
+                row.location_type,
                 row.quantity,
-                row.is_singleton as i64
+                row.is_singleton as i64,
+                row.is_blueprint_copy as i64,
+                row.is_blueprint as i64
             ])?;
         }
     }
@@ -340,8 +350,11 @@ fn query_character_assets(
             type_id: row.get(2)?,
             location_id: row.get(3)?,
             location_flag: row.get(4)?,
-            quantity: row.get(5)?,
-            is_singleton: row.get::<_, i64>(6)? != 0,
+            location_type: row.get(5)?,
+            quantity: row.get(6)?,
+            is_singleton: row.get::<_, i64>(7)? != 0,
+            is_blueprint_copy: row.get::<_, i64>(8)? != 0,
+            is_blueprint: row.get::<_, i64>(9)? != 0,
         })
     };
     let rows = match character_id {
@@ -365,7 +378,7 @@ pub fn list_character_assets(
     );
     query_character_assets(
         conn,
-        "SELECT character_id, item_id, type_id, location_id, location_flag, quantity, is_singleton \
+        "SELECT character_id, item_id, type_id, location_id, location_flag, location_type, quantity, is_singleton, is_blueprint_copy, is_blueprint \
          FROM character_assets WHERE character_id = ?1 ORDER BY item_id",
         Some(character_id),
     )
@@ -375,7 +388,7 @@ pub fn list_all_character_assets(conn: &rusqlite::Connection) -> AppResult<Vec<C
     tracing::debug!("[PANTRY] list_all_character_assets entry");
     query_character_assets(
         conn,
-        "SELECT character_id, item_id, type_id, location_id, location_flag, quantity, is_singleton \
+        "SELECT character_id, item_id, type_id, location_id, location_flag, location_type, quantity, is_singleton, is_blueprint_copy, is_blueprint \
          FROM character_assets ORDER BY character_id, item_id",
         None,
     )

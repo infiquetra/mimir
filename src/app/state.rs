@@ -757,6 +757,11 @@ pub struct AppState {
     /// switches; `remove_character` drops the removed character's
     /// rows so deleted holdings never bleed into the stockpile.
     pub pantry: LoadState<crate::pantry::PantrySnapshot>,
+    /// Derived Pantry display data (rows, buckets, available
+    /// totals, filtered indices), rebuilt only when the
+    /// snapshot, name cache, or roster changes — a cache-hit
+    /// frame never rebuilds or re-sorts (card #642 repair).
+    pub pantry_cache: crate::pantry::indexer::PantryCache,
     pub pantry_search: String,
     pub log_lines: Vec<String>,
     pub status_message: String,
@@ -1655,6 +1660,7 @@ impl AppState {
         self.wallet = LoadState::Empty;
         self.assets = LoadState::Empty;
         self.pantry = LoadState::Empty;
+        self.pantry_cache = crate::pantry::indexer::PantryCache::default();
         self.pantry_search.clear();
         self.assets_needs_reauthorize = false;
         self.structures_needs_reauthorize = false;

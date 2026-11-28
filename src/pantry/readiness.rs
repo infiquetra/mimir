@@ -14,7 +14,12 @@
 //! - Missing items are what one *next* copy still needs:
 //!   `need_i * (copies + 1) - have_i`, kept when positive.
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
+
+/// The resolver's unresolved fallback label. A Multibuy line
+/// carrying it can never match anything in the EVE client, so
+/// unresolved shortfalls are counted, never pasted.
+pub const UNKNOWN_ITEM_NAME: &str = "Unknown Item";
 
 /// One fit line: how many of a type a single copy consumes.
 #[derive(Debug, Clone, PartialEq)]
@@ -38,13 +43,27 @@ pub struct FitReadiness {
     pub completion_ratio: f64,
     pub missing_for_next_copy: Vec<MissingItem>,
     pub multibuy_block: String,
+    /// Shortfall lines kept out of `multibuy_block` because
+    /// their type name never resolved (`Unknown Item xN` would
+    /// paste as garbage in the EVE client). The UI surfaces
+    /// this count so the omission is never silent.
+    pub unresolved_missing_count: usize,
+}
+
+/// Whether a shortfall line may enter the Multibuy block: the
+/// name must be a real resolved type name.
+fn is_multibuy_line(missing: &MissingItem) -> bool {
+    missing.quantity > 0
+        && !missing.type_name.trim().is_empty()
+        && missing.type_name != UNKNOWN_ITEM_NAME
 }
 
 /// EVE Multibuy clipboard block: one `Name xQuantity` line per
 /// missing item, sorted by name for deterministic pastes. Empty
-/// when nothing is missing.
+/// when nothing is missing. Unresolved lines are always skipped
+/// (see [`UNKNOWN_ITEM_NAME`]).
 pub fn build_multibuy_block(missing: &[MissingItem]) -> String {
-    let mut sorted: Vec<&MissingItem> = missing.iter().filter(|m| m.quantity > 0).collect();
+    let mut sorted: Vec<&MissingItem> = missing.iter().filter(|m| is_multibuy_line(m)).collect();
     sorted.sort_by(|a, b| {
         a.type_name
             .cmp(&b.type_name)
@@ -57,14 +76,32 @@ pub fn build_multibuy_block(missing: &[MissingItem]) -> String {
         .join("\n")
 }
 
+/// Merge requirement lines sharing a type id (needs sum; the
+/// first line's name wins) so callers may pass ungrouped fit
+/// items without double-spending the same stock per line.
+/// Deterministic: output sorts by type id.
+fn merge_requirements(requirements: &[FitRequirement]) -> Vec<FitRequirement> {
+    let mut merged: BTreeMap<i64, FitRequirement> = BTreeMap::new();
+    for req in requirements.iter().filter(|r| r.quantity_per_copy > 0) {
+        match merged.get_mut(&req.type_id) {
+            Some(existing) => {
+                existing.quantity_per_copy = existing
+                    .quantity_per_copy
+                    .saturating_add(req.quantity_per_copy);
+            }
+            None => {
+                merged.insert(req.type_id, req.clone());
+            }
+        }
+    }
+    merged.into_values().collect()
+}
+
 pub fn compute_readiness(
     requirements: &[FitRequirement],
     available_by_type: &HashMap<i64, i64>,
 ) -> FitReadiness {
-    let positive: Vec<&FitRequirement> = requirements
-        .iter()
-        .filter(|r| r.quantity_per_copy > 0)
-        .collect();
+    let positive = merge_requirements(requirements);
     if positive.is_empty() {
         tracing::debug!("[PANTRY] readiness computed with no positive-need requirements");
         return FitReadiness {
@@ -72,6 +109,7 @@ pub fn compute_readiness(
             completion_ratio: 0.0,
             missing_for_next_copy: Vec::new(),
             multibuy_block: String::new(),
+            unresolved_missing_count: 0,
         };
     }
     let mut copies: i64 = i64::MAX;
@@ -111,18 +149,24 @@ pub fn compute_readiness(
             })
         })
         .collect();
+    let unresolved_missing_count = missing_for_next_copy
+        .iter()
+        .filter(|m| !is_multibuy_line(m))
+        .count();
     let multibuy_block = build_multibuy_block(&missing_for_next_copy);
     tracing::debug!(
-        "[PANTRY] readiness copies={} ratio={:.3} missing_lines={}",
+        "[PANTRY] readiness copies={} ratio={:.3} missing_lines={} unresolved_skipped={}",
         copies,
         completion_ratio,
-        missing_for_next_copy.len()
+        missing_for_next_copy.len(),
+        unresolved_missing_count
     );
     FitReadiness {
         buildable_copies: copies,
         completion_ratio,
         missing_for_next_copy,
         multibuy_block,
+        unresolved_missing_count,
     }
 }
 
@@ -208,6 +252,48 @@ mod tests {
         assert!((readiness.completion_ratio - 0.4).abs() < 1e-9);
         assert_eq!(readiness.missing_for_next_copy[0].quantity, 6);
         assert_eq!(readiness.multibuy_block, "Tritanium x6");
+    }
+
+    #[test]
+    fn duplicate_type_lines_merge_before_spending_stock() {
+        // Two lines for type 100 (2 + 2 per copy) against 6 in
+        // stock: merged need is 4, so exactly 1 copy builds.
+        // Unmerged per-line math would claim floor(6/2) = 3.
+        let readiness = compute_readiness(
+            &[
+                req(100, "Gyrostabilizer", 2),
+                req(100, "Gyrostabilizer", 2),
+                req(587, "Rifter", 1),
+            ],
+            &avail(&[(100, 6), (587, 9)]),
+        );
+        assert_eq!(readiness.buildable_copies, 1);
+        assert_eq!(readiness.missing_for_next_copy.len(), 1);
+        assert_eq!(readiness.missing_for_next_copy[0].type_id, 100);
+        assert_eq!(readiness.missing_for_next_copy[0].quantity, 2);
+        assert_eq!(readiness.multibuy_block, "Gyrostabilizer x2");
+    }
+
+    #[test]
+    fn multibuy_never_emits_unresolved_unknown_item_lines() {
+        let readiness = compute_readiness(
+            &[req(587, "Rifter", 1), req(999_999, UNKNOWN_ITEM_NAME, 3)],
+            &avail(&[]),
+        );
+        assert_eq!(readiness.buildable_copies, 0);
+        assert_eq!(readiness.missing_for_next_copy.len(), 2);
+        assert_eq!(readiness.unresolved_missing_count, 1);
+        assert_eq!(readiness.multibuy_block, "Rifter x1");
+        assert!(!readiness.multibuy_block.contains(UNKNOWN_ITEM_NAME));
+        // The block builder itself also refuses the line.
+        assert_eq!(
+            build_multibuy_block(&[MissingItem {
+                type_id: 999_999,
+                type_name: UNKNOWN_ITEM_NAME.to_string(),
+                quantity: 3,
+            }]),
+            ""
+        );
     }
 
     #[test]

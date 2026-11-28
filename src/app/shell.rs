@@ -221,6 +221,14 @@ enum BackendMsg {
     SdeSynced {
         summary: Result<SdeSyncSummary, String>,
     },
+    /// Background Pantry persist finished (blocking pool): the
+    /// reloaded cross-character snapshot for one character's
+    /// refresh generation, stale-dropped like `Refreshed`.
+    PantryPersisted {
+        generation: u64,
+        character_id: i64,
+        snapshot: Result<crate::pantry::PantrySnapshot, String>,
+    },
     /// One EVE log line from the log-worker thread (card #655).
     LogEvent(LogEvent),
     /// Human-readable daemon status label from the log-worker thread.
@@ -1262,14 +1270,20 @@ impl MimirApp {
                                         "[PANTRY] loaded persisted stockpile rows={}",
                                         asset_rows.len()
                                     );
-                                    state.pantry =
-                                        LoadState::Ready(crate::pantry::PantrySnapshot {
-                                            items: asset_rows
-                                                .iter()
-                                                .map(crate::pantry::indexer::PantryItem::from_row)
-                                                .collect(),
-                                            step_up_character_ids: Vec::new(),
-                                        });
+                                    // Step-up badges come from stored
+                                    // token scopes for EVERY linked
+                                    // character, so they are correct
+                                    // at startup before any refresh;
+                                    // scope-lost rows stay fenced out.
+                                    let roster: Vec<(i64, String)> = state
+                                        .characters
+                                        .iter()
+                                        .map(|c| (c.character_id, c.name.clone()))
+                                        .collect();
+                                    let facts = crate::pantry::scope_facts_for(&conn, &roster);
+                                    state.pantry = LoadState::Ready(
+                                        crate::pantry::snapshot_from_rows(&asset_rows, &facts),
+                                    );
                                 }
                                 Err(e) => {
                                     tracing::warn!("[PANTRY] stockpile load failed: {}", e)
@@ -2208,11 +2222,15 @@ impl MimirApp {
                         match assets {
                             Ok(data) => {
                                 // Pantry ingestion (card #642): persist the
-                                // landed assets and reload the cross-character
-                                // snapshot. Short DB lock only, never across
-                                // an await; demo never reaches this arm.
+                                // landed assets on the blocking pool and
+                                // land the reloaded snapshot via
+                                // `PantryPersisted` — a 25k-row write must
+                                // never stall the UI frame that received
+                                // the refresh. Demo never reaches this arm.
                                 if crate::pantry::should_persist_pantry(self.state.demo) {
-                                    if let Some(backends) = &self.backends {
+                                    if let (Some(backends), Some(runtime)) =
+                                        (self.backends.as_ref(), self.runtime.as_ref())
+                                    {
                                         let pantry_items: Vec<crate::pantry::indexer::PantryItem> =
                                             data.items
                                                 .iter()
@@ -2223,32 +2241,33 @@ impl MimirApp {
                                                     )
                                                 })
                                                 .collect();
-                                        match crate::pantry::persist_and_reload(
-                                            &backends.db,
+                                        let roster: Vec<(i64, String)> = self
+                                            .state
+                                            .characters
+                                            .iter()
+                                            .map(|c| (c.character_id, c.name.clone()))
+                                            .collect();
+                                        let db = backends.db.clone();
+                                        let tx = self.tx.clone();
+                                        tracing::debug!(
+                                            "[PANTRY] background persist spawned character_id={} rows={}",
                                             character_id,
-                                            &pantry_items,
-                                        ) {
-                                            Ok(mut snapshot) => {
-                                                snapshot.step_up_character_ids =
-                                                    match &self.state.pantry {
-                                                        LoadState::Ready(previous) => previous
-                                                            .step_up_character_ids
-                                                            .iter()
-                                                            .copied()
-                                                            .filter(|id| *id != character_id)
-                                                            .collect(),
-                                                        _ => Vec::new(),
-                                                    };
-                                                self.state.pantry = LoadState::Ready(snapshot);
-                                            }
-                                            Err(e) => {
-                                                tracing::warn!(
-                                                    "[PANTRY] persist failed character_id={} error={}",
-                                                    character_id,
-                                                    e
-                                                );
-                                            }
-                                        }
+                                            pantry_items.len()
+                                        );
+                                        runtime.spawn_blocking(move || {
+                                            let snapshot = crate::pantry::persist_and_reload(
+                                                db.as_ref(),
+                                                character_id,
+                                                &pantry_items,
+                                                &roster,
+                                            )
+                                            .map_err(|e| e.to_string());
+                                            tx.send(BackendMsg::PantryPersisted {
+                                                generation,
+                                                character_id,
+                                                snapshot,
+                                            });
+                                        });
                                     }
                                 }
                                 self.state.assets = LoadState::Ready(*data);
@@ -2259,16 +2278,16 @@ impl MimirApp {
                                 // stale rows rather than present them current.
                                 self.state.assets = LoadState::Error(message);
                                 self.state.assets_needs_reauthorize = true;
-                                // Pantry keeps every authorized character and
-                                // badges only the one missing the scope.
+                                // Pantry keeps every authorized character;
+                                // the scope-lost character's rows leave
+                                // the in-memory totals immediately so the
+                                // badge copy stays true (persisted rows
+                                // remain fenced out by scope on load).
                                 let mut snapshot = match self.state.pantry.clone() {
                                     LoadState::Ready(previous) => previous,
                                     _ => crate::pantry::PantrySnapshot::default(),
                                 };
-                                if !snapshot.step_up_character_ids.contains(&character_id) {
-                                    snapshot.step_up_character_ids.push(character_id);
-                                    snapshot.step_up_character_ids.sort_unstable();
-                                }
+                                snapshot.exclude_for_step_up(character_id);
                                 self.state.pantry = LoadState::Ready(snapshot);
                             }
                             Err(message) => {
@@ -2659,6 +2678,45 @@ impl MimirApp {
                             kind.as_str(),
                             id
                         );
+                    }
+                }
+                BackendMsg::PantryPersisted {
+                    generation,
+                    character_id,
+                    snapshot,
+                } => {
+                    if self.state.demo
+                        || self.refresh_generation.get(&character_id).copied() != Some(generation)
+                        || !self
+                            .state
+                            .characters
+                            .iter()
+                            .any(|c| c.character_id == character_id)
+                    {
+                        tracing::warn!(
+                            "[PANTRY] ignoring stale persist result character_id={} generation={}",
+                            character_id,
+                            generation
+                        );
+                        continue;
+                    }
+                    match snapshot {
+                        Ok(snapshot) => {
+                            tracing::debug!(
+                                "[PANTRY] background persist landed character_id={} rows={} step_up={}",
+                                character_id,
+                                snapshot.items.len(),
+                                snapshot.step_up_character_ids.len()
+                            );
+                            self.state.pantry = LoadState::Ready(snapshot);
+                        }
+                        Err(message) => {
+                            tracing::warn!(
+                                "[PANTRY] persist failed character_id={} error={}",
+                                character_id,
+                                message
+                            );
+                        }
                     }
                 }
                 BackendMsg::SdeSynced { summary } => {
@@ -7424,6 +7482,71 @@ mod tests {
         assert!(ids.contains(&98_000_001));
         assert!(ids.contains(&99_000_001));
         assert!(ids.contains(&98_000_002));
+    }
+
+    #[test]
+    fn pantry_persisted_landing_applies_fresh_and_drops_stale() {
+        let mut app = MimirApp::new(false, Arc::new(Mutex::new(Vec::new())), None, None);
+        app.state.daemon_logs_enabled = false; // test isolation: never watch real EVE logs
+        app.state.characters = vec![CharacterRow {
+            character_id: 101,
+            name: "Alpha".to_string(),
+            corporation_id: 0,
+            alliance_id: None,
+            is_active: true,
+        }];
+        app.refresh_generation.insert(101, 2);
+        let snapshot = |quantity: i64| {
+            crate::pantry::PantrySnapshot::new(
+                vec![crate::pantry::indexer::PantryItem {
+                    character_id: 101,
+                    item_id: 1,
+                    type_id: 34,
+                    location_id: 60003760,
+                    location_flag: "Hangar".to_string(),
+                    location_type: "station".to_string(),
+                    quantity,
+                    is_singleton: false,
+                    is_blueprint_copy: false,
+                    is_blueprint: false,
+                }],
+                Vec::new(),
+            )
+        };
+        // Stale generation (1 != current 2) is dropped untouched.
+        app.tx.send(BackendMsg::PantryPersisted {
+            generation: 1,
+            character_id: 101,
+            snapshot: Ok(snapshot(111)),
+        });
+        app.drain_requests();
+        assert!(
+            !app.state.pantry.is_ready(),
+            "stale persist landing must be dropped"
+        );
+        // Fresh generation lands.
+        app.tx.send(BackendMsg::PantryPersisted {
+            generation: 2,
+            character_id: 101,
+            snapshot: Ok(snapshot(222)),
+        });
+        app.drain_requests();
+        let landed = app.state.pantry.as_ready().expect("fresh landing applies");
+        assert_eq!(landed.items.len(), 1);
+        assert_eq!(landed.items[0].quantity, 222);
+        // A landing for a character no longer linked is dropped.
+        app.state.characters.clear();
+        app.tx.send(BackendMsg::PantryPersisted {
+            generation: 2,
+            character_id: 101,
+            snapshot: Ok(snapshot(333)),
+        });
+        app.drain_requests();
+        let kept = app.state.pantry.as_ready().expect("previous snapshot kept");
+        assert_eq!(
+            kept.items[0].quantity, 222,
+            "unlinked landing must be dropped"
+        );
     }
 
     #[test]
