@@ -672,6 +672,178 @@ fn show_effects(ui: &mut egui::Ui, state: &mut AppState, reference: &Exploration
     });
 }
 
+/// Security band for strip node coloring (TOKENS sec_* only).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SecurityBand {
+    High,
+    Low,
+    Null,
+    Wormhole,
+}
+
+/// One Wormhole Subway Chain Strip node. Names only — the
+/// system id is never stored here, so it cannot be rendered.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SubwayNode {
+    pub system_name: String,
+    pub class_label: String,
+    pub effect_label: String,
+    pub band: SecurityBand,
+    pub eol: bool,
+}
+
+/// EOL decay: dashed ring when under 4h remain (spec R10:
+/// `0 < remaining < 4h`; exactly 4h is stable, at/past expiry
+/// the edge is gone, not dashed).
+pub fn eol_dashed(remaining_secs: Option<i64>) -> bool {
+    matches!(remaining_secs, Some(s) if s > 0 && s < 4 * 3600)
+}
+
+fn band_for(system: &RefSystem) -> SecurityBand {
+    use crate::names::exploration_ref::SecurityCategory;
+    match system.category() {
+        SecurityCategory::Highsec => SecurityBand::High,
+        SecurityCategory::Lowsec => SecurityBand::Low,
+        SecurityCategory::Nullsec => SecurityBand::Null,
+        _ => SecurityBand::Wormhole,
+    }
+}
+
+/// Representative chain C1..C6 from the bundled reference:
+/// first system (name order) per wormhole class, with its
+/// weather (effect) badge. Deterministic; names only.
+pub fn subway_chain(reference: &ExplorationRef) -> Vec<SubwayNode> {
+    let mut nodes = Vec::new();
+    for class in 1..=6i64 {
+        let candidates: Vec<&RefSystem> = reference
+            .systems
+            .iter()
+            .filter(|s| s.inherited_class.or(s.raw_class) == Some(class))
+            .collect();
+        let Some(system) = candidates.iter().min_by(|a, b| a.name.cmp(&b.name)) else {
+            continue;
+        };
+        let effect_label = match effect_for_system(system, reference) {
+            EffectResolution::Applied {
+                family, strength, ..
+            } => {
+                format!("{} {}", family.label(), strength)
+            }
+            EffectResolution::None => "No effect".to_string(),
+            EffectResolution::Unknown => "Effect unknown".to_string(),
+        };
+        nodes.push(SubwayNode {
+            system_name: system.name.clone(),
+            class_label: format!("C{class}"),
+            effect_label,
+            band: band_for(system),
+            eol: false,
+        });
+    }
+    tracing::debug!("[EXPLORE] subway_chain nodes={}", nodes.len());
+    nodes
+}
+
+fn band_color(band: SecurityBand) -> egui::Color32 {
+    let t = super::tokens::TOKENS;
+    match band {
+        SecurityBand::High => t.sec_high,
+        SecurityBand::Low => t.sec_low,
+        SecurityBand::Null => t.sec_null,
+        SecurityBand::Wormhole => t.sec_wh,
+    }
+}
+
+/// Horizontal Subway Chain Strip via painter: class nodes,
+/// weather badges, solid connectors; EOL nodes get a dashed
+/// warning ring. All colors/sizes resolve through TOKENS.
+fn show_subway_strip(ui: &mut egui::Ui, reference: &ExplorationRef) {
+    let nodes = subway_chain(reference);
+    widgets::card(ui, |ui| {
+        ui.label(
+            egui::RichText::new("Wormhole subway chain")
+                .font(super::tokens::TOKENS.typography.heading_font())
+                .color(super::tokens::TOKENS.text_primary),
+        );
+        if nodes.is_empty() {
+            widgets::empty_panel(ui, "No wormhole systems in reference data.");
+            return;
+        }
+        let width = ui.available_width().max(320.0);
+        let (rect, _resp) = ui.allocate_exact_size(egui::vec2(width, 108.0), egui::Sense::hover());
+        let painter = ui.painter_at(rect);
+        let t = super::tokens::TOKENS;
+        let cy = rect.center().y - 8.0;
+        let n = nodes.len() as f32;
+        let xs: Vec<f32> = nodes
+            .iter()
+            .enumerate()
+            .map(|(i, _)| {
+                rect.left() + 36.0 + (rect.width() - 72.0) * (i as f32 / (n - 1.0).max(1.0))
+            })
+            .collect();
+        // Connectors first (under nodes).
+        for pair in xs.windows(2) {
+            painter.line_segment(
+                [egui::pos2(pair[0], cy), egui::pos2(pair[1], cy)],
+                egui::Stroke::new(2.0, t.cyan_telemetry),
+            );
+        }
+        for (i, node) in nodes.iter().enumerate() {
+            let center = egui::pos2(xs[i], cy);
+            let color = band_color(node.band);
+            painter.circle_filled(center, 15.0, t.bg_card_elevated);
+            painter.circle_stroke(center, 15.0, egui::Stroke::new(2.5, color));
+            if node.eol {
+                // Dashed EOL (<4h) ring: short arc segments.
+                let mut deg = 0.0f32;
+                while deg < 360.0 {
+                    let a1 = (deg).to_radians();
+                    let a2 = (deg + 18.0).to_radians();
+                    painter.line_segment(
+                        [
+                            center + egui::vec2(a1.cos() * 20.0, a1.sin() * 20.0),
+                            center + egui::vec2(a2.cos() * 20.0, a2.sin() * 20.0),
+                        ],
+                        egui::Stroke::new(2.0, t.warning),
+                    );
+                    deg += 36.0;
+                }
+            }
+            painter.text(
+                center,
+                egui::Align2::CENTER_CENTER,
+                &node.class_label,
+                t.typography.small_font(),
+                t.text_primary,
+            );
+            painter.text(
+                center + egui::vec2(0.0, 28.0),
+                egui::Align2::CENTER_CENTER,
+                &node.system_name,
+                t.typography.small_font(),
+                t.text_primary,
+            );
+            painter.text(
+                center + egui::vec2(0.0, 42.0),
+                egui::Align2::CENTER_CENTER,
+                &node.effect_label,
+                t.typography.small_font(),
+                t.text_muted,
+            );
+            if node.eol {
+                painter.text(
+                    center + egui::vec2(0.0, -28.0),
+                    egui::Align2::CENTER_CENTER,
+                    "EOL <4h",
+                    t.typography.small_font(),
+                    t.warning,
+                );
+            }
+        }
+    });
+}
+
 pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
     ui.heading("Exploration");
     // Clone only the `Arc` handle out of the load state so the frame
@@ -731,6 +903,7 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
             }
         });
     });
+    show_subway_strip(ui, &reference);
     match state.exploration_section {
         ExplorationSection::Types => show_types(ui, state, &reference),
         ExplorationSection::Systems => show_systems(ui, state, &reference),
@@ -1136,6 +1309,36 @@ mod tests {
             reference.manifest.row_counts.get("statics"),
             Some(&reference.statics.len())
         );
+    }
+
+    #[test]
+    fn subway_chain_covers_c1_to_c6_with_names_and_weather() {
+        let reference = ExplorationRef::load_bundled().expect("bundled loads");
+        let chain = subway_chain(&reference);
+        assert_eq!(chain.len(), 6, "one node per class C1-C6");
+        for (i, node) in chain.iter().enumerate() {
+            assert_eq!(node.class_label, format!("C{}", i + 1));
+            assert!(!node.system_name.is_empty());
+            // Names only: label is a system name, never a raw id string
+            assert!(
+                reference.systems.iter().any(|s| s.name == node.system_name),
+                "node name resolves in reference"
+            );
+            assert!(!node.effect_label.is_empty(), "weather badge present");
+            assert_eq!(node.band, SecurityBand::Wormhole);
+        }
+        // Deterministic
+        assert_eq!(chain, subway_chain(&reference));
+    }
+
+    #[test]
+    fn eol_dashed_only_inside_four_hour_window() {
+        assert!(eol_dashed(Some(1)));
+        assert!(eol_dashed(Some(4 * 3600 - 1)));
+        assert!(!eol_dashed(Some(4 * 3600)), "exactly 4h is stable");
+        assert!(!eol_dashed(Some(0)), "expired is pruned, not dashed");
+        assert!(!eol_dashed(Some(-5)));
+        assert!(!eol_dashed(None));
     }
 
     #[test]

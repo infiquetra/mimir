@@ -34,6 +34,14 @@
 **Rationale.** A single harness with fixed timestep (`1/60`), `RendererOptions::PREDICTABLE` (`msaa_samples = 1`), and demo-seeded `MimirApp::new(true, ..., None, None)` gives deterministic, disk-free, network-free frames that downstream cards reuse without renegotiating determinism.
 **Revisit when.** egui_kittest renames the `mac` config table, or a downstream card needs per-OS goldens beyond Linux.
 **Refs.** `tests/ui_kittest/`, `kittest.toml`, `scripts/qa/utm-smoke.sh`, `.github/workflows/ci.yml`, ADR-013.
+### Tuple-cost Dijkstra with mode-specific security mappings (#646)
+
+**Author.** builder-muse (card-646)
+**Decision.** One Dijkstra engine in `src/exploration/router.rs` over petgraph with lexicographic `RouteCost (security_penalty, jump_count, wormhole_uncertainty, path_system_ids)`; Shortest zeroes security, Safest charges lowsec 10 / wormhole 12 / null 20, LessSecure inverts highsec to 20. Full path ids are the deterministic tiebreak.
+**Rejected alternatives.** Scalar weighted-sum cost (loses lexicographic guarantees); BFS (cannot honor security-first or sequence tiebreaks, spec 4.6).
+**Rationale.** Lexicographic tuples make mode semantics exact and testable; storing the path in the cost makes equal-cost relaxation deterministic regardless of insertion order.
+**Revisit when.** Route preferences gain user-tunable avoid flags (spec R23) — then eligibility filtering, not new cost terms, should carry them.
+**Refs.** `src/exploration/router.rs`, `docs/specs/exploration-module-design.md` section 4.6, issue #646.
 
 ## 2026-11-27
 

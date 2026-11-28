@@ -48,6 +48,14 @@
 **Validation.** `cargo test --locked pantry` — indexer/readiness/virtualization-bench/demo-isolation suites green including the rewritten bench; full `cargo test --locked` and `ui_kittest` suites green. The same repair also persisted `location_type`/blueprint flags through SQLite (additive `ALTER TABLE` migration), moved Pantry persistence to `spawn_blocking` with a generation-stamped `PantryPersisted` landing, derived step-up badges for every character from stored `token_meta` scopes at startup and on each persist, excluded fitted/ship-bay stock from Fit-Readiness totals, resolved table locations through root places, gave every `egui_table` column a `range` floor, and virtualized the Assets view (removing the 100-row render truncation).
 **Generalizable rule.** In debug egui test binaries, meet frame budgets by moving string work to build time and rejecting rows with integer masks; never try to out-optimize per-row string scans at opt-level 0.
 **Refs.** Issue #642; `docs/engineering-journal/DECISIONS.md` (Assets truncation history).
+### Unverified scans must never become route edges; K162 mass stays Unknown until paired (#646)
+
+**Author.** builder-muse (card-646)
+**Context.** Porting the exploration router required joining probe-scanner pastes, Eve-Scout highways, and stargates in one Dijkstra graph without ever inventing traversability.
+**Evidence.** `src/exploration/notebook.rs` (`import_scan` stores `verified=0, destination_system_id=NULL`; only `confirm_connection` writes `exploration_connections`; test `unverified_signatures_never_create_edges`), `src/exploration/router.rs` (`effective_max_jump_mass_kg` returns None for unpaired K162; test `k162_unknown_never_traversable_for_mass_limited_query`).
+**Mechanism.** A scanner row naming a wormhole proves presence, not destination or mass; defaulting either fabricates shortcuts. Separating signature storage from connection confirmation makes the unsafe state unrepresentable in the edge query.
+**Generalizable rule.** Presence observations and traversal authorizations are different tables; the routing query reads only the authorization table.
+**Refs.** `docs/specs/exploration-module.md` R20/R21, issue #646.
 
 ## 2026-11-21
 
