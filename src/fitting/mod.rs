@@ -2,12 +2,16 @@
 //! catalogue. No egui, no state, no network, no database.
 
 pub mod active_repair;
+pub mod active_tank;
 pub mod bay_usage;
+pub mod breacher_dot;
 pub mod calibration;
 pub mod dna;
+pub mod dogma_pipeline;
 pub mod dps;
 pub mod editor;
 pub mod eft;
+pub mod propulsion;
 pub mod resources;
 pub mod saved_copy;
 pub mod ship_cap_stability;
@@ -20,15 +24,32 @@ pub mod slot_layout;
 pub mod write_map;
 
 pub use active_repair::{fitting_active_repair, FittingActiveRepair};
+pub use active_tank::{
+    fitting_active_tank, ActiveTankLayer, FittingActiveTank, SustainedBasis,
+    REPAIR_AMOUNT_ATTRIBUTE_ID,
+};
 pub use bay_usage::{bay_usage, BayBudget, BayUsage, BayUsageOutcome};
+pub use breacher_dot::{
+    breacher_dps, breacher_dps_against, breacher_dps_multi, breacher_time_to_kill_secs,
+    BreacherPod, BreacherTarget, SCARAB_POD_M, SCARAB_POD_S,
+};
 pub use calibration::{rig_calibration, CalibrationBudget, CalibrationOutcome};
 pub use dna::{parse_dna, parse_import, MAX_DNA_EXPANDED_ITEMS, MAX_DNA_SEGMENTS};
+pub use dogma_pipeline::{
+    evaluate_attribute, evaluate_attributes, stacking_effectiveness, DogmaModifier, DogmaOperator,
+    EvaluatedAttribute, ModifierSource, ModuleState, OperandScaling, SkillContext, UnappliedEffect,
+    UnappliedReason,
+};
 pub use dps::{fitting_dps, FamilyDps, FittingDps, FittingDpsOutcome};
 pub use editor::{add_item, remove_item, rename, set_quantity, EditRefusal};
 pub use eft::{
     parse_eft, EftImportOutcome, ImportFatal, ImportFormat, ImportIssue, ImportIssueKind,
     ImportReport, ImportSection, ImportedCharge, ImportedFitting, ImportedItem,
     MAX_EFT_IMPORT_BYTES, MAX_EFT_IMPORT_LINES, MAX_STACK_QUANTITY,
+};
+pub use propulsion::{
+    align_time_secs, fitting_propulsion, mass_with_percent, propelled_max_velocity,
+    FittingPropulsion, FittingPropulsionOutcome, PropulsionModule,
 };
 pub use resources::{
     fitting_resources, fitting_resources_with_skills, resource_skill_levels, FittingResources,

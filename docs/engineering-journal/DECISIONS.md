@@ -961,3 +961,16 @@ the provenance model. Do not collapse back to unstructured prompt-only evidence.
 `test/features/combat_analyzer/domain/combat_evidence_ledger_test.dart`;
 [LEARNINGS 2026-05-21](LEARNINGS.md#combat-logs-are-a-primary-source-but-not-a-complete-aar-evidence-source);
 [QUEUED AAR fit simulation](QUEUED.md#p1--aar-fit-simulation-and-defense-profile-derivation).
+
+### Dogma completion composes shipped blocks; unbaked operands stay explicit inputs (#639)
+
+**Decision.** The complete Dogma evaluator ships as a new pure pipeline (`src/fitting/dogma_pipeline.rs`: canonical nine-operator order, magnitude-sorted stacking only for module/rig/subsystem sources on non-stackable targets, `SkillContext::{Trained, AllFive, BaseOnly}`, `ModuleState`, `unapplied_effects` with named reasons) plus thin compositions over shipped blocks: `propulsion.rs` reuses bonused navigation mass/agility, `active_tank.rs` reuses `active_repair.rs` rates and bonused resistances (no second repair implementation), and `breacher_dot.rs` is the closed-form `min(flat, pct * total_hp)` / max-stream rule. SDE operands the bundled extract does not bake (propulsion thrust/boost, pod damage, per-level skill percents) are explicit caller inputs; existing `ship_*` pinned values are untouched.
+
+**Rejected alternatives.**
+- Rewriting the `ship_*` blocks onto the new pipeline in the same change. That risks every pinned category-7 value for zero user-visible gain; migration can happen family by family behind the same oracle tests.
+- Embedding a private copy of thrust/pod tables in Rust. That forks the SDE and goes stale silently; explicit inputs keep one source of truth and an honest disclosure path.
+- Reading `dogma.json` at runtime for the missing attributes. The codebase explicitly forbids it, and its pod values already diverge from the CSV cache.
+
+**Revisit when.** The generator (`scripts/sde/generate_fitting_types_sde.py`) bakes attributes 20/567/796/5736/5737 and subsystem modifiers into `fitting_types.json` (or SDE-over-HTTP #654 serves them): then `fitting_propulsion`, pod resolution, and hull/skill modifier construction should read the catalogue directly and the explicit-input structs retire.
+
+**Refs.** `tests/dogma_pyfa_oracles.rs` (30 SDE-derived fixtures); [LEARNINGS 2026-11-28](LEARNINGS.md).
