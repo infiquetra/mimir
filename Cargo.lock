@@ -3033,6 +3033,7 @@ dependencies = [
  "oauth2",
  "open",
  "p256",
+ "petgraph",
  "rand 0.8.8",
  "reqwest 0.12.28",
  "rsa",
@@ -3856,6 +3857,7 @@ dependencies = [
  "fixedbitset",
  "hashbrown 0.15.5",
  "indexmap",
+ "serde",
 ]
 
 [[package]]
