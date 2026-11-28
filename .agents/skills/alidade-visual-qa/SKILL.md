@@ -1,6 +1,6 @@
 ---
 name: alidade-visual-qa
-description: Execute two-tier automated UI, accessibility, and Metal visual verification for Alidade: Tier 1 headless egui_kittest + AccessKit snapshots on host CI, and Tier 2 SSH-locked full-window testing inside the hidden macos-test-02 UTM guest. Trigger before merging any UI, layout, or visualization PR.
+description: "Execute two-tier automated UI, accessibility, and Metal visual verification for Alidade: Tier 1 headless egui_kittest + AccessKit snapshots on host CI, and Tier 2 SSH-locked full-window testing inside the hidden macos-test-02 UTM guest. Trigger before merging any UI, layout, or visualization PR."
 ---
 
 # Alidade Two-Tier Visual & GUI Verification
