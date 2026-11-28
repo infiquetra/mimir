@@ -8,4 +8,5 @@
 mod harness;
 
 mod card_653;
+mod exploration;
 mod pantry;

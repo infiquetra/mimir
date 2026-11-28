@@ -779,7 +779,7 @@ fn show_subway_strip(ui: &mut egui::Ui, reference: &ExplorationRef) {
             .iter()
             .enumerate()
             .map(|(i, _)| {
-                rect.left() + 36.0 + (rect.width() - 72.0) * (i as f32 / (n - 1.0).max(1.0))
+                rect.left() + 56.0 + (rect.width() - 112.0) * (i as f32 / (n - 1.0).max(1.0))
             })
             .collect();
         // Connectors first (under nodes).
