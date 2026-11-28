@@ -154,30 +154,11 @@ pub struct TrackedSignature {
     pub observed_at: i64,
 }
 
+/// Single source of truth: `src/storage/schema.sql` (included
+/// as `SCHEMA_SQL` by `db::migrate`). Executing the full batch
+/// keeps notebook tables byte-identical with migrated databases.
 pub fn ensure_notebook_tables(conn: &Connection) -> AppResult<()> {
-    conn.execute_batch(
-        "CREATE TABLE IF NOT EXISTS exploration_signatures (
-            character_id INTEGER NOT NULL,
-            system_id INTEGER NOT NULL,
-            signature_id TEXT NOT NULL,
-            signature_type TEXT NOT NULL DEFAULT 'Unknown',
-            name TEXT,
-            destination_system_id INTEGER,
-            verified INTEGER NOT NULL DEFAULT 0,
-            observed_at INTEGER NOT NULL DEFAULT 0,
-            PRIMARY KEY (character_id, system_id, signature_id)
-        );
-        CREATE TABLE IF NOT EXISTS exploration_connections (
-            character_id INTEGER NOT NULL,
-            from_system_id INTEGER NOT NULL,
-            to_system_id INTEGER NOT NULL,
-            wormhole_code TEXT NOT NULL DEFAULT '',
-            max_jump_mass_kg INTEGER,
-            expires_at INTEGER,
-            verified_at INTEGER NOT NULL DEFAULT 0,
-            PRIMARY KEY (character_id, from_system_id, to_system_id, wormhole_code)
-        );",
-    )?;
+    conn.execute_batch(crate::storage::db::SCHEMA_SQL)?;
     Ok(())
 }
 
@@ -224,6 +205,33 @@ pub fn import_scan(
     let tx = conn.unchecked_transaction()?;
     let mut written = 0;
     for row in rows {
+        // R20: a rescan changing a signature away from Wormhole
+        // atomically retires its owned connection in this tx.
+        let previous: Option<(String, Option<i64>)> = tx
+            .query_row(
+                "SELECT signature_type, destination_system_id FROM exploration_signatures \
+                 WHERE character_id=?1 AND system_id=?2 AND signature_id=?3",
+                params![character_id, system_id, row.signature_id],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .ok();
+        if let Some((prev_label, prev_dest)) = &previous {
+            if type_from_label(prev_label) == SignatureType::Wormhole
+                && row.signature_type != SignatureType::Wormhole
+            {
+                if let Some(dest) = prev_dest {
+                    tx.execute(
+                        "DELETE FROM exploration_connections \
+                         WHERE character_id=?1 AND from_system_id=?2 AND to_system_id=?3",
+                        params![character_id, system_id, dest],
+                    )?;
+                    tracing::info!(
+                        "[EXPLORE] retired connection on rescan signature_id={}",
+                        row.signature_id
+                    );
+                }
+            }
+        }
         tx.execute(
             "INSERT INTO exploration_signatures \
              (character_id, system_id, signature_id, signature_type, name, destination_system_id, verified, observed_at) \
@@ -239,6 +247,16 @@ pub fn import_scan(
                 now
             ],
         )?;
+        if previous.as_ref().is_some_and(|(prev_label, _)| {
+            type_from_label(prev_label) == SignatureType::Wormhole
+                && row.signature_type != SignatureType::Wormhole
+        }) {
+            tx.execute(
+                "UPDATE exploration_signatures SET destination_system_id=NULL, verified=0 \
+                 WHERE character_id=?1 AND system_id=?2 AND signature_id=?3",
+                params![character_id, system_id, row.signature_id],
+            )?;
+        }
         written += 1;
     }
     tx.commit()?;
@@ -316,14 +334,14 @@ pub fn confirm_connection(conn: &Connection, req: &ConfirmConnection) -> AppResu
             "connection endpoints must differ".to_string(),
         ));
     }
-    let exists: i64 = conn.query_row(
-        "SELECT COUNT(*) FROM exploration_signatures WHERE character_id=?1 AND system_id=?2 AND signature_id=?3",
-        params![character_id, from_system_id, signature_id],
-        |r| r.get(0),
-    )?;
-    if exists == 0 {
+    if wormhole_code.trim().is_empty() {
         return Err(crate::error::AppError::Message(
-            "signature not in notebook for this character/system".to_string(),
+            "wormhole code must not be empty".to_string(),
+        ));
+    }
+    if expires_at.is_some_and(|exp| exp <= now) {
+        return Err(crate::error::AppError::Message(
+            "connection expiry must be in the future".to_string(),
         ));
     }
     tracing::info!(
@@ -332,6 +350,29 @@ pub fn confirm_connection(conn: &Connection, req: &ConfirmConnection) -> AppResu
         signature_id
     );
     let tx = conn.unchecked_transaction()?;
+    // R20 inside the transaction: only an active Wormhole
+    // signature may own a connection.
+    let stored_type: Option<String> = tx
+        .query_row(
+            "SELECT signature_type FROM exploration_signatures \
+             WHERE character_id=?1 AND system_id=?2 AND signature_id=?3",
+            params![character_id, from_system_id, signature_id],
+            |r| r.get(0),
+        )
+        .ok();
+    match stored_type.as_deref() {
+        None => {
+            return Err(crate::error::AppError::Message(
+                "signature not in notebook for this character/system".to_string(),
+            ));
+        }
+        Some(label) if type_from_label(label) != SignatureType::Wormhole => {
+            return Err(crate::error::AppError::Message(
+                "only a wormhole signature can own a connection".to_string(),
+            ));
+        }
+        _ => {}
+    }
     tx.execute(
         "UPDATE exploration_signatures SET destination_system_id=?1, verified=1 \
          WHERE character_id=?2 AND system_id=?3 AND signature_id=?4",
@@ -356,7 +397,7 @@ pub fn traversable_edges(
 ) -> AppResult<Vec<RouterEdge>> {
     ensure_notebook_tables(conn)?;
     let mut stmt = conn.prepare(
-        "SELECT from_system_id, to_system_id, wormhole_code, max_jump_mass_kg, expires_at \
+        "SELECT from_system_id, to_system_id, wormhole_code, max_jump_mass_kg, expires_at, verified_at \
          FROM exploration_connections WHERE character_id=?1 ORDER BY from_system_id, to_system_id",
     )?;
     let rows = stmt.query_map(params![character_id], |r| {
@@ -366,12 +407,17 @@ pub fn traversable_edges(
             r.get::<_, String>(2)?,
             r.get::<_, Option<i64>>(3)?,
             r.get::<_, Option<i64>>(4)?,
+            r.get::<_, i64>(5)?,
         ))
     })?;
     let mut edges = Vec::new();
     for row in rows {
-        let (from, to, code, mass, expires) = row?;
+        let (from, to, code, mass, expires, verified_at) = row?;
         if expires.is_some_and(|exp| now >= exp) {
+            continue;
+        }
+        // R20/R22: verification expires for routing after 24h.
+        if now.saturating_sub(verified_at) >= 86_400 {
             continue;
         }
         // Both directions: wormholes are traversable both ways (R21).
@@ -485,5 +531,92 @@ mod tests {
         );
         // Expired confirmed edge pruned
         assert!(traversable_edges(&conn, 7, 1).unwrap().len() == 2);
+    }
+
+    fn confirm_req(code: &str, expires_at: Option<i64>, now: i64) -> ConfirmConnection {
+        ConfirmConnection {
+            character_id: 7,
+            from_system_id: 100,
+            signature_id: "ABC-123".to_string(),
+            to_system_id: 200,
+            wormhole_code: code.to_string(),
+            max_jump_mass_kg: None,
+            expires_at,
+            now,
+        }
+    }
+
+    #[test]
+    fn data_and_combat_signatures_cannot_own_connections() {
+        for paste in [
+            "ABC-123\tCosmic Signature\tData Site",
+            "ABC-123\tCosmic Anomaly\tCombat Site",
+        ] {
+            let conn = mem();
+            let parsed = parse_probe_scan(paste).unwrap();
+            import_scan(&conn, 7, 100, &parsed.rows, 1_000).unwrap();
+            assert!(
+                confirm_connection(&conn, &confirm_req("B274", None, 1_000)).is_err(),
+                "{paste}"
+            );
+            assert!(traversable_edges(&conn, 7, 1_000).unwrap().is_empty());
+        }
+    }
+
+    #[test]
+    fn rescan_away_from_wormhole_retires_edge() {
+        let conn = mem();
+        let wh = parse_probe_scan("ABC-123\tCosmic Signature\tWormhole").unwrap();
+        import_scan(&conn, 7, 100, &wh.rows, 1_000).unwrap();
+        confirm_connection(&conn, &confirm_req("B274", None, 1_000)).unwrap();
+        assert_eq!(traversable_edges(&conn, 7, 1_000).unwrap().len(), 2);
+        let relic = parse_probe_scan("ABC-123\tCosmic Signature\tRelic Site").unwrap();
+        import_scan(&conn, 7, 100, &relic.rows, 2_000).unwrap();
+        assert!(traversable_edges(&conn, 7, 2_000).unwrap().is_empty());
+    }
+
+    #[test]
+    fn verification_age_24h_boundary_and_expiry_validation() {
+        let conn = mem();
+        let wh = parse_probe_scan("ABC-123\tCosmic Signature\tWormhole").unwrap();
+        import_scan(&conn, 7, 100, &wh.rows, 1_000).unwrap();
+        // Past expiry and empty code rejected.
+        assert!(confirm_connection(&conn, &confirm_req("B274", Some(999), 1_000)).is_err());
+        assert!(confirm_connection(&conn, &confirm_req("B274", Some(1_000), 1_000)).is_err());
+        assert!(confirm_connection(&conn, &confirm_req("", None, 1_000)).is_err());
+        assert!(confirm_connection(&conn, &confirm_req("  ", None, 1_000)).is_err());
+        confirm_connection(&conn, &confirm_req("B274", None, 1_000)).unwrap();
+        // 23h59m included, exactly 24h excluded.
+        assert_eq!(
+            traversable_edges(&conn, 7, 1_000 + 86_399).unwrap().len(),
+            2
+        );
+        assert!(traversable_edges(&conn, 7, 1_000 + 86_400)
+            .unwrap()
+            .is_empty());
+        assert!(traversable_edges(&conn, 7, 1_000 + 400 * 86_400)
+            .unwrap()
+            .is_empty());
+    }
+
+    #[test]
+    fn notebook_tables_match_schema_source() {
+        let via_ensure = mem();
+        ensure_notebook_tables(&via_ensure).unwrap();
+        let via_schema = mem();
+        via_schema
+            .execute_batch(crate::storage::db::SCHEMA_SQL)
+            .unwrap();
+        for conn in [&via_ensure, &via_schema] {
+            let count: i64 = conn
+                .query_row(
+                    "SELECT COUNT(*) FROM sqlite_master WHERE type='table' \
+                     AND name IN ('exploration_signatures','exploration_connections')",
+                    [],
+                    |r| r.get(0),
+                )
+                .unwrap();
+            assert_eq!(count, 2);
+        }
     }
 }

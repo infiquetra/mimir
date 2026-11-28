@@ -229,6 +229,21 @@ enum BackendMsg {
         character_id: i64,
         snapshot: Result<crate::pantry::PantrySnapshot, String>,
     },
+    /// Exploration notebook/chain reload after a background
+    /// write or load (#646 repair): edges and signatures for
+    /// one character, applied only for the active character.
+    ExplorationUpdated {
+        character_id: i64,
+        edges: Vec<crate::exploration::router::RouterEdge>,
+        signatures: Vec<crate::exploration::notebook::TrackedSignature>,
+        signatures_system_id: Option<i64>,
+        status: String,
+    },
+    /// Background route result (#646 repair).
+    ExplorationRouteResult {
+        route: Option<crate::exploration::router::Route>,
+        message: Option<String>,
+    },
     /// One EVE log line from the log-worker thread (card #655).
     LogEvent(LogEvent),
     /// Human-readable daemon status label from the log-worker thread.
@@ -2747,6 +2762,41 @@ impl MimirApp {
                         }
                     }
                 }
+                BackendMsg::ExplorationUpdated {
+                    character_id,
+                    edges,
+                    signatures,
+                    signatures_system_id,
+                    status,
+                } => {
+                    if self.state.demo || self.state.active_character_id != Some(character_id) {
+                        tracing::debug!(
+                            "[EXPLORE] dropping exploration update character_id={}",
+                            character_id
+                        );
+                        continue;
+                    }
+                    tracing::info!(
+                        "[EXPLORE] exploration updated edges={} signatures={}",
+                        edges.len(),
+                        signatures.len()
+                    );
+                    self.state.exploration_chain_edges = edges;
+                    if signatures_system_id.is_some() {
+                        self.state.exploration_signatures = signatures;
+                        self.state.exploration_signatures_system_id = signatures_system_id;
+                    }
+                    self.state.exploration_loaded_for = Some(character_id);
+                    self.state.exploration_status = Some(status);
+                }
+                BackendMsg::ExplorationRouteResult { route, message } => {
+                    if self.state.demo {
+                        continue;
+                    }
+                    tracing::info!("[EXPLORE] route result landed found={}", route.is_some());
+                    self.state.exploration_route_result = route;
+                    self.state.exploration_route_message = message;
+                }
                 BackendMsg::LogEvent(event) => {
                     if self.state.demo {
                         tracing::debug!("[DAEMON] dropping log event in demo mode");
@@ -3001,7 +3051,220 @@ impl MimirApp {
         if self.state.sde_sync_requested {
             self.try_spawn_sde_sync();
         }
+        self.drain_exploration_requests();
         self.sync_daemon_state();
+    }
+
+    /// Drain exploration requests (#646 repair) on the blocking
+    /// pool: SQLite is locked only briefly inside the blocking
+    /// closure (never across `.await`), results land through
+    /// `BackendMsg`, and demo mode never reaches here (the view
+    /// applies demo imports in memory with zero live-DB writes).
+    /// No network is added; Eve-Scout stays parser/snapshot only.
+    fn drain_exploration_requests(&mut self) {
+        let has_work = self.state.exploration_load_requested
+            || self.state.exploration_pending_import.is_some()
+            || self.state.exploration_confirm_request.is_some()
+            || self.state.exploration_route_request.is_some();
+        if !has_work {
+            return;
+        }
+        if self.state.demo {
+            self.state.exploration_load_requested = false;
+            self.state.exploration_pending_import = None;
+            self.state.exploration_confirm_request = None;
+            self.state.exploration_route_request = None;
+            return;
+        }
+        let Some(character_id) = self.state.active_character_id else {
+            self.state.exploration_load_requested = false;
+            self.state.exploration_pending_import = None;
+            self.state.exploration_confirm_request = None;
+            self.state.exploration_route_request = None;
+            self.state.exploration_status =
+                Some("Select a character to track signatures".to_string());
+            return;
+        };
+        let (Some(backends), Some(runtime)) = (self.backends.as_ref(), self.runtime.as_ref())
+        else {
+            self.state.exploration_load_requested = false;
+            self.state.exploration_pending_import = None;
+            self.state.exploration_confirm_request = None;
+            self.state.exploration_route_request = None;
+            self.state.exploration_status =
+                Some("Exploration storage unavailable (no backend)".to_string());
+            return;
+        };
+        let db = backends.db.clone();
+        let tx = self.tx.clone();
+        let now = self.state.now_utc().timestamp();
+        if self.state.exploration_load_requested {
+            self.state.exploration_load_requested = false;
+            let db = db.clone();
+            let tx = tx.clone();
+            tracing::debug!("[EXPLORE] background chain load spawned");
+            runtime.spawn_blocking(move || {
+                let result = (|| -> Result<_, String> {
+                    let conn = db.lock().map_err(|e| e.to_string())?;
+                    let edges =
+                        crate::exploration::notebook::traversable_edges(&conn, character_id, now)
+                            .map_err(|e| e.to_string())?;
+                    Ok(edges)
+                })();
+                let (edges, status) = match result {
+                    Ok(edges) => (edges, "Connections loaded".to_string()),
+                    Err(message) => (Vec::new(), message),
+                };
+                tx.send(BackendMsg::ExplorationUpdated {
+                    character_id,
+                    edges,
+                    signatures: Vec::new(),
+                    signatures_system_id: None,
+                    status,
+                });
+            });
+            return;
+        }
+        if let Some((system_id, rows)) = self.state.exploration_pending_import.take() {
+            let db = backends.db.clone();
+            let tx = self.tx.clone();
+            tracing::debug!("[EXPLORE] background scan import spawned");
+            runtime.spawn_blocking(move || {
+                let result = (|| -> Result<_, String> {
+                    let conn = db.lock().map_err(|e| e.to_string())?;
+                    crate::exploration::notebook::import_scan(
+                        &conn,
+                        character_id,
+                        system_id,
+                        &rows,
+                        now,
+                    )
+                    .map_err(|e| e.to_string())?;
+                    let signatures = crate::exploration::notebook::list_signatures(
+                        &conn,
+                        character_id,
+                        system_id,
+                    )
+                    .map_err(|e| e.to_string())?;
+                    let edges =
+                        crate::exploration::notebook::traversable_edges(&conn, character_id, now)
+                            .map_err(|e| e.to_string())?;
+                    Ok((signatures, edges))
+                })();
+                let (signatures, edges, status) = match result {
+                    Ok((signatures, edges)) => (signatures, edges, "Scan imported".to_string()),
+                    Err(message) => (Vec::new(), Vec::new(), message),
+                };
+                tx.send(BackendMsg::ExplorationUpdated {
+                    character_id,
+                    edges,
+                    signatures,
+                    signatures_system_id: Some(system_id),
+                    status,
+                });
+            });
+            return;
+        }
+        if let Some(request) = self.state.exploration_confirm_request.take() {
+            let db = backends.db.clone();
+            let tx = self.tx.clone();
+            tracing::debug!("[EXPLORE] background confirm spawned");
+            runtime.spawn_blocking(move || {
+                let result = (|| -> Result<_, String> {
+                    let conn = db.lock().map_err(|e| e.to_string())?;
+                    crate::exploration::notebook::confirm_connection(
+                        &conn,
+                        &crate::exploration::notebook::ConfirmConnection {
+                            character_id,
+                            from_system_id: request.from_system_id,
+                            signature_id: request.signature_id.clone(),
+                            to_system_id: request.to_system_id,
+                            wormhole_code: request.wormhole_code.clone(),
+                            max_jump_mass_kg: request.max_jump_mass_kg,
+                            expires_at: request.expires_at,
+                            now,
+                        },
+                    )
+                    .map_err(|e| e.to_string())?;
+                    let signatures = crate::exploration::notebook::list_signatures(
+                        &conn,
+                        character_id,
+                        request.from_system_id,
+                    )
+                    .map_err(|e| e.to_string())?;
+                    let edges =
+                        crate::exploration::notebook::traversable_edges(&conn, character_id, now)
+                            .map_err(|e| e.to_string())?;
+                    Ok((signatures, edges))
+                })();
+                let (signatures, edges, status) = match result {
+                    Ok((signatures, edges)) => {
+                        (signatures, edges, "Connection confirmed".to_string())
+                    }
+                    Err(message) => (Vec::new(), Vec::new(), message),
+                };
+                tx.send(BackendMsg::ExplorationUpdated {
+                    character_id,
+                    edges,
+                    signatures,
+                    signatures_system_id: Some(request.from_system_id),
+                    status,
+                });
+            });
+            return;
+        }
+        if let Some(request) = self.state.exploration_route_request.take() {
+            let reference = self
+                .state
+                .exploration
+                .as_ready()
+                .map(|data| std::sync::Arc::clone(&data.reference));
+            let snapshot = self.state.exploration_snapshot.clone();
+            tracing::debug!("[EXPLORE] background route spawned");
+            runtime.spawn_blocking(move || {
+                let route = (|| -> Option<crate::exploration::router::Route> {
+                    let reference = reference?;
+                    let nodes: Vec<crate::exploration::router::SystemNode> = reference
+                        .systems
+                        .iter()
+                        .map(|s| crate::exploration::router::SystemNode {
+                            system_id: s.system_id,
+                            name: s.name.clone(),
+                            security: s.raw_security,
+                            wormhole_class: s.inherited_class.or(s.raw_class),
+                        })
+                        .collect();
+                    let conn = db.lock().ok()?;
+                    let mut edges = crate::exploration::router::stargate_edges_from_db(&conn);
+                    if let Ok(local) =
+                        crate::exploration::notebook::traversable_edges(&conn, character_id, now)
+                    {
+                        edges.extend(local);
+                    }
+                    drop(conn);
+                    if let Some(snap) = &snapshot {
+                        edges.extend(crate::exploration::evescout::snapshot_edges(
+                            snap, now, false,
+                        ));
+                    }
+                    crate::exploration::router::find_route(
+                        &nodes,
+                        &edges,
+                        request.origin_id,
+                        request.destination_id,
+                        request.mode,
+                        request.ship,
+                        now,
+                    )
+                })();
+                let message = if route.is_some() {
+                    None
+                } else {
+                    Some("No route in the available connection graph".to_string())
+                };
+                tx.send(BackendMsg::ExplorationRouteResult { route, message });
+            });
+        }
     }
 
     /// Spawn the background SDE sync when the decision helper allows

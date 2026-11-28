@@ -1,7 +1,8 @@
 //! Card #646 exploration suite: structural contract for
-//! the Exploration view including the Wormhole Subway
-//! Chain Strip (C1–C6 nodes with weather badges), plus
-//! Linux pixel goldens under `tests/snapshots/card_646/`.
+//! the Exploration view including the real-edge Wormhole
+//! Subway Chain Strip (ordered chain nodes with weather
+//! badges, mass state, and EOL "<4h" markers), plus Linux
+//! pixel goldens under `tests/snapshots/card_646/`.
 
 use mimir::app::state::View;
 
@@ -25,6 +26,38 @@ fn exploration_structural_contract_at_both_viewports() {
         assert!(
             texts.iter().any(|t| t.contains("Wormhole subway chain")),
             "subway strip heading missing at {size:?}"
+        );
+        // AC4: the demo chain carries an under-4h edge, so
+        // the EOL marker must render (dashed connector is
+        // pixel-level; the text marker is the paint proof).
+        assert!(
+            texts.iter().any(|t| t.contains("EOL <4h")),
+            "EOL <4h marker missing at {size:?}: {texts:?}"
+        );
+        // R10 mass dimension: a public leg renders the "Mass
+        // not reported" state (elided to "Mass not..." at the
+        // narrow pane pitch) and known-mass legs render their
+        // grouped kg figure (likewise elided when narrow).
+        assert!(
+            texts.iter().any(|t| t.contains("Mass not")),
+            "Mass not reported label missing at {size:?}"
+        );
+        assert!(
+            texts.iter().any(|t| t.contains("375,000")),
+            "known mass label missing at {size:?}"
+        );
+        // Weather badge on chain nodes.
+        assert!(
+            texts.iter().any(|t| {
+                t.contains("effect")
+                    || t.contains("Pulsar")
+                    || t.contains("Magnetar")
+                    || t.contains("Cataclysmic")
+                    || t.contains("Black Hole")
+                    || t.contains("Red Giant")
+                    || t.contains("Wolf-Rayet")
+            }),
+            "weather badge missing at {size:?}"
         );
     }
 }

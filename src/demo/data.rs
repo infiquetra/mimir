@@ -1371,6 +1371,7 @@ pub fn seed_demo_state(state: &mut AppState) {
                 state.set_active_character(first_id);
                 apply_character(state, &bundle, first_id);
             }
+            seed_demo_exploration(state);
             state.status_message = "Demo mode: sample data, no network.".to_string();
             tracing::info!(
                 "[DEMO] seed complete characters={} summaries={}",
@@ -1391,6 +1392,104 @@ pub fn seed_demo_state(state: &mut AppState) {
             state.fittings = LoadState::Error(format!("Demo data failed to load: {e}"));
         }
     }
+}
+
+/// Seed the demo exploration chain (#646 repair): a realistic
+/// linear chain resolved by NAME from the bundled reference
+/// (highsec anchor plus C1-C6), with expiries computed against
+/// the demo anchor (`state.now_utc()`) so goldens are
+/// deterministic. In-memory only; zero live-DB writes.
+fn seed_demo_exploration(state: &mut AppState) {
+    use crate::exploration::evescout::{EveScoutConnection, EveScoutSnapshot, MaxShipSize};
+    use crate::exploration::notebook::{SignatureType, TrackedSignature};
+    use crate::exploration::router::RouterEdge;
+    let Some(reference) = state
+        .exploration
+        .as_ready()
+        .map(|data| std::sync::Arc::clone(&data.reference))
+    else {
+        tracing::debug!("[DEMO] exploration reference not ready; demo chain skipped");
+        return;
+    };
+    // Anchor is Thera (class 12): the bundled reference holds
+    // wormhole/Pochven systems only, so no k-space name exists
+    // to resolve; Thera is the honest named anchor present.
+    let names = [
+        "Thera", "J002216", "J001057", "J001348", "J001302", "J001025", "J010366",
+    ];
+    let mut ids: Vec<i64> = Vec::new();
+    for name in names {
+        let Some(system) = reference.systems.iter().find(|s| s.name == name) else {
+            tracing::warn!("[DEMO] demo chain system missing name={name}");
+            return;
+        };
+        ids.push(system.system_id);
+    }
+    let anchor = state.now_utc().timestamp();
+    let stable = Some(anchor + 20 * 3600);
+    let mut edges = vec![
+        RouterEdge::wormhole(ids[0], ids[1], "B274", Some(375_000_000), stable),
+        RouterEdge::wormhole(
+            ids[1],
+            ids[2],
+            "N944",
+            Some(1_300_000_000),
+            Some(anchor + 2 * 3600),
+        ),
+        RouterEdge::wormhole(ids[2], ids[3], "K162", Some(300_000_000), stable),
+        RouterEdge::wormhole(ids[3], ids[4], "D845", Some(20_000_000), None),
+        RouterEdge::wormhole(ids[4], ids[5], "B274", Some(375_000_000), stable),
+    ];
+    // K162 stays unpaired so its mass renders Unknown.
+    edges[2].paired_forward_code = None;
+    state.exploration_chain_edges = edges;
+    // Public Eve-Scout leg (C5 -> C6): mass not reported.
+    state.exploration_snapshot = Some(EveScoutSnapshot {
+        connections: vec![EveScoutConnection {
+            record_key: "evescout:646".to_string(),
+            hub_system_id: ids[5],
+            far_system_id: ids[6],
+            hub_signature: Some("ABC-123".to_string()),
+            far_signature: None,
+            wh_type: Some("B274".to_string()),
+            wh_exits_outward: Some(true),
+            expires_at: stable,
+            max_ship_size: Some(MaxShipSize::Battleship),
+        }],
+        fetched_at: anchor,
+    });
+    if let Some(character_id) = state.active_character_id {
+        state.exploration_signatures = vec![
+            TrackedSignature {
+                character_id,
+                system_id: ids[1],
+                signature_id: "ABC-123".to_string(),
+                signature_type: SignatureType::Wormhole,
+                name: None,
+                destination_system_id: Some(ids[2]),
+                verified: true,
+                observed_at: anchor,
+            },
+            TrackedSignature {
+                character_id,
+                system_id: ids[1],
+                signature_id: "DEF-456".to_string(),
+                signature_type: SignatureType::Data,
+                name: None,
+                destination_system_id: None,
+                verified: false,
+                observed_at: anchor,
+            },
+        ];
+        state.exploration_signatures_system_id = Some(ids[1]);
+    }
+    state.exploration_route_origin = "J002216".to_string();
+    state.exploration_origin_system_id = Some(ids[1]);
+    tracing::info!(
+        "[DEMO] demo exploration chain seeded nodes={} edges={}",
+        ids.len(),
+        state.exploration_chain_edges.len()
+    );
 }
 
 /// Seed a bundle through the F2 repositories (never raw SQL here, per the

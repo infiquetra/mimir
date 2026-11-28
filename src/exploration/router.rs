@@ -35,11 +35,22 @@ impl ShipClass {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum RouteMode {
+    #[default]
     Shortest,
     Safest,
     LessSecure,
+}
+
+impl RouteMode {
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::Shortest => "Shortest",
+            Self::Safest => "Safest",
+            Self::LessSecure => "Less secure",
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -138,11 +149,19 @@ impl RouterEdge {
 /// Security penalty for *entering* `dest` under `mode`.
 /// Shortest: 0 everywhere (pure jumps). Safest: highsec-first.
 /// LessSecure: prefers low/null (inverse of Safest).
+/// Pochven (wormhole class 25) is its own high-risk category
+/// per R23/R25: Safest penalty 20, at/above nullsec, never the
+/// generic wormhole 12. Weights otherwise follow the brief's
+/// tuple order and deviate from R24's entry-count model; see
+/// DECISIONS.md (exploration router weights).
 pub fn security_penalty(mode: RouteMode, dest: &SystemNode) -> u32 {
+    let is_pochven = dest.wormhole_class == Some(25);
     match mode {
         RouteMode::Shortest => 0,
         RouteMode::Safest => {
-            if dest.is_wormhole() {
+            if is_pochven {
+                20
+            } else if dest.is_wormhole() {
                 12
             } else if dest.is_highsec() {
                 0
@@ -155,7 +174,9 @@ pub fn security_penalty(mode: RouteMode, dest: &SystemNode) -> u32 {
             }
         }
         RouteMode::LessSecure => {
-            if dest.is_wormhole() {
+            if is_pochven {
+                0
+            } else if dest.is_wormhole() {
                 5
             } else if dest.is_highsec() {
                 20
@@ -210,9 +231,27 @@ pub struct RouteCost {
     pub path: Vec<i64>,
 }
 
+/// How one route step was entered (R25 step detail).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RouteVia {
+    Gate,
+    Wormhole { code: Option<String> },
+}
+
+/// One ordered route step: the entered system plus how it
+/// was reached (`None` only for the origin step).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RouteStep {
+    pub system_id: i64,
+    pub via: Option<RouteVia>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Route {
     pub system_ids: Vec<i64>,
+    /// Per-step detail parallel to `system_ids` (additive;
+    /// `system_ids` remains the compatibility view).
+    pub steps: Vec<RouteStep>,
     pub cost: RouteCost,
 }
 
@@ -241,6 +280,10 @@ pub fn find_route(
     if origin == destination && nodes.iter().any(|n| n.system_id == origin) {
         return Some(Route {
             system_ids: vec![origin],
+            steps: vec![RouteStep {
+                system_id: origin,
+                via: None,
+            }],
             cost: RouteCost {
                 security_penalty: 0,
                 jumps: 0,
@@ -249,7 +292,10 @@ pub fn find_route(
             },
         });
     }
-    let mut graph: DiGraph<i64, ()> = DiGraph::new();
+    // The petgraph DiGraph is the single source of truth:
+    // edge weights are the traversable RouterEdges (parallel
+    // edges preserved) and Dijkstra walks `graph.edges(ix)`.
+    let mut graph: DiGraph<i64, RouterEdge> = DiGraph::new();
     let mut index: HashMap<i64, NodeIndex> = HashMap::new();
     let mut by_id: HashMap<i64, &SystemNode> = HashMap::new();
     for node in nodes {
@@ -259,8 +305,6 @@ pub fn find_route(
     let (Some(&origin_ix), Some(&dest_ix)) = (index.get(&origin), index.get(&destination)) else {
         return None;
     };
-    // Adjacency kept outside graph weights: parallel edges matter.
-    let mut adjacency: HashMap<NodeIndex, Vec<RouterEdge>> = HashMap::new();
     for edge in edges {
         if !edge_traversable(edge, ship, now) {
             continue;
@@ -268,11 +312,7 @@ pub fn find_route(
         let (Some(&from), Some(&to)) = (index.get(&edge.from_id), index.get(&edge.to_id)) else {
             continue;
         };
-        graph.add_edge(from, to, ());
-        adjacency.entry(from).or_default().push(edge.clone());
-    }
-    for list in adjacency.values_mut() {
-        list.sort_by_key(|e| e.to_id);
+        graph.add_edge(from, to, edge.clone());
     }
 
     let start = RouteCost {
@@ -282,6 +322,7 @@ pub fn find_route(
         path: vec![origin],
     };
     let mut best: HashMap<NodeIndex, RouteCost> = HashMap::new();
+    let mut parent: HashMap<NodeIndex, (NodeIndex, RouterEdge)> = HashMap::new();
     best.insert(origin_ix, start.clone());
     let mut heap: BinaryHeap<Reverse<(RouteCost, NodeIndex)>> = BinaryHeap::new();
     heap.push(Reverse((start, origin_ix)));
@@ -290,15 +331,51 @@ pub fn find_route(
             continue; // stale queue entry
         }
         if ix == dest_ix {
+            // Rebuild per-step detail from the parent chain.
+            let mut steps = vec![RouteStep {
+                system_id: origin,
+                via: None,
+            }];
+            let mut chain: Vec<(i64, RouterEdge)> = Vec::new();
+            let mut cursor = dest_ix;
+            while cursor != origin_ix {
+                let Some((prev, edge)) = parent.get(&cursor) else {
+                    break;
+                };
+                chain.push((edge.to_id, edge.clone()));
+                cursor = *prev;
+            }
+            chain.reverse();
+            for (system_id, edge) in chain {
+                let via = match edge.kind {
+                    EdgeKind::Stargate => RouteVia::Gate,
+                    EdgeKind::Wormhole => RouteVia::Wormhole {
+                        code: edge.wormhole_code.clone(),
+                    },
+                };
+                steps.push(RouteStep {
+                    system_id,
+                    via: Some(via),
+                });
+            }
             return Some(Route {
                 system_ids: cost.path.clone(),
+                steps,
                 cost,
             });
         }
-        let Some(outgoing) = adjacency.get(&ix) else {
-            continue;
-        };
-        for edge in outgoing {
+        // Deterministic expansion: sort graph edges by target.
+        let mut outgoing: Vec<RouterEdge> = graph
+            .edges(ix)
+            .map(|edge_ref| edge_ref.weight().clone())
+            .collect();
+        outgoing.sort_by(|a, b| {
+            a.to_id
+                .cmp(&b.to_id)
+                .then_with(|| format!("{:?}", a.kind).cmp(&format!("{:?}", b.kind)))
+                .then_with(|| a.wormhole_code.cmp(&b.wormhole_code))
+        });
+        for edge in &outgoing {
             let Some(dest_node) = by_id.get(&edge.to_id) else {
                 continue;
             };
@@ -317,6 +394,7 @@ pub fn find_route(
             };
             if better {
                 best.insert(to_ix, next.clone());
+                parent.insert(to_ix, (ix, edge.clone()));
                 heap.push(Reverse((next, to_ix)));
             }
         }
@@ -337,14 +415,24 @@ pub fn stargate_edges_from_db(conn: &rusqlite::Connection) -> Vec<RouterEdge> {
     };
     let rows = stmt.query_map([], |row| Ok((row.get::<_, i64>(0)?, row.get::<_, i64>(1)?)));
     let mut edges = Vec::new();
+    let mut dropped = 0usize;
     if let Ok(rows) = rows {
-        for row in rows.flatten() {
-            if row.0 != row.1 {
-                edges.push(RouterEdge::stargate(row.0, row.1));
+        for row in rows {
+            match row {
+                Ok((from, to)) => {
+                    if from != to {
+                        edges.push(RouterEdge::stargate(from, to));
+                    }
+                }
+                Err(_) => dropped += 1,
             }
         }
     }
-    tracing::debug!("[EXPLORE] stargate edges loaded count={}", edges.len());
+    tracing::debug!(
+        "[EXPLORE] stargate edges loaded count={} dropped={}",
+        edges.len(),
+        dropped
+    );
     edges
 }
 
@@ -546,6 +634,38 @@ mod tests {
         let mut e = RouterEdge::wormhole(1, 2, "B274", Some(375_000_000), None);
         e.verified = false;
         assert!(find_route(&nodes, &[e], 1, 2, RouteMode::Shortest, None, 0).is_none());
+    }
+
+    #[test]
+    fn pochven_is_high_risk_and_route_steps_carry_via() {
+        let pochven = SystemNode {
+            system_id: 9,
+            name: "Ala".to_string(),
+            security: Some(-1.0),
+            wormhole_class: Some(25),
+        };
+        assert_eq!(security_penalty(RouteMode::Safest, &pochven), 20);
+        let nodes = vec![node(1, Some(0.9)), wh_node(2), node(3, Some(0.9))];
+        let edges = vec![
+            RouterEdge::wormhole(1, 2, "N944", Some(375_000_000), None),
+            RouterEdge::wormhole(2, 3, "B274", Some(375_000_000), None),
+        ];
+        let route = find_route(&nodes, &edges, 1, 3, RouteMode::Shortest, None, 0).unwrap();
+        assert_eq!(route.system_ids, vec![1, 2, 3]);
+        assert_eq!(route.steps.len(), 3);
+        assert_eq!(route.steps[0].via, None);
+        assert_eq!(
+            route.steps[1].via,
+            Some(RouteVia::Wormhole {
+                code: Some("N944".to_string())
+            })
+        );
+        assert_eq!(
+            route.steps[2].via,
+            Some(RouteVia::Wormhole {
+                code: Some("B274".to_string())
+            })
+        );
     }
 
     #[test]

@@ -681,6 +681,26 @@ pub enum SecurityBand {
     Wormhole,
 }
 
+/// Mass status for one chain node (spec R10): a known limit,
+/// an unpaired K162 (Unknown), or a public Eve-Scout row,
+/// which never reports mass ("Mass not reported").
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MassState {
+    Known(i64),
+    Unknown,
+    NotReported,
+}
+
+impl MassState {
+    pub fn label(&self) -> String {
+        match self {
+            Self::Known(kg) => format_kg(Some(*kg as f64)),
+            Self::Unknown => "Unknown (K162)".to_string(),
+            Self::NotReported => "Mass not reported".to_string(),
+        }
+    }
+}
+
 /// One Wormhole Subway Chain Strip node. Names only — the
 /// system id is never stored here, so it cannot be rendered.
 #[derive(Debug, Clone, PartialEq)]
@@ -689,6 +709,14 @@ pub struct SubwayNode {
     pub class_label: String,
     pub effect_label: String,
     pub band: SecurityBand,
+    pub eol: bool,
+    pub mass: MassState,
+}
+
+/// One connector between adjacent chain nodes; `eol` drives
+/// the dashed `<4h` rendering from `eol_dashed`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SubwayConnector {
     pub eol: bool,
 }
 
@@ -709,39 +737,156 @@ fn band_for(system: &RefSystem) -> SecurityBand {
     }
 }
 
-/// Representative chain C1..C6 from the bundled reference:
-/// first system (name order) per wormhole class, with its
-/// weather (effect) badge. Deterministic; names only.
-pub fn subway_chain(reference: &ExplorationRef) -> Vec<SubwayNode> {
-    let mut nodes = Vec::new();
-    for class in 1..=6i64 {
-        let candidates: Vec<&RefSystem> = reference
-            .systems
-            .iter()
-            .filter(|s| s.inherited_class.or(s.raw_class) == Some(class))
+fn class_label_for(system: &RefSystem) -> String {
+    match system.inherited_class.or(system.raw_class) {
+        Some(class @ 1..=6) => format!("C{class}"),
+        Some(12) => "Thera".to_string(),
+        Some(25) => "Pochven".to_string(),
+        Some(class) => format!("C{class}"),
+        None => system.security_label(),
+    }
+}
+
+fn effect_label_for(system: &RefSystem, reference: &ExplorationRef) -> String {
+    match effect_for_system(system, reference) {
+        EffectResolution::Applied {
+            family, strength, ..
+        } => format!("{} {}", family.label(), strength),
+        EffectResolution::None => "No effect".to_string(),
+        EffectResolution::Unknown => "Effect unknown".to_string(),
+    }
+}
+
+/// Order real edges into a display chain (no static systems).
+/// Local confirmed edges and public snapshot edges merge as
+/// undirected hops; the walk starts at an endpoint (smallest
+/// name wins ties) and follows unvisited neighbours. EOL and
+/// mass derive from the edge entering each node (the first
+/// node uses its outgoing edge) against `now` (demo anchor via
+/// `state.now_utc()` upstream). Empty input stays empty so the
+/// strip can show an honest "No confirmed connections" state.
+pub fn ordered_chain(
+    local_edges: &[crate::exploration::router::RouterEdge],
+    snapshot_edges: &[crate::exploration::router::RouterEdge],
+    reference: &ExplorationRef,
+    now: i64,
+) -> (Vec<SubwayNode>, Vec<SubwayConnector>) {
+    use crate::exploration::router::EdgeKind;
+    use std::collections::HashMap;
+    // Undirected hop table: key (min_id, max_id) -> (edge, public).
+    let mut hops: HashMap<(i64, i64), (crate::exploration::router::RouterEdge, bool)> =
+        HashMap::new();
+    for (edges, public) in [(local_edges, false), (snapshot_edges, true)] {
+        for edge in edges {
+            if edge.kind != EdgeKind::Wormhole || edge.from_id == edge.to_id {
+                continue;
+            }
+            if edge.expires_at.is_some_and(|exp| now >= exp) {
+                continue;
+            }
+            let key = (edge.from_id.min(edge.to_id), edge.from_id.max(edge.to_id));
+            // Local confirmed edges win over public duplicates.
+            if public && hops.contains_key(&key) {
+                continue;
+            }
+            hops.insert(key, (edge.clone(), public));
+        }
+    }
+    if hops.is_empty() {
+        return (Vec::new(), Vec::new());
+    }
+    let mut adjacency: HashMap<i64, Vec<i64>> = HashMap::new();
+    for (a, b) in hops.keys() {
+        adjacency.entry(*a).or_default().push(*b);
+        adjacency.entry(*b).or_default().push(*a);
+    }
+    let name_of = |id: i64| {
+        reference
+            .system_by_id(id)
+            .map(|s| s.name.clone())
+            .unwrap_or_else(|| "Unknown system".to_string())
+    };
+    let mut starts: Vec<i64> = adjacency
+        .iter()
+        .filter(|(_, neighbours)| neighbours.len() == 1)
+        .map(|(id, _)| *id)
+        .collect();
+    if starts.is_empty() {
+        starts = adjacency.keys().copied().collect();
+    }
+    starts.sort_by_key(|a| name_of(*a));
+    let start = starts[0];
+    let mut order: Vec<i64> = vec![start];
+    let mut visited: std::collections::HashSet<i64> = [start].into_iter().collect();
+    let mut current = start;
+    loop {
+        let mut neighbours: Vec<i64> = adjacency
+            .get(&current)
+            .cloned()
+            .unwrap_or_default()
+            .into_iter()
+            .filter(|id| !visited.contains(id))
             .collect();
-        let Some(system) = candidates.iter().min_by(|a, b| a.name.cmp(&b.name)) else {
+        neighbours.sort_by_key(|a| name_of(*a));
+        let Some(next) = neighbours.first().copied() else {
+            break;
+        };
+        visited.insert(next);
+        order.push(next);
+        current = next;
+    }
+    let hop_between = |a: i64, b: i64| {
+        hops.get(&(a.min(b), a.max(b)))
+            .map(|(edge, public)| (edge.clone(), *public))
+    };
+    let mut nodes = Vec::new();
+    let mut connectors = Vec::new();
+    for (i, id) in order.iter().enumerate() {
+        let Some(system) = reference.system_by_id(*id) else {
             continue;
         };
-        let effect_label = match effect_for_system(system, reference) {
-            EffectResolution::Applied {
-                family, strength, ..
-            } => {
-                format!("{} {}", family.label(), strength)
-            }
-            EffectResolution::None => "No effect".to_string(),
-            EffectResolution::Unknown => "Effect unknown".to_string(),
+        let entering = if i == 0 {
+            order.get(1).and_then(|next| hop_between(*id, *next))
+        } else {
+            hop_between(order[i - 1], *id)
         };
+        let (eol, mass) = match &entering {
+            Some((edge, public)) => {
+                let remaining = edge.expires_at.map(|exp| exp - now);
+                let mass = if *public {
+                    MassState::NotReported
+                } else {
+                    match edge.effective_max_jump_mass_kg() {
+                        Some(limit) => MassState::Known(limit),
+                        None => MassState::Unknown,
+                    }
+                };
+                (eol_dashed(remaining), mass)
+            }
+            None => (false, MassState::Unknown),
+        };
+        if i > 0 {
+            if let Some((edge, _)) = hop_between(order[i - 1], *id) {
+                connectors.push(SubwayConnector {
+                    eol: eol_dashed(edge.expires_at.map(|exp| exp - now)),
+                });
+            }
+        }
         nodes.push(SubwayNode {
             system_name: system.name.clone(),
-            class_label: format!("C{class}"),
-            effect_label,
+            class_label: class_label_for(system),
+            effect_label: effect_label_for(system, reference),
             band: band_for(system),
-            eol: false,
+            eol,
+            mass,
         });
     }
-    tracing::debug!("[EXPLORE] subway_chain nodes={}", nodes.len());
-    nodes
+    tracing::debug!(
+        "[EXPLORE] ordered_chain nodes={} connectors={}",
+        nodes.len(),
+        connectors.len()
+    );
+    (nodes, connectors)
 }
 
 fn band_color(band: SecurityBand) -> egui::Color32 {
@@ -754,60 +899,153 @@ fn band_color(band: SecurityBand) -> egui::Color32 {
     }
 }
 
-/// Horizontal Subway Chain Strip via painter: class nodes,
-/// weather badges, solid connectors; EOL nodes get a dashed
-/// warning ring. All colors/sizes resolve through TOKENS.
-fn show_subway_strip(ui: &mut egui::Ui, reference: &ExplorationRef) {
-    let nodes = subway_chain(reference);
+/// Elide `text` with an ellipsis so its measured galley fits
+/// `max_width` (zero overlap: every caption is measured with
+/// `layout_no_wrap` and truncated into its per-node slot).
+fn elide_to_width(fonts: &egui::Painter, text: &str, font: egui::FontId, max_width: f32) -> String {
+    if max_width <= 0.0 {
+        return String::new();
+    }
+    let full = fonts.layout_no_wrap(text.to_string(), font.clone(), egui::Color32::TRANSPARENT);
+    if full.size().x <= max_width {
+        return text.to_string();
+    }
+    let ellipsis = "\u{2026}";
+    let mut best = ellipsis.to_string();
+    for end in 0..=text.len() {
+        if !text.is_char_boundary(end) {
+            continue;
+        }
+        let candidate = format!("{}{ellipsis}", &text[..end]);
+        let galley =
+            fonts.layout_no_wrap(candidate.clone(), font.clone(), egui::Color32::TRANSPARENT);
+        if galley.size().x <= max_width {
+            best = candidate;
+        } else {
+            break;
+        }
+    }
+    best
+}
+
+fn mass_ring_color(mass: MassState) -> egui::Color32 {
+    let t = super::tokens::TOKENS;
+    match mass {
+        MassState::Known(_) => t.positive,
+        MassState::Unknown => t.warning,
+        MassState::NotReported => t.text_disabled,
+    }
+}
+
+/// Horizontal Subway Chain Strip via painter over REAL edges:
+/// nodes in chain order with class, system, weather, and mass
+/// captions; an inner mass ring and an outer dashed EOL ring
+/// (R10, two independent dimensions); connectors dashed when
+/// that connection is EOL (<4h). Every measurement resolves
+/// through DesignTokens strip fields; captions are measured
+/// and elided into their node pitch so labels never overlap.
+fn show_subway_strip(ui: &mut egui::Ui, state: &AppState, reference: &ExplorationRef) {
+    let t = super::tokens::TOKENS;
+    let now = state.now_utc().timestamp();
+    let snapshot_edges = state
+        .exploration_snapshot
+        .as_ref()
+        .map(|snap| crate::exploration::evescout::snapshot_edges(snap, now, false))
+        .unwrap_or_default();
+    let (nodes, connectors) = ordered_chain(
+        &state.exploration_chain_edges,
+        &snapshot_edges,
+        reference,
+        now,
+    );
     widgets::card(ui, |ui| {
         ui.label(
             egui::RichText::new("Wormhole subway chain")
-                .font(super::tokens::TOKENS.typography.heading_font())
-                .color(super::tokens::TOKENS.text_primary),
+                .font(t.typography.heading_font())
+                .color(t.text_primary),
         );
         if nodes.is_empty() {
-            widgets::empty_panel(ui, "No wormhole systems in reference data.");
+            widgets::empty_panel(ui, "No confirmed connections");
             return;
         }
-        let width = ui.available_width().max(320.0);
-        let (rect, _resp) = ui.allocate_exact_size(egui::vec2(width, 108.0), egui::Sense::hover());
+        let width = ui.available_width().max(t.strip_min_width);
+        let (rect, _resp) =
+            ui.allocate_exact_size(egui::vec2(width, t.strip_height), egui::Sense::hover());
         let painter = ui.painter_at(rect);
-        let t = super::tokens::TOKENS;
-        let cy = rect.center().y - 8.0;
-        let n = nodes.len() as f32;
+        let cy = rect.center().y - t.strip_center_drop;
+        let count = nodes.len();
+        let span = (rect.width() - t.strip_inset_x - t.strip_inset_x).max(t.strip_min_width * 0.0);
+        let pitch = if count > 1 {
+            span / (count - 1) as f32
+        } else {
+            span
+        };
         let xs: Vec<f32> = nodes
             .iter()
             .enumerate()
-            .map(|(i, _)| {
-                rect.left() + 56.0 + (rect.width() - 112.0) * (i as f32 / (n - 1.0).max(1.0))
-            })
+            .map(|(i, _)| rect.left() + t.strip_inset_x + pitch * i as f32)
             .collect();
-        // Connectors first (under nodes).
-        for pair in xs.windows(2) {
-            painter.line_segment(
-                [egui::pos2(pair[0], cy), egui::pos2(pair[1], cy)],
-                egui::Stroke::new(2.0, t.cyan_telemetry),
-            );
+        // Connectors first (under nodes): dashed when EOL.
+        for (i, pair) in xs.windows(2).enumerate() {
+            let eol = connectors.get(i).is_some_and(|c| c.eol);
+            let from = egui::pos2(pair[0], cy);
+            let to = egui::pos2(pair[1], cy);
+            if eol {
+                let segments = (pitch / t.strip_mass_ring_radius).max(1.0) as usize;
+                for seg in (0..segments).step_by(2) {
+                    let start_t = seg as f32 / segments as f32;
+                    let end_t = ((seg + 1) as f32 / segments as f32).min(1.0);
+                    painter.line_segment(
+                        [from + (to - from) * start_t, from + (to - from) * end_t],
+                        egui::Stroke::new(t.strip_connector_width, t.warning),
+                    );
+                }
+            } else {
+                painter.line_segment(
+                    [from, to],
+                    egui::Stroke::new(t.strip_connector_width, t.cyan_telemetry),
+                );
+            }
         }
         for (i, node) in nodes.iter().enumerate() {
             let center = egui::pos2(xs[i], cy);
             let color = band_color(node.band);
-            painter.circle_filled(center, 15.0, t.bg_card_elevated);
-            painter.circle_stroke(center, 15.0, egui::Stroke::new(2.5, color));
+            painter.circle_filled(center, t.strip_node_radius, t.bg_card_elevated);
+            painter.circle_stroke(
+                center,
+                t.strip_node_radius,
+                egui::Stroke::new(t.strip_node_stroke, color),
+            );
+            // Inner mass ring (R10 mass dimension).
+            painter.circle_stroke(
+                center,
+                t.strip_mass_ring_radius,
+                egui::Stroke::new(t.strip_ring_stroke, mass_ring_color(node.mass)),
+            );
             if node.eol {
-                // Dashed EOL (<4h) ring: short arc segments.
-                let mut deg = 0.0f32;
-                while deg < 360.0 {
-                    let a1 = (deg).to_radians();
-                    let a2 = (deg + 18.0).to_radians();
+                // Outer dashed EOL ring (R10 time dimension).
+                let mut angle = 0.0f32;
+                let step = t.strip_dash_step_deg.to_radians();
+                let arc = t.strip_dash_arc_deg.to_radians();
+                while angle < std::f32::consts::TAU {
+                    let a1 = angle;
+                    let a2 = angle + arc;
                     painter.line_segment(
                         [
-                            center + egui::vec2(a1.cos() * 20.0, a1.sin() * 20.0),
-                            center + egui::vec2(a2.cos() * 20.0, a2.sin() * 20.0),
+                            center
+                                + egui::vec2(
+                                    a1.cos() * t.strip_eol_ring_radius,
+                                    a1.sin() * t.strip_eol_ring_radius,
+                                ),
+                            center
+                                + egui::vec2(
+                                    a2.cos() * t.strip_eol_ring_radius,
+                                    a2.sin() * t.strip_eol_ring_radius,
+                                ),
                         ],
-                        egui::Stroke::new(2.0, t.warning),
+                        egui::Stroke::new(t.strip_ring_stroke, t.warning),
                     );
-                    deg += 36.0;
+                    angle += step;
                 }
             }
             painter.text(
@@ -817,28 +1055,432 @@ fn show_subway_strip(ui: &mut egui::Ui, reference: &ExplorationRef) {
                 t.typography.small_font(),
                 t.text_primary,
             );
-            painter.text(
-                center + egui::vec2(0.0, 28.0),
-                egui::Align2::CENTER_CENTER,
-                &node.system_name,
-                t.typography.small_font(),
-                t.text_primary,
-            );
-            painter.text(
-                center + egui::vec2(0.0, 42.0),
-                egui::Align2::CENTER_CENTER,
-                &node.effect_label,
-                t.typography.small_font(),
-                t.text_muted,
-            );
+            let slot = pitch.max(t.strip_min_width * 0.0 + t.strip_node_radius * 2.0);
+            for (text, offset, ink) in [
+                (
+                    node.system_name.clone(),
+                    t.strip_name_offset_y,
+                    t.text_primary,
+                ),
+                (
+                    node.effect_label.clone(),
+                    t.strip_weather_offset_y,
+                    t.text_muted,
+                ),
+                (
+                    node.mass.label(),
+                    t.strip_mass_offset_y,
+                    mass_ring_color(node.mass),
+                ),
+            ] {
+                let elided = elide_to_width(&painter, &text, t.typography.small_font(), slot);
+                painter.text(
+                    center + egui::vec2(0.0, offset),
+                    egui::Align2::CENTER_CENTER,
+                    &elided,
+                    t.typography.small_font(),
+                    ink,
+                );
+            }
             if node.eol {
                 painter.text(
-                    center + egui::vec2(0.0, -28.0),
+                    center + egui::vec2(0.0, t.strip_eol_offset_y),
                     egui::Align2::CENTER_CENTER,
                     "EOL <4h",
                     t.typography.small_font(),
                     t.warning,
                 );
+            }
+        }
+    });
+}
+
+fn resolve_system_id(reference: &ExplorationRef, name: &str) -> Option<i64> {
+    let needle = name.trim();
+    reference
+        .systems
+        .iter()
+        .find(|s| s.name.eq_ignore_ascii_case(needle))
+        .map(|s| s.system_id)
+}
+
+fn router_nodes(reference: &ExplorationRef) -> Vec<crate::exploration::router::SystemNode> {
+    reference
+        .systems
+        .iter()
+        .map(|s| crate::exploration::router::SystemNode {
+            system_id: s.system_id,
+            name: s.name.clone(),
+            security: s.raw_security,
+            wormhole_class: s.inherited_class.or(s.raw_class),
+        })
+        .collect()
+}
+
+/// In-memory demo import: same upsert/retire semantics as
+/// `notebook::import_scan`, against state only (zero DB).
+fn apply_demo_import(
+    state: &mut AppState,
+    system_id: i64,
+    rows: &[crate::exploration::notebook::ParsedScanRow],
+) {
+    use crate::exploration::notebook::{SignatureType, TrackedSignature};
+    let now = state.now_utc().timestamp();
+    let character_id = state.active_character_id.unwrap_or(0);
+    for row in rows {
+        let previous = state
+            .exploration_signatures
+            .iter()
+            .find(|s| s.system_id == system_id && s.signature_id == row.signature_id)
+            .cloned();
+        if let Some(prev) = &previous {
+            if prev.signature_type == SignatureType::Wormhole
+                && row.signature_type != SignatureType::Wormhole
+            {
+                if let Some(dest) = prev.destination_system_id {
+                    state.exploration_chain_edges.retain(|e| {
+                        !((e.from_id == system_id && e.to_id == dest)
+                            || (e.from_id == dest && e.to_id == system_id))
+                    });
+                }
+            }
+        }
+        if let Some(existing) = state
+            .exploration_signatures
+            .iter_mut()
+            .find(|s| s.system_id == system_id && s.signature_id == row.signature_id)
+        {
+            existing.signature_type = row.signature_type;
+            existing.name = row.name.clone();
+            existing.observed_at = now;
+            if previous.as_ref().is_some_and(|p| {
+                p.signature_type == SignatureType::Wormhole
+                    && row.signature_type != SignatureType::Wormhole
+            }) {
+                existing.destination_system_id = None;
+                existing.verified = false;
+            }
+        } else {
+            state.exploration_signatures.push(TrackedSignature {
+                character_id,
+                system_id,
+                signature_id: row.signature_id.clone(),
+                signature_type: row.signature_type,
+                name: row.name.clone(),
+                destination_system_id: None,
+                verified: false,
+                observed_at: now,
+            });
+        }
+    }
+    state.exploration_signatures_system_id = Some(system_id);
+}
+
+/// Probe Scanner import, signature Confirm, and route finder
+/// (#646 repair wiring). Scan episodes stay strictly local:
+/// demo writes only in-memory state; live writes queue shell
+/// requests drained off the UI thread. No network is added.
+fn show_domain_panels(ui: &mut egui::Ui, state: &mut AppState, reference: &ExplorationRef) {
+    use crate::exploration::notebook::SignatureType;
+    use crate::exploration::router::{RouteMode, ShipClass};
+    let now = state.now_utc().timestamp();
+    // Live chain load: once per active character.
+    if !state.demo
+        && state.active_character_id.is_some()
+        && state.exploration_loaded_for != state.active_character_id
+        && !state.exploration_load_requested
+    {
+        state.exploration_load_requested = true;
+    }
+    widgets::card(ui, |ui| {
+        ui.label(
+            egui::RichText::new("Probe scanner")
+                .font(super::tokens::TOKENS.typography.heading_font())
+                .color(super::tokens::TOKENS.text_primary),
+        );
+        ui.label("Current system");
+        ui.add(
+            egui::TextEdit::singleline(&mut state.exploration_route_origin)
+                .hint_text("Current system name"),
+        );
+        ui.label("Probe Scanner paste");
+        ui.add(
+            egui::TextEdit::multiline(&mut state.exploration_paste)
+                .hint_text("Paste Probe Scanner rows")
+                .desired_rows(3),
+        );
+        if ui.button("Import scan").clicked() {
+            match crate::exploration::notebook::parse_probe_scan(&state.exploration_paste) {
+                Ok(outcome) => {
+                    let origin_name = state.exploration_route_origin.clone();
+                    match resolve_system_id(reference, &origin_name) {
+                        Some(system_id) => {
+                            state.exploration_origin_system_id = Some(system_id);
+                            if state.demo {
+                                apply_demo_import(state, system_id, &outcome.rows);
+                                state.exploration_status =
+                                    Some(format!("Imported {} signatures", outcome.rows.len()));
+                            } else if state.active_character_id.is_some() {
+                                state.exploration_pending_import = Some((system_id, outcome.rows));
+                                state.exploration_status = Some("Import queued".to_string());
+                            } else {
+                                state.exploration_status =
+                                    Some("Select a character to track signatures".to_string());
+                            }
+                            if !outcome.diagnostics.is_empty() {
+                                state.exploration_status =
+                                    Some(format!("{} rows rejected", outcome.diagnostics.len()));
+                            }
+                        }
+                        None => {
+                            state.exploration_status =
+                                Some("Current system name not found".to_string());
+                        }
+                    }
+                }
+                Err(error) => {
+                    state.exploration_status = Some(error.to_string());
+                }
+            }
+            tracing::info!("[EXPLORE] probe scan import requested");
+        }
+        if let Some(status) = &state.exploration_status {
+            ui.label(status.clone());
+        }
+        if state.exploration_signatures.is_empty() {
+            widgets::empty_panel(ui, "No signatures tracked yet.");
+        } else {
+            let signatures = state.exploration_signatures.clone();
+            for signature in &signatures {
+                let type_name = format!("{:?}", signature.signature_type);
+                let row = format!("{} \u{00B7} {}", signature.signature_id, type_name);
+                let selected = state.exploration_selected_signature.as_deref()
+                    == Some(&signature.signature_id);
+                if ui.selectable_label(selected, row).clicked() {
+                    state.exploration_selected_signature = Some(signature.signature_id.clone());
+                }
+            }
+        }
+        if let Some(signature_id) = state.exploration_selected_signature.clone() {
+            let signature = state
+                .exploration_signatures
+                .iter()
+                .find(|s| s.signature_id == signature_id)
+                .cloned();
+            if let Some(signature) = signature {
+                ui.label(format!("Confirm connection {}", signature.signature_id));
+                ui.label("Destination system");
+                ui.add(
+                    egui::TextEdit::singleline(&mut state.exploration_confirm_dest_name)
+                        .hint_text("Destination system name"),
+                );
+                ui.label("Wormhole code");
+                ui.add(
+                    egui::TextEdit::singleline(&mut state.exploration_confirm_code)
+                        .hint_text("Wormhole code"),
+                );
+                ui.label("Max jump mass kg (optional)");
+                ui.add(
+                    egui::TextEdit::singleline(&mut state.exploration_confirm_mass)
+                        .hint_text("Max jump mass kg"),
+                );
+                ui.label("Expiry hours from now (optional)");
+                ui.add(
+                    egui::TextEdit::singleline(&mut state.exploration_confirm_expiry_hours)
+                        .hint_text("Expiry hours"),
+                );
+                if ui.button("Confirm connection").clicked() {
+                    let dest_name = state.exploration_confirm_dest_name.clone();
+                    let code = state.exploration_confirm_code.trim().to_string();
+                    let mass = state.exploration_confirm_mass.trim().parse::<i64>().ok();
+                    let expires_at = state
+                        .exploration_confirm_expiry_hours
+                        .trim()
+                        .parse::<i64>()
+                        .ok()
+                        .map(|hours| now + hours * 3600);
+                    match resolve_system_id(reference, &dest_name) {
+                        _ if code.is_empty() => {
+                            state.exploration_status =
+                                Some("Wormhole code must not be empty".to_string());
+                        }
+                        _ if signature.signature_type != SignatureType::Wormhole => {
+                            state.exploration_status =
+                                Some("Only a wormhole signature can own a connection".to_string());
+                        }
+                        Some(to_system_id) => {
+                            let from_system_id = signature.system_id;
+                            if state.demo {
+                                let edge = crate::exploration::router::RouterEdge::wormhole(
+                                    from_system_id,
+                                    to_system_id,
+                                    &code,
+                                    mass,
+                                    expires_at,
+                                );
+                                let mut reverse = edge.clone();
+                                reverse.from_id = to_system_id;
+                                reverse.to_id = from_system_id;
+                                state.exploration_chain_edges.push(edge);
+                                state.exploration_chain_edges.push(reverse);
+                                if let Some(tracked) = state
+                                    .exploration_signatures
+                                    .iter_mut()
+                                    .find(|s| s.signature_id == signature_id)
+                                {
+                                    tracked.destination_system_id = Some(to_system_id);
+                                    tracked.verified = true;
+                                }
+                                state.exploration_status = Some("Connection confirmed".to_string());
+                            } else {
+                                state.exploration_confirm_request =
+                                    Some(crate::app::state::ExplorationConfirmRequest {
+                                        signature_id: signature_id.clone(),
+                                        from_system_id,
+                                        to_system_id,
+                                        wormhole_code: code,
+                                        max_jump_mass_kg: mass,
+                                        expires_at,
+                                    });
+                                state.exploration_status = Some("Confirmation queued".to_string());
+                            }
+                        }
+                        None => {
+                            state.exploration_status =
+                                Some("Destination system name not found".to_string());
+                        }
+                    }
+                    tracing::info!("[EXPLORE] confirm connection requested");
+                }
+            }
+        }
+    });
+    widgets::card(ui, |ui| {
+        ui.label(
+            egui::RichText::new("Route finder")
+                .font(super::tokens::TOKENS.typography.heading_font())
+                .color(super::tokens::TOKENS.text_primary),
+        );
+        ui.label("Origin system");
+        ui.add(
+            egui::TextEdit::singleline(&mut state.exploration_route_origin)
+                .hint_text("Current system name"),
+        );
+        let stale_origin = state.exploration_origin_system_id.is_some()
+            && state.exploration_signatures_system_id.is_some()
+            && state.exploration_origin_system_id != state.exploration_signatures_system_id;
+        if stale_origin {
+            ui.label("Origin may be stale");
+            ui.checkbox(&mut state.exploration_origin_confirmed, "Confirm origin");
+        }
+        ui.label("Destination system");
+        ui.add(
+            egui::TextEdit::singleline(&mut state.exploration_route_destination)
+                .hint_text("Destination system name"),
+        );
+        ui.label("Route mode");
+        ui.horizontal_wrapped(|ui| {
+            for mode in [
+                RouteMode::Shortest,
+                RouteMode::Safest,
+                RouteMode::LessSecure,
+            ] {
+                if ui
+                    .selectable_label(state.exploration_route_mode == mode, mode.label())
+                    .clicked()
+                {
+                    state.exploration_route_mode = mode;
+                }
+            }
+        });
+        ui.label("Ship mass class");
+        ui.horizontal_wrapped(|ui| {
+            for (label, ship) in [
+                ("Any", None),
+                ("Frigate", Some(ShipClass::Frigate)),
+                ("Battleship", Some(ShipClass::Battleship)),
+                ("Capital", Some(ShipClass::Capital)),
+            ] {
+                if ui
+                    .selectable_label(state.exploration_route_ship == ship, label)
+                    .clicked()
+                {
+                    state.exploration_route_ship = ship;
+                }
+            }
+        });
+        if ui.button("Find route").clicked() {
+            let origin = resolve_system_id(reference, &state.exploration_route_origin);
+            let destination = resolve_system_id(reference, &state.exploration_route_destination);
+            match (origin, destination) {
+                (Some(origin_id), Some(destination_id)) => {
+                    if stale_origin && !state.exploration_origin_confirmed {
+                        state.exploration_route_message =
+                            Some("Confirm the stale origin before routing".to_string());
+                    } else if state.demo {
+                        let snapshot_edges = state
+                            .exploration_snapshot
+                            .as_ref()
+                            .map(|snap| {
+                                crate::exploration::evescout::snapshot_edges(snap, now, false)
+                            })
+                            .unwrap_or_default();
+                        let mut edges = state.exploration_chain_edges.clone();
+                        edges.extend(snapshot_edges);
+                        let route = crate::exploration::router::find_route(
+                            &router_nodes(reference),
+                            &edges,
+                            origin_id,
+                            destination_id,
+                            state.exploration_route_mode,
+                            state.exploration_route_ship,
+                            now,
+                        );
+                        state.exploration_route_message = if route.is_some() {
+                            None
+                        } else {
+                            Some("No route in the available connection graph".to_string())
+                        };
+                        state.exploration_route_result = route;
+                    } else {
+                        state.exploration_route_request =
+                            Some(crate::app::state::ExplorationRouteRequest {
+                                origin_id,
+                                destination_id,
+                                mode: state.exploration_route_mode,
+                                ship: state.exploration_route_ship,
+                            });
+                        state.exploration_route_message = Some("Routing queued".to_string());
+                    }
+                }
+                _ => {
+                    state.exploration_route_message =
+                        Some("Origin or destination name not found".to_string());
+                }
+            }
+            tracing::info!("[EXPLORE] find route requested");
+        }
+        if let Some(message) = &state.exploration_route_message {
+            ui.label(message.clone());
+        }
+        if let Some(route) = &state.exploration_route_result {
+            if route.system_ids.len() <= 1 {
+                ui.label("No travel required");
+            } else {
+                for step in &route.steps {
+                    let name = reference
+                        .system_by_id(step.system_id)
+                        .map(|s| s.name.clone())
+                        .unwrap_or_else(|| "Unknown system".to_string());
+                    let via = match &step.via {
+                        None => "Origin".to_string(),
+                        Some(crate::exploration::router::RouteVia::Gate) => "Stargate".to_string(),
+                        Some(crate::exploration::router::RouteVia::Wormhole { code }) => {
+                            format!("Wormhole {}", code.as_deref().unwrap_or("Unknown"))
+                        }
+                    };
+                    ui.label(format!("{} \u{00B7} {}", name, via));
+                }
             }
         }
     });
@@ -903,7 +1545,8 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
             }
         });
     });
-    show_subway_strip(ui, &reference);
+    show_subway_strip(ui, state, &reference);
+    show_domain_panels(ui, state, &reference);
     match state.exploration_section {
         ExplorationSection::Types => show_types(ui, state, &reference),
         ExplorationSection::Systems => show_systems(ui, state, &reference),
@@ -1312,23 +1955,37 @@ mod tests {
     }
 
     #[test]
-    fn subway_chain_covers_c1_to_c6_with_names_and_weather() {
+    fn ordered_chain_uses_real_edges_only() {
         let reference = ExplorationRef::load_bundled().expect("bundled loads");
-        let chain = subway_chain(&reference);
-        assert_eq!(chain.len(), 6, "one node per class C1-C6");
-        for (i, node) in chain.iter().enumerate() {
-            assert_eq!(node.class_label, format!("C{}", i + 1));
-            assert!(!node.system_name.is_empty());
-            // Names only: label is a system name, never a raw id string
-            assert!(
-                reference.systems.iter().any(|s| s.name == node.system_name),
-                "node name resolves in reference"
-            );
-            assert!(!node.effect_label.is_empty(), "weather badge present");
-            assert_eq!(node.band, SecurityBand::Wormhole);
-        }
-        // Deterministic
-        assert_eq!(chain, subway_chain(&reference));
+        // No edges: honest empty chain, never a static chain.
+        let (nodes, connectors) = ordered_chain(&[], &[], &reference, 1_000);
+        assert!(nodes.is_empty());
+        assert!(connectors.is_empty());
+        // One real EOL edge between two bundled systems.
+        let a = reference
+            .systems
+            .iter()
+            .find(|s| s.name == "Thera")
+            .unwrap();
+        let b = reference
+            .systems
+            .iter()
+            .find(|s| s.name == "J002216")
+            .unwrap();
+        let edge = crate::exploration::router::RouterEdge::wormhole(
+            a.system_id,
+            b.system_id,
+            "B274",
+            Some(375_000_000),
+            Some(1_000 + 2 * 3600),
+        );
+        let (nodes, connectors) = ordered_chain(&[edge], &[], &reference, 1_000);
+        assert_eq!(nodes.len(), 2);
+        assert_eq!(connectors.len(), 1);
+        assert!(connectors[0].eol, "under-4h connector is EOL");
+        assert!(nodes.iter().any(|n| n.eol));
+        assert!(nodes.iter().all(|n| !n.effect_label.is_empty()));
+        assert_eq!(nodes[1].mass, MassState::Known(375_000_000));
     }
 
     #[test]
