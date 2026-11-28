@@ -11,8 +11,8 @@ use super::state::{
     ship_display_name, summary_location_name, AppState, AssetsData, AuthState, BlueprintsData,
     CharacterDetailData, CharacterOrdersData, CharacterSummary, ExplorationData,
     FittingWriteInFlight, FittingWriteKind, FittingWriteOutcome, FittingWriteRequest, FittingsData,
-    IndustryData, IndustryJobsData, LoadState, MarketData, MarketSelection, PlanetSelection,
-    PlanetaryData, PortraitState, PublicOrdersData, SectionError, SectionResult,
+    IndustryData, IndustryJobsData, LoadState, MarketData, MarketSelection, MiningData,
+    PlanetSelection, PlanetaryData, PortraitState, PublicOrdersData, SectionError, SectionResult,
     SelectedColonyDetail, SkillsData, StepUpRequest, View, WalletData,
 };
 use crate::auth::callback_server::CallbackServer;
@@ -244,6 +244,11 @@ enum BackendMsg {
         route: Option<crate::exploration::router::Route>,
         message: Option<String>,
     },
+    MiningFetched {
+        generation: u64,
+        character_id: i64,
+        result: SectionResult<Vec<crate::esi::models::CharacterMiningEntry>>,
+    },
     /// One EVE log line from the log-worker thread (card #655).
     LogEvent(LogEvent),
     /// Human-readable daemon status label from the log-worker thread.
@@ -323,6 +328,8 @@ pub struct MimirApp {
     pub state: AppState,
     pub sde: Sde,
     pub fitting_types: Option<Arc<FittingTypes>>,
+    /// Lazily loaded Dogma catalogue for mining hold capacity (#648).
+    pub dogma_catalogue: Option<Arc<crate::fitting::dogma_catalogue::DogmaCatalogue>>,
     pub industry_data: Option<Arc<IndustryRef>>,
     pub planet_schematics: Option<Arc<PlanetSchematicsRef>>,
     pub resolver: NameResolver,
@@ -486,6 +493,17 @@ fn structures_stepup_observed(request_scopes: &[String], state: &AppState) -> bo
 /// asks for the write scope, so stored token metadata
 /// claiming the grant is stale and the already-granted
 /// shortcut must not be taken.
+/// Mining observed-reality arm (card #648): a mining fetch already
+/// returned a scope refusal this session while the step-up asks for
+/// the mining scope.
+fn mining_stepup_observed(request_scopes: &[String], state: &AppState) -> bool {
+    request_scopes
+        .iter()
+        .any(|scope| EveConfig::MINING_SCOPES.contains(&scope.as_str()))
+        && (state.mining_needs_reauthorize
+            || matches!(&state.mining, LoadState::Ready(d) if d.needs_mining_stepup()))
+}
+
 fn fittings_write_stepup_observed(request_scopes: &[String], state: &AppState) -> bool {
     request_scopes
         .iter()
@@ -1397,6 +1415,7 @@ impl MimirApp {
             state,
             sde,
             fitting_types,
+            dogma_catalogue: None,
             industry_data,
             planet_schematics,
             resolver,
@@ -2522,6 +2541,12 @@ impl MimirApp {
                         // clears the write flag (it never resumes a
                         // write — consent is re-given by hand).
                         self.state.fittings_write_needs_reauthorize = false;
+                        // Mining (card #648): queue the gated ledger fetch
+                        // only when mining was the observed step-up need.
+                        if self.state.mining_needs_reauthorize {
+                            tracing::debug!("[MINING] mining fetch queued after step-up");
+                            self.state.mining_fetch_requested = true;
+                        }
                         self.state.status_message = "Permission granted. Refreshing...".to_string();
                     } else {
                         self.state.status_message = "Permission granted.".to_string();
@@ -2529,6 +2554,54 @@ impl MimirApp {
                             "[AUTH] step-up finished for non-active character_id={}",
                             character_id
                         );
+                    }
+                }
+                BackendMsg::MiningFetched {
+                    generation,
+                    character_id,
+                    result,
+                } => {
+                    if self.state.demo {
+                        tracing::warn!("[MINING] dropping live mining result in demo mode");
+                        continue;
+                    }
+                    if generation != self.state.mining_generation
+                        || self.state.active_character_id != Some(character_id)
+                    {
+                        tracing::warn!(
+                            "[MINING] dropping stale mining result character_id={}",
+                            character_id
+                        );
+                        continue;
+                    }
+                    match result {
+                        Ok(entries) => {
+                            tracing::info!(
+                                "[MINING] mining ledger applied character_id={} rows={}",
+                                character_id,
+                                entries.len()
+                            );
+                            self.state.mining_needs_reauthorize = false;
+                            self.state.mining = LoadState::Ready(MiningData {
+                                entries,
+                                needs_reauthorize: false,
+                            });
+                        }
+                        Err(e) => {
+                            tracing::warn!(
+                                "[MINING] mining ledger failed needs_reauthorize={}",
+                                e.needs_reauthorize
+                            );
+                            self.state.mining_needs_reauthorize = e.needs_reauthorize;
+                            self.state.mining = if e.needs_reauthorize {
+                                LoadState::Ready(MiningData {
+                                    entries: Vec::new(),
+                                    needs_reauthorize: true,
+                                })
+                            } else {
+                                LoadState::Error(e.message)
+                            };
+                        }
                     }
                 }
                 BackendMsg::MarketFetched { generation, data } => {
@@ -3031,6 +3104,9 @@ impl MimirApp {
         }
         if self.state.planetary_detail_fetch_requested {
             self.start_planetary_detail_fetch();
+        }
+        if self.state.mining_fetch_requested {
+            self.start_mining_fetch();
         }
         if self.state.login_requested {
             self.state.login_requested = false;
@@ -4033,6 +4109,60 @@ impl MimirApp {
         }
     }
 
+    /// On-demand mining ledger fetch (card #648): demo never spawns,
+    /// no database lock is held across the await.
+    fn start_mining_fetch(&mut self) {
+        self.state.mining_fetch_requested = false;
+        if self.state.demo {
+            tracing::info!("[MINING] mining fetch skipped: demo mode (no network)");
+            self.state.mining = LoadState::Empty;
+            return;
+        }
+        let Some(character_id) = self.state.active_character_id else {
+            tracing::debug!("[MINING] mining fetch skipped: no active character");
+            self.state.mining = LoadState::Empty;
+            return;
+        };
+        let (Some(backends), Some(runtime)) = (self.backends.as_ref(), self.runtime.as_ref())
+        else {
+            tracing::warn!("[MINING] mining fetch skipped: live backends not wired");
+            self.state.mining =
+                LoadState::Error("Mining data unavailable: live backends not wired.".to_string());
+            return;
+        };
+        self.state.mining_generation = self.state.mining_generation.wrapping_add(1);
+        let generation = self.state.mining_generation;
+        self.state.mining = LoadState::Loading;
+        let esi = backends.esi.clone();
+        let tx = self.tx.clone();
+        tracing::info!(
+            "[MINING] mining fetch started character_id={}",
+            character_id
+        );
+        runtime.spawn(async move {
+            let result = match endpoints::get_character_mining(&esi, character_id).await {
+                Ok(entries) => Ok(entries),
+                Err(e) => {
+                    let needs_reauthorize = endpoints::needs_reauthorize(&e);
+                    tracing::warn!(
+                        "[MINING] mining section failed needs_reauthorize={} error={}",
+                        needs_reauthorize,
+                        e
+                    );
+                    Err(SectionError {
+                        message: "mining ledger request failed".to_string(),
+                        needs_reauthorize,
+                    })
+                }
+            };
+            tx.send(BackendMsg::MiningFetched {
+                generation,
+                character_id,
+                result,
+            });
+        });
+    }
+
     /// On-demand market fetch (design section 8.2): its own path,
     /// separate from `start_refresh`, keyed by the stamped selection
     /// identity plus generation. In-memory only — no repository call.
@@ -4977,6 +5107,7 @@ impl MimirApp {
                 || (overlaps(EveConfig::PLANETS_SCOPES)
                     && matches!(&self.state.planetary, LoadState::Ready(d) if d.needs_planetary_stepup()))
                 || fittings_stepup_observed(&request.scopes, &self.state)
+                || mining_stepup_observed(&request.scopes, &self.state)
                 || fittings_write_stepup_observed(&request.scopes, &self.state)
                 || structures_stepup_observed(&request.scopes, &self.state)
                 || (overlaps(EveConfig::MARKET_SCOPES)
@@ -5005,6 +5136,14 @@ impl MimirApp {
             if self.state.planetary_selected_planet_id.is_some() {
                 tracing::debug!("[PI] colony detail refetch queued after already-granted step-up");
                 self.state.planetary_detail_fetch_requested = true;
+            }
+            if request
+                .scopes
+                .iter()
+                .any(|s| EveConfig::MINING_SCOPES.contains(&s.as_str()))
+            {
+                tracing::debug!("[MINING] mining refetch queued after already-granted step-up");
+                self.state.mining_fetch_requested = true;
             }
             // Fittings design section 7.3: no fittings flag here
             // either — the already-granted main refresh above
@@ -5557,6 +5696,7 @@ impl MimirApp {
             || self.state.market_fetch_requested
             || self.state.market_lookup_requested.is_some()
             || self.state.planetary_detail_fetch_requested
+            || self.state.mining_fetch_requested
             || self.state.fittings_write_requested.is_some()
             || self.state.sde_sync_requested
             || self.state.skill_plan_action.is_some()
@@ -6032,6 +6172,21 @@ impl MimirApp {
                 &self.resolver,
                 &mut self.portrait_textures,
             ),
+            View::Mining => {
+                if self.dogma_catalogue.is_none() {
+                    self.dogma_catalogue =
+                        crate::fitting::dogma_catalogue::DogmaCatalogue::load_bundled()
+                            .ok()
+                            .map(Arc::new);
+                }
+                ui::mining::show(
+                    ui,
+                    &mut self.state,
+                    &self.resolver,
+                    self.fitting_types.as_deref(),
+                    self.dogma_catalogue.as_deref(),
+                )
+            }
         }
     }
 }
@@ -6638,13 +6793,18 @@ mod tests {
         assert_eq!(view_key_hint(View::Settings), "0");
         assert_eq!(view_key_hint(View::Exploration), "E");
         // Views past the eleventh keep the placeholder: index-based
-        // keys give Pantry no digit (card #642).
+        // keys give Pantry and Mining no digit (cards #642/#648).
         assert_eq!(view_key_hint(View::Pantry), "\u{b7}");
+        assert_eq!(view_key_hint(View::Mining), "\u{b7}");
         let mut hints: Vec<&str> = View::ALL.iter().map(|v| view_key_hint(*v)).collect();
-        assert_eq!(hints.len(), 12);
+        assert_eq!(hints.len(), 13);
         hints.sort_unstable();
         hints.dedup();
-        assert_eq!(hints.len(), 12, "every view hint is unique");
+        assert_eq!(
+            hints.len(),
+            12,
+            "bound keys are unique; unbound views share the placeholder"
+        );
     }
 
     #[test]
