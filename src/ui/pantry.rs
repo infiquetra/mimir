@@ -95,10 +95,13 @@ impl TableDelegate for PantryDelegate<'_> {
             3 => "Bay",
             _ => "Quantity",
         };
-        ui.label(
-            egui::RichText::new(label)
-                .color(TOKENS.text_muted)
-                .font(TOKENS.typography.small_font()),
+        ui.add(
+            egui::Label::new(
+                egui::RichText::new(label)
+                    .color(TOKENS.text_muted)
+                    .font(TOKENS.typography.small_font()),
+            )
+            .truncate(),
         );
     }
 
@@ -120,31 +123,43 @@ impl TableDelegate for PantryDelegate<'_> {
                 if row.is_blueprint_copy {
                     label.push_str(" (copy)");
                 }
-                ui.label(
-                    egui::RichText::new(label)
-                        .color(TOKENS.text_primary)
-                        .font(TOKENS.typography.body_font()),
+                ui.add(
+                    egui::Label::new(
+                        egui::RichText::new(label)
+                            .color(TOKENS.text_primary)
+                            .font(TOKENS.typography.body_font()),
+                    )
+                    .truncate(),
                 );
             }
             1 => {
-                ui.label(
-                    egui::RichText::new(&row.character_name)
-                        .color(TOKENS.text_muted)
-                        .font(TOKENS.typography.small_font()),
+                ui.add(
+                    egui::Label::new(
+                        egui::RichText::new(&row.character_name)
+                            .color(TOKENS.text_muted)
+                            .font(TOKENS.typography.small_font()),
+                    )
+                    .truncate(),
                 );
             }
             2 => {
-                ui.label(
-                    egui::RichText::new(&row.location_name)
-                        .color(TOKENS.text_muted)
-                        .font(TOKENS.typography.small_font()),
+                ui.add(
+                    egui::Label::new(
+                        egui::RichText::new(&row.location_name)
+                            .color(TOKENS.text_muted)
+                            .font(TOKENS.typography.small_font()),
+                    )
+                    .truncate(),
                 );
             }
             3 => {
-                ui.label(
-                    egui::RichText::new(&row.location_flag)
-                        .color(TOKENS.text_muted)
-                        .font(TOKENS.typography.small_font()),
+                ui.add(
+                    egui::Label::new(
+                        egui::RichText::new(&row.location_flag)
+                            .color(TOKENS.text_muted)
+                            .font(TOKENS.typography.small_font()),
+                    )
+                    .truncate(),
                 );
             }
             _ => {
@@ -399,15 +414,19 @@ pub fn show(
                 state,
                 cache,
             };
+            // Scale columns to the pane so narrow tiles
+            // never overlap cell text (cells truncate).
+            let available = ui.available_width().max(320.0);
+            let unit = available / 900.0;
             Table::new()
                 .id_salt("pantry_table")
                 .num_rows(row_count)
                 .columns(vec![
-                    Column::new(280.0),
-                    Column::new(150.0),
-                    Column::new(230.0),
-                    Column::new(140.0),
-                    Column::new(100.0),
+                    Column::new((280.0 * unit).max(160.0)),
+                    Column::new((150.0 * unit).max(95.0)),
+                    Column::new((230.0 * unit).max(130.0)),
+                    Column::new((140.0 * unit).max(70.0)),
+                    Column::new((100.0 * unit).max(64.0)),
                 ])
                 .headers(vec![HeaderRow::new(HEADER_HEIGHT)])
                 .show(ui, &mut delegate);
