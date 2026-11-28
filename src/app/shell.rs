@@ -407,7 +407,7 @@ impl FittingWriteRefusal {
                 "A fitting change is already in progress. Wait for it to finish."
             }
             FittingWriteRefusal::UnknownCharacter => {
-                "That character is no longer in Mimir. Nothing was sent to EVE."
+                "That character is no longer in Alidade. Nothing was sent to EVE."
             }
             FittingWriteRefusal::NotActive => {
                 "The active character changed. Nothing was sent to EVE."
@@ -3702,7 +3702,7 @@ impl MimirApp {
                 request.character_id
             );
             self.state.status_message =
-                "Step-up sign-in skipped: that character is no longer in Mimir.".to_string();
+                "Step-up sign-in skipped: that character is no longer in Alidade.".to_string();
             return;
         }
         let granted: Vec<String> = match backends.db.lock() {
@@ -4178,7 +4178,7 @@ impl MimirApp {
     }
 
     fn collect_keys(&self, ctx: &egui::Context) -> KeyActions {
-        let typing = self.state.text_input_focused || ctx.wants_keyboard_input();
+        let typing = self.state.text_input_focused || ctx.egui_wants_keyboard_input();
         ctx.input(|i| {
             let mut actions = KeyActions::default();
             let command_r =
@@ -4343,14 +4343,17 @@ fn queue_has_unfinished_skill(
     })
 }
 
-impl eframe::App for MimirApp {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        self.tx.attach_ctx_if_unset(ctx);
+impl MimirApp {
+    /// Whole-shell frame body; extracted so headless tests can drive it
+    /// without constructing an `eframe::Frame` (its fields are crate-private).
+    fn show_shell(&mut self, ui: &mut egui::Ui) {
+        let ctx = ui.ctx().clone();
+        self.tx.attach_ctx_if_unset(&ctx);
         self.drain_requests();
         // Persist startup-view choice only when it actually changed since
         // the last write (settings view edits it); no per-frame DB reads.
         self.persist_startup_view_if_changed();
-        let actions = self.collect_keys(ctx);
+        let actions = self.collect_keys(&ctx);
         self.apply_keys(actions);
         // Reset after key handling; views re-set it while rendering so the
         // next frame knows whether a text box owns the keyboard.
@@ -4365,65 +4368,79 @@ impl eframe::App for MimirApp {
             self.state.log_lines.clone_from(&buf);
         }
 
-        let bar_frame = egui::Frame::none()
+        let bar_frame = egui::Frame::new()
             .fill(ui::theme::BG_PANEL)
             .stroke(egui::Stroke::new(1.0_f32, ui::theme::BORDER_SUBTLE))
-            .inner_margin(egui::Margin::symmetric(14.0, 8.0));
+            .inner_margin(egui::Margin::symmetric(14, 8));
 
-        egui::TopBottomPanel::top("top_bar")
-            .frame(bar_frame)
-            .show(ctx, |ui| {
-                ui.horizontal(|ui| {
-                    ui.label(
-                        egui::RichText::new("MIMIR")
-                            .size(17.0)
-                            .strong()
-                            .color(ui::theme::ACCENT_CYAN),
+        egui::Panel::top("top_bar").frame(bar_frame).show(ui, |ui| {
+            // Drag/maximize on the empty top-bar area (macOS hides the
+            // native titlebar); widgets drawn afterwards keep their clicks.
+            let drag_response = ui.interact(
+                ui.available_rect_before_wrap(),
+                ui.scope_id().with("top_bar_window_drag"),
+                egui::Sense::click_and_drag(),
+            );
+            if drag_response.drag_started() {
+                tracing::debug!("[UI] top bar drag started; requesting window drag");
+                ui.ctx().send_viewport_cmd(egui::ViewportCommand::StartDrag);
+            }
+            if drag_response.double_clicked() {
+                let maximized = ui.ctx().input(|i| i.viewport().maximized).unwrap_or(false);
+                tracing::debug!(
+                    "[UI] top bar double-click toggling maximized={}",
+                    !maximized
+                );
+                ui.ctx()
+                    .send_viewport_cmd(egui::ViewportCommand::Maximized(!maximized));
+            }
+            ui.horizontal(|ui| {
+                ui.add_space(ui::theme::traffic_light_inset());
+                ui.label(
+                    egui::RichText::new("ALIDADE")
+                        .size(17.0)
+                        .strong()
+                        .color(ui::theme::ACCENT_CYAN),
+                );
+                if self.state.demo {
+                    ui::widgets::badge(ui, "DEMO", ui::theme::WARNING_BG, ui::theme::WARNING);
+                }
+                if self.state.offline {
+                    ui::widgets::badge(ui, "OFFLINE", ui::theme::NEGATIVE_BG, ui::theme::NEGATIVE);
+                }
+                if let Some(active) = self.state.active_character() {
+                    ui::widgets::badge(
+                        ui,
+                        &format!("Active: {}", active.name),
+                        ui::theme::BG_CARD_ALT,
+                        ui::theme::TEXT_PRIMARY,
                     );
-                    if self.state.demo {
-                        ui::widgets::badge(ui, "DEMO", ui::theme::WARNING_BG, ui::theme::WARNING);
+                }
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if ui.button("Refresh (Ctrl+R)").clicked() {
+                        self.state.request_refresh("top-bar button");
                     }
-                    if self.state.offline {
-                        ui::widgets::badge(
-                            ui,
-                            "OFFLINE",
-                            ui::theme::NEGATIVE_BG,
-                            ui::theme::NEGATIVE,
+                    if !self.state.status_message.is_empty() {
+                        ui.label(
+                            egui::RichText::new(&self.state.status_message)
+                                .size(12.0)
+                                .color(ui::theme::TEXT_SECONDARY),
                         );
                     }
-                    if let Some(active) = self.state.active_character() {
-                        ui::widgets::badge(
-                            ui,
-                            &format!("Active: {}", active.name),
-                            ui::theme::BG_CARD_ALT,
-                            ui::theme::TEXT_PRIMARY,
-                        );
-                    }
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        if ui.button("Refresh (Ctrl+R)").clicked() {
-                            self.state.request_refresh("top-bar button");
-                        }
-                        if !self.state.status_message.is_empty() {
-                            ui.label(
-                                egui::RichText::new(&self.state.status_message)
-                                    .size(12.0)
-                                    .color(ui::theme::TEXT_SECONDARY),
-                            );
-                        }
-                    });
                 });
             });
+        });
 
-        let sidebar_frame = egui::Frame::none()
+        let sidebar_frame = egui::Frame::new()
             .fill(ui::theme::BG_PANEL)
             .stroke(egui::Stroke::new(1.0_f32, ui::theme::BORDER_SUBTLE))
-            .inner_margin(egui::Margin::symmetric(12.0, 12.0));
+            .inner_margin(egui::Margin::symmetric(12, 12));
 
-        egui::SidePanel::left("character_rail")
-            .default_width(210.0)
+        egui::Panel::left("character_rail")
+            .default_size(210.0)
             .resizable(false)
             .frame(sidebar_frame)
-            .show(ctx, |ui| {
+            .show(ui, |ui| {
                 ui.label(
                     egui::RichText::new("CHARACTERS")
                         .size(11.0)
@@ -4496,14 +4513,14 @@ impl eframe::App for MimirApp {
                 });
             });
 
-        let status_frame = egui::Frame::none()
+        let status_frame = egui::Frame::new()
             .fill(ui::theme::BG_PANEL)
             .stroke(egui::Stroke::new(1.0_f32, ui::theme::BORDER_SUBTLE))
-            .inner_margin(egui::Margin::symmetric(14.0, 6.0));
+            .inner_margin(egui::Margin::symmetric(14, 6));
 
-        egui::TopBottomPanel::bottom("status_bar")
+        egui::Panel::bottom("status_bar")
             .frame(status_frame)
-            .show(ctx, |ui| {
+            .show(ui, |ui| {
                 ui.horizontal(|ui| {
                     ui.label(
                         egui::RichText::new(format!("View: {}", self.state.view.label()))
@@ -4538,13 +4555,13 @@ impl eframe::App for MimirApp {
                 });
             });
 
-        let canvas_frame = egui::Frame::none()
+        let canvas_frame = egui::Frame::new()
             .fill(ui::theme::BG_CANVAS)
-            .inner_margin(egui::Margin::same(16.0));
+            .inner_margin(egui::Margin::same(16));
 
         egui::CentralPanel::default()
             .frame(canvas_frame)
-            .show(ctx, |ui| {
+            .show(ui, |ui| {
                 egui::ScrollArea::vertical().show(ui, |ui| match self.state.view {
                     View::Dashboard => ui::dashboard::show(
                         ui,
@@ -4610,6 +4627,16 @@ impl eframe::App for MimirApp {
         if self.has_pending_work() {
             ctx.request_repaint();
         }
+    }
+}
+
+impl eframe::App for MimirApp {
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        self.show_shell(ui);
+    }
+
+    fn persist_egui_memory(&self) -> bool {
+        !self.state.demo
     }
 }
 
@@ -6760,6 +6787,118 @@ mod tests {
         assert_eq!(
             app.state.portrait_requests,
             vec![(ImageKind::Faction, 500001)]
+        );
+    }
+
+    fn shell_test_input(events: Vec<egui::Event>) -> egui::RawInput {
+        egui::RawInput {
+            screen_rect: Some(egui::Rect::from_min_size(
+                egui::Pos2::ZERO,
+                egui::vec2(1280.0, 800.0),
+            )),
+            events,
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn full_shell_smoke_renders_every_view_without_panic() {
+        assert_eq!(View::ALL.len(), 11);
+        let mut app = MimirApp::new(true, Arc::new(Mutex::new(Vec::new())), None, None);
+        let ctx = egui::Context::default();
+        for view in View::ALL {
+            app.state.switch_view(view);
+            let mut output = ctx.run_ui(shell_test_input(Vec::new()), |ui| {
+                app.show_shell(ui);
+            });
+            output.textures_delta.clear();
+            assert!(
+                !output.shapes.is_empty(),
+                "view {} produced no shapes",
+                view.label()
+            );
+            assert!(
+                output.viewport_output.contains_key(&egui::ViewportId::ROOT),
+                "view {} produced no root viewport output",
+                view.label()
+            );
+        }
+    }
+
+    #[test]
+    fn top_bar_refresh_button_still_clickable_over_drag_area() {
+        let mut app = MimirApp::new(true, Arc::new(Mutex::new(Vec::new())), None, None);
+        let ctx = egui::Context::default();
+        let mut warmup = ctx.run_ui(shell_test_input(Vec::new()), |ui| {
+            app.show_shell(ui);
+        });
+        warmup.textures_delta.clear();
+        assert!(!app.state.refresh_requested);
+        let button_pos = egui::pos2(1210.0, 16.0);
+        for pressed in [true, false] {
+            let mut output = ctx.run_ui(
+                shell_test_input(vec![egui::Event::PointerButton {
+                    pos: button_pos,
+                    button: egui::PointerButton::Primary,
+                    pressed,
+                    modifiers: egui::Modifiers::default(),
+                }]),
+                |ui| {
+                    app.show_shell(ui);
+                },
+            );
+            output.textures_delta.clear();
+        }
+        assert!(
+            app.state.refresh_requested,
+            "Refresh button click must survive the top-bar drag area"
+        );
+    }
+
+    #[test]
+    fn top_bar_drag_emits_start_drag_viewport_command() {
+        let mut app = MimirApp::new(true, Arc::new(Mutex::new(Vec::new())), None, None);
+        let ctx = egui::Context::default();
+        // Warm-up frame establishes the top-bar layout and widget ids.
+        let mut warmup = ctx.run_ui(shell_test_input(Vec::new()), |ui| {
+            app.show_shell(ui);
+        });
+        warmup.textures_delta.clear();
+
+        let press_pos = egui::pos2(640.0, 16.0);
+        let mut press = ctx.run_ui(
+            shell_test_input(vec![egui::Event::PointerButton {
+                pos: press_pos,
+                button: egui::PointerButton::Primary,
+                pressed: true,
+                modifiers: egui::Modifiers::default(),
+            }]),
+            |ui| {
+                app.show_shell(ui);
+            },
+        );
+        press.textures_delta.clear();
+
+        let mut saw_start_drag = false;
+        for moved in [egui::pos2(660.0, 16.0), egui::pos2(700.0, 16.0)] {
+            let mut output = ctx.run_ui(
+                shell_test_input(vec![egui::Event::PointerMoved(moved)]),
+                |ui| {
+                    app.show_shell(ui);
+                },
+            );
+            output.textures_delta.clear();
+            if output.viewport_output.values().any(|viewport| {
+                viewport
+                    .commands
+                    .contains(&egui::ViewportCommand::StartDrag)
+            }) {
+                saw_start_drag = true;
+            }
+        }
+        assert!(
+            saw_start_drag,
+            "press+move over the empty top bar must emit ViewportCommand::StartDrag"
         );
     }
 }

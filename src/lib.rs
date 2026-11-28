@@ -1,4 +1,4 @@
-//! Mimir — EVE Online companion app (Rust/egui rewrite).
+//! Alidade — EVE Online companion app (Rust/egui rewrite).
 //!
 //! Cross-builder contracts (scaffold-owned; change only via scaffold owner):
 //! F1 exposes `EsiClient`, `TokenStore`, and the ESI model structs; F2

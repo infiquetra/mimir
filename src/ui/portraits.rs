@@ -563,12 +563,13 @@ mod tests {
             (ImageKind::Character, 1),
             PortraitState::Ready(ready_image(8, 8)),
         );
-        let _ = ctx.run(egui::RawInput::default(), |ctx| {
-            egui::CentralPanel::default().show(ctx, |ui| {
+        let mut full_output = ctx.run_ui(egui::RawInput::default(), |ui| {
+            egui::CentralPanel::default().show(ui, |ui| {
                 show_portrait(ui, &mut cache, &state, 1, "Test Pilot", LIST_PORTRAIT_PX);
                 show_portrait(ui, &mut cache, &state, 2, "Test Pilot", LIST_PORTRAIT_PX);
             });
         });
+        full_output.textures_delta.clear();
         assert_eq!(cache.len(), 1, "only the Ready portrait uploaded");
     }
 
@@ -799,8 +800,8 @@ mod tests {
             PortraitState::Ready(ready_image(8, 8)),
         );
         // Corporation 1000125 has no entry: the placeholder.
-        let _ = ctx.run(egui::RawInput::default(), |ctx| {
-            egui::CentralPanel::default().show(ctx, |ui| {
+        let mut full_output = ctx.run_ui(egui::RawInput::default(), |ui| {
+            egui::CentralPanel::default().show(ui, |ui| {
                 show_logo(
                     ui,
                     &mut cache,
@@ -819,6 +820,7 @@ mod tests {
                 );
             });
         });
+        full_output.textures_delta.clear();
         assert_eq!(cache.len(), 1, "only the Ready logo uploaded");
     }
 
@@ -1183,12 +1185,13 @@ mod tests {
             PortraitState::Ready(ready_image(8, 8)),
         );
         // Type 2048 has no entry: the placeholder box.
-        let _ = ctx.run(egui::RawInput::default(), |ctx| {
-            egui::CentralPanel::default().show(ctx, |ui| {
+        let mut full_output = ctx.run_ui(egui::RawInput::default(), |ui| {
+            egui::CentralPanel::default().show(ui, |ui| {
                 show_type_icon(ui, &mut cache, &state, 587, TYPE_ICON_PX);
                 show_type_icon(ui, &mut cache, &state, 2048, TYPE_ICON_PX);
             });
         });
+        full_output.textures_delta.clear();
         assert_eq!(cache.len(), 1, "only the Ready type icon uploaded");
     }
 }

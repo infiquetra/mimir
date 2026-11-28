@@ -11097,11 +11097,12 @@ mod tests {
         let mut state = type_fixture_state();
         let mut cache = PortraitImageCache::new();
         let ctx = egui::Context::default();
-        let _ = ctx.run(egui::RawInput::default(), |ctx| {
-            egui::CentralPanel::default().show(ctx, |ui| {
+        let mut full_output = ctx.run_ui(egui::RawInput::default(), |ui| {
+            egui::CentralPanel::default().show(ui, |ui| {
                 render_fitting_items(ui, &rows, Some((&mut state, &mut cache)));
             });
         });
+        full_output.textures_delta.clear();
         assert_eq!(
             state.portrait_requests,
             vec![(ImageKind::Type, 2048), (ImageKind::Type, 34)]
@@ -11109,11 +11110,12 @@ mod tests {
 
         // A second run queues nothing further: every key has
         // left `NotRequested`.
-        let _ = ctx.run(egui::RawInput::default(), |ctx| {
-            egui::CentralPanel::default().show(ctx, |ui| {
+        let mut full_output = ctx.run_ui(egui::RawInput::default(), |ui| {
+            egui::CentralPanel::default().show(ui, |ui| {
                 render_fitting_items(ui, &rows, Some((&mut state, &mut cache)));
             });
         });
+        full_output.textures_delta.clear();
         assert_eq!(
             state.portrait_requests,
             vec![(ImageKind::Type, 2048), (ImageKind::Type, 34)]
@@ -11135,11 +11137,12 @@ mod tests {
         let state = type_fixture_state();
         let cache = PortraitImageCache::new();
         let ctx = egui::Context::default();
-        let _ = ctx.run(egui::RawInput::default(), |ctx| {
-            egui::CentralPanel::default().show(ctx, |ui| {
+        let mut full_output = ctx.run_ui(egui::RawInput::default(), |ui| {
+            egui::CentralPanel::default().show(ui, |ui| {
                 render_fitting_items(ui, &rows, None);
             });
         });
+        full_output.textures_delta.clear();
         assert!(state.portrait_requests.is_empty());
         assert!(cache.is_empty());
     }
@@ -11164,11 +11167,12 @@ mod tests {
         };
         let mut cache = PortraitImageCache::new();
         let ctx = egui::Context::default();
-        let _ = ctx.run(egui::RawInput::default(), |ctx| {
-            egui::CentralPanel::default().show(ctx, |ui| {
+        let mut full_output = ctx.run_ui(egui::RawInput::default(), |ui| {
+            egui::CentralPanel::default().show(ui, |ui| {
                 render_fitting_items(ui, &rows, Some((&mut state, &mut cache)));
             });
         });
+        full_output.textures_delta.clear();
         assert_eq!(state.portrait_requests.len(), 100);
         assert!(
             !state.portrait_requests.contains(&(ImageKind::Type, 1101)),

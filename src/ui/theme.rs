@@ -1,6 +1,6 @@
-//! Mimir EVE-inspired space-slate dark theme applied once at startup.
+//! Alidade EVE-inspired space-slate dark theme applied once at startup.
 
-use egui::{Color32, FontId, Margin, Rounding, Stroke, TextStyle};
+use egui::{Color32, CornerRadius, FontId, Margin, Stroke, TextStyle};
 
 pub const BG_CANVAS: Color32 = Color32::from_rgb(0x0D, 0x11, 0x17);
 pub const BG_PANEL: Color32 = Color32::from_rgb(0x12, 0x18, 0x22);
@@ -26,7 +26,22 @@ pub const NEGATIVE_BG: Color32 = Color32::from_rgb(0x33, 0x14, 0x18);
 pub const WARNING: Color32 = Color32::from_rgb(0xF5, 0x9E, 0x0B);
 pub const WARNING_BG: Color32 = Color32::from_rgb(0x2B, 0x21, 0x11);
 
-/// Configure Mimir's EVE dark theme, spacing, and type scale on the egui context.
+/// Left inset (points) clearing the macOS traffic-light buttons
+/// when the content view extends under a hidden titlebar; zero on
+/// other platforms where native chrome keeps its own controls.
+#[cfg(target_os = "macos")]
+pub fn traffic_light_inset() -> f32 {
+    78.0
+}
+
+/// Left inset (points) clearing the macOS traffic-light buttons;
+/// zero off macOS.
+#[cfg(not(target_os = "macos"))]
+pub fn traffic_light_inset() -> f32 {
+    0.0
+}
+
+/// Configure Alidade's EVE dark theme, spacing, and type scale on the egui context.
 pub fn apply(ctx: &egui::Context) {
     let mut visuals = egui::Visuals::dark();
     visuals.dark_mode = true;
@@ -43,47 +58,47 @@ pub fn apply(ctx: &egui::Context) {
     visuals.selection.bg_fill = ACCENT_BLUE_FILL;
     visuals.selection.stroke = Stroke::new(1.0_f32, ACCENT_CYAN);
 
-    let radius = Rounding::same(6.0);
-    visuals.window_rounding = Rounding::same(8.0);
+    let radius = CornerRadius::same(6);
+    visuals.window_corner_radius = CornerRadius::same(8);
     visuals.window_stroke = Stroke::new(1.0_f32, BORDER_STRONG);
 
     visuals.widgets.noninteractive.bg_fill = BG_CARD;
     visuals.widgets.noninteractive.weak_bg_fill = BG_PANEL;
     visuals.widgets.noninteractive.bg_stroke = Stroke::new(1.0_f32, BORDER_SUBTLE);
     visuals.widgets.noninteractive.fg_stroke = Stroke::new(1.0_f32, TEXT_PRIMARY);
-    visuals.widgets.noninteractive.rounding = radius;
+    visuals.widgets.noninteractive.corner_radius = radius;
 
     visuals.widgets.inactive.bg_fill = BG_CARD_ALT;
     visuals.widgets.inactive.weak_bg_fill = BG_CARD;
     visuals.widgets.inactive.bg_stroke = Stroke::new(1.0_f32, BORDER_STRONG);
     visuals.widgets.inactive.fg_stroke = Stroke::new(1.0_f32, TEXT_PRIMARY);
-    visuals.widgets.inactive.rounding = radius;
+    visuals.widgets.inactive.corner_radius = radius;
 
     visuals.widgets.hovered.bg_fill = Color32::from_rgb(0x22, 0x30, 0x44);
     visuals.widgets.hovered.weak_bg_fill = Color32::from_rgb(0x22, 0x30, 0x44);
     visuals.widgets.hovered.bg_stroke = Stroke::new(1.0_f32, ACCENT_CYAN);
     visuals.widgets.hovered.fg_stroke = Stroke::new(1.5_f32, TEXT_PRIMARY);
-    visuals.widgets.hovered.rounding = radius;
+    visuals.widgets.hovered.corner_radius = radius;
 
     visuals.widgets.active.bg_fill = ACCENT_BLUE_FILL;
     visuals.widgets.active.weak_bg_fill = ACCENT_BLUE_FILL;
     visuals.widgets.active.bg_stroke = Stroke::new(1.0_f32, ACCENT_CYAN);
     visuals.widgets.active.fg_stroke = Stroke::new(1.5_f32, TEXT_PRIMARY);
-    visuals.widgets.active.rounding = radius;
+    visuals.widgets.active.corner_radius = radius;
 
     visuals.widgets.open.bg_fill = BG_CARD_ALT;
     visuals.widgets.open.weak_bg_fill = BG_CARD;
     visuals.widgets.open.bg_stroke = Stroke::new(1.0_f32, BORDER_STRONG);
     visuals.widgets.open.fg_stroke = Stroke::new(1.0_f32, TEXT_PRIMARY);
-    visuals.widgets.open.rounding = radius;
+    visuals.widgets.open.corner_radius = radius;
 
     ctx.set_visuals(visuals);
 
-    let mut style = (*ctx.style()).clone();
+    let mut style = (*ctx.global_style()).clone();
     style.spacing.item_spacing = egui::vec2(8.0, 6.0);
     style.spacing.button_padding = egui::vec2(10.0, 5.0);
     style.spacing.interact_size.y = 26.0;
-    style.spacing.window_margin = Margin::same(12.0);
+    style.spacing.window_margin = Margin::same(12);
     style
         .text_styles
         .insert(TextStyle::Heading, FontId::proportional(19.0));
@@ -99,7 +114,7 @@ pub fn apply(ctx: &egui::Context) {
     style
         .text_styles
         .insert(TextStyle::Small, FontId::proportional(11.5));
-    ctx.set_style(style);
+    ctx.set_global_style(style);
 
-    tracing::debug!("[UI] applied Mimir EVE dark theme");
+    tracing::debug!("[UI] applied Alidade EVE dark theme");
 }

@@ -194,7 +194,7 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
     // --- About ---
     super::widgets::card(ui, |ui| {
         super::widgets::section_title(ui, "About");
-        ui.label("Mimir — EVE Online companion (Rust/egui).");
+        ui.label("Alidade — EVE Online companion (Rust/egui).");
         ui.label(format!("Version {}", env!("CARGO_PKG_VERSION")));
         ui.label(
             "Data: EVE ESI (esi.evetech.net) after EVE SSO sign-in; demo mode is fully offline.",

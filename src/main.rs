@@ -1,4 +1,4 @@
-//! Mimir entry point: tracing init, tokio runtime, database open, egui.
+//! Alidade entry point: tracing init, tokio runtime, database open, egui.
 //! Access and refresh tokens are never logged.
 
 use std::io::Write;
@@ -10,6 +10,56 @@ use mimir::auth::token_store::TokenStore;
 use mimir::portraits::PortraitService;
 use mimir::storage::db;
 use mimir::EsiClient;
+
+/// User-facing desktop application name. The crate, binary, and
+/// repository slug stay `mimir`; only window chrome and `.app`
+/// packaging carry the Alidade brand.
+const APP_DISPLAY_NAME: &str = "Alidade";
+
+/// Native window title shown in desktop chrome.
+fn window_title() -> &'static str {
+    "Alidade — EVE Online Companion"
+}
+
+/// Apply platform window-chrome settings to the root viewport:
+/// on macOS the content view fills the window under a hidden
+/// titlebar (the shell clears the traffic lights with
+/// `mimir::ui::theme::traffic_light_inset`); elsewhere native
+/// chrome is unchanged.
+#[cfg(target_os = "macos")]
+fn apply_platform_chrome(viewport: egui::ViewportBuilder) -> egui::ViewportBuilder {
+    tracing::debug!(
+        "[STARTUP] macOS chrome applied: fullsize_content_view=true titlebar_shown=false title_shown=false"
+    );
+    viewport
+        .with_fullsize_content_view(true)
+        .with_titlebar_shown(false)
+        .with_title_shown(false)
+}
+
+/// Apply platform window-chrome settings to the root viewport;
+/// a no-op off macOS.
+#[cfg(not(target_os = "macos"))]
+fn apply_platform_chrome(viewport: egui::ViewportBuilder) -> egui::ViewportBuilder {
+    tracing::debug!(
+        "[STARTUP] native chrome applied: platform default (no macOS titlebar overrides)"
+    );
+    viewport
+}
+
+/// Build native options; demo mode disables eframe window-state
+/// persistence so `--demo` writes no window geometry to disk.
+fn native_options(viewport: egui::ViewportBuilder, demo: bool) -> eframe::NativeOptions {
+    let mut options = eframe::NativeOptions {
+        viewport,
+        ..Default::default()
+    };
+    if demo {
+        options.persist_window = false;
+        tracing::debug!("[STARTUP] demo mode: eframe persist_window=false (no disk window state)");
+    }
+    options
+}
 
 /// Parse `--view <name>` or `--view=<name>` from CLI arguments.
 fn parse_view_arg(args: &[String]) -> Option<View> {
@@ -112,7 +162,7 @@ fn main() -> eframe::Result<()> {
     let log_buffer: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
     init_tracing(log_buffer.clone());
     tracing::info!(
-        "[STARTUP] Mimir starting demo={} initial_view={:?}",
+        "[STARTUP] Alidade starting demo={} initial_view={:?}",
         demo,
         initial_view.map(|v| v.label())
     );
@@ -161,19 +211,18 @@ fn main() -> eframe::Result<()> {
         Backends::open_live()
     };
 
-    let mut viewport = egui::ViewportBuilder::default()
-        .with_inner_size([1280.0, 800.0])
-        .with_title("Mimir — EVE Online Companion");
+    let mut viewport = apply_platform_chrome(
+        egui::ViewportBuilder::default()
+            .with_inner_size([1280.0, 800.0])
+            .with_title(window_title()),
+    );
     if let Some(icon) = load_app_icon() {
         viewport = viewport.with_icon(icon);
     }
-    let options = eframe::NativeOptions {
-        viewport,
-        ..Default::default()
-    };
+    let options = native_options(viewport, demo);
 
     eframe::run_native(
-        "Mimir",
+        APP_DISPLAY_NAME,
         options,
         Box::new(move |cc| {
             tracing::info!("[STARTUP] egui frame created");
@@ -218,6 +267,41 @@ mod tests {
         assert_eq!(icon.width, 1024);
         assert_eq!(icon.height, 1024);
         assert_eq!(icon.rgba.len(), 1024 * 1024 * 4);
+    }
+
+    #[test]
+    fn alidade_window_title_and_display_name() {
+        assert_eq!(APP_DISPLAY_NAME, "Alidade");
+        assert_eq!(window_title(), "Alidade — EVE Online Companion");
+        let viewport =
+            apply_platform_chrome(egui::ViewportBuilder::default().with_title(window_title()));
+        assert_eq!(viewport.title.as_deref(), Some(window_title()));
+    }
+
+    #[test]
+    fn macos_chrome_hides_titlebar_and_clears_traffic_lights() {
+        let viewport = apply_platform_chrome(egui::ViewportBuilder::default());
+        #[cfg(target_os = "macos")]
+        {
+            assert_eq!(viewport.fullsize_content_view, Some(true));
+            assert_eq!(viewport.titlebar_shown, Some(false));
+            assert_eq!(viewport.title_shown, Some(false));
+            assert_eq!(mimir::ui::theme::traffic_light_inset(), 78.0);
+        }
+        #[cfg(not(target_os = "macos"))]
+        {
+            assert_eq!(viewport.fullsize_content_view, None);
+            assert_eq!(viewport.title_shown, None);
+            assert_eq!(mimir::ui::theme::traffic_light_inset(), 0.0);
+        }
+    }
+
+    #[test]
+    fn demo_disables_persist_window_live_keeps_it_on() {
+        let demo_options = native_options(egui::ViewportBuilder::default(), true);
+        assert!(!demo_options.persist_window);
+        let live_options = native_options(egui::ViewportBuilder::default(), false);
+        assert!(live_options.persist_window);
     }
 
     #[test]

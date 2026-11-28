@@ -444,7 +444,7 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState, sde: &Sde, cache: &mut Port
                         ));
                     }
                     // Arrow-key row movement (skipped while typing in search or notes).
-                    if !state.text_input_focused && !ui.ctx().wants_keyboard_input() {
+                    if !state.text_input_focused && !ui.ctx().egui_wants_keyboard_input() {
                         let (down, up) = ui.ctx().input(|i| {
                             (
                                 i.key_pressed(egui::Key::ArrowDown),
@@ -1598,11 +1598,12 @@ mod tests {
             let mut state = AppState::new(false);
             let mut cache = PortraitImageCache::new();
             let ctx = egui::Context::default();
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
-                egui::CentralPanel::default().show(ctx, |ui| {
+            let mut full_output = ctx.run_ui(egui::RawInput::default(), |ui| {
+                egui::CentralPanel::default().show(ui, |ui| {
                     show(ui, &mut state, &sde, &mut cache);
                 });
             });
+            full_output.textures_delta.clear();
             assert!(state.portrait_requests.is_empty());
             assert!(cache.is_empty());
         }
@@ -1613,11 +1614,12 @@ mod tests {
             let mut state = ready_catalogue_state(&sde);
             let mut cache = PortraitImageCache::new();
             let ctx = egui::Context::default();
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
-                egui::CentralPanel::default().show(ctx, |ui| {
+            let mut full_output = ctx.run_ui(egui::RawInput::default(), |ui| {
+                egui::CentralPanel::default().show(ui, |ui| {
                     show(ui, &mut state, &sde, &mut cache);
                 });
             });
+            full_output.textures_delta.clear();
             assert!(state.portrait_requests.is_empty());
             assert!(cache.is_empty());
         }
@@ -1632,11 +1634,12 @@ mod tests {
             state.skill_search = "e".to_string();
             let mut cache = PortraitImageCache::new();
             let ctx = egui::Context::default();
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
-                egui::CentralPanel::default().show(ctx, |ui| {
+            let mut full_output = ctx.run_ui(egui::RawInput::default(), |ui| {
+                egui::CentralPanel::default().show(ui, |ui| {
                     show(ui, &mut state, &sde, &mut cache);
                 });
             });
+            full_output.textures_delta.clear();
             assert_eq!(state.portrait_requests.len(), 100);
             let mut queued_ids: Vec<i64> =
                 state.portrait_requests.iter().map(|(_, id)| *id).collect();
@@ -1654,11 +1657,12 @@ mod tests {
 
             // Every queued key has left NotRequested; a second
             // frame queues nothing new.
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
-                egui::CentralPanel::default().show(ctx, |ui| {
+            let mut full_output = ctx.run_ui(egui::RawInput::default(), |ui| {
+                egui::CentralPanel::default().show(ui, |ui| {
                     show(ui, &mut state, &sde, &mut cache);
                 });
             });
+            full_output.textures_delta.clear();
             assert_eq!(state.portrait_requests.len(), 100);
             assert!(cache.is_empty());
 
@@ -1666,11 +1670,12 @@ mod tests {
             // beyond-cap row's own name reveals it and queues
             // exactly one additional key.
             state.skill_search = "Amarr Strategic Cruiser".to_string();
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
-                egui::CentralPanel::default().show(ctx, |ui| {
+            let mut full_output = ctx.run_ui(egui::RawInput::default(), |ui| {
+                egui::CentralPanel::default().show(ui, |ui| {
                     show(ui, &mut state, &sde, &mut cache);
                 });
             });
+            full_output.textures_delta.clear();
             assert_eq!(state.portrait_requests.len(), 101);
             assert!(state.portrait_requests.contains(&(ImageKind::Type, 30650)));
         }
@@ -1686,11 +1691,12 @@ mod tests {
                 .insert((ImageKind::Type, 3300), PortraitState::Failed);
             let mut cache = PortraitImageCache::new();
             let ctx = egui::Context::default();
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
-                egui::CentralPanel::default().show(ctx, |ui| {
+            let mut full_output = ctx.run_ui(egui::RawInput::default(), |ui| {
+                egui::CentralPanel::default().show(ui, |ui| {
                     show(ui, &mut state, &sde, &mut cache);
                 });
             });
+            full_output.textures_delta.clear();
             assert_eq!(state.portrait_requests.len(), 99);
             assert!(!state.portrait_requests.contains(&(ImageKind::Type, 3300)));
             assert!(matches!(
@@ -1717,11 +1723,12 @@ mod tests {
         state.skill_search = "e".to_string();
         let mut cache = PortraitImageCache::new();
         let ctx = egui::Context::default();
-        let _ = ctx.run(egui::RawInput::default(), |ctx| {
-            egui::CentralPanel::default().show(ctx, |ui| {
+        let mut full_output = ctx.run_ui(egui::RawInput::default(), |ui| {
+            egui::CentralPanel::default().show(ui, |ui| {
                 show(ui, &mut state, &sde, &mut cache);
             });
         });
+        full_output.textures_delta.clear();
         assert_eq!(state.portrait_requests.len(), 100);
         let mut queued_ids: Vec<i64> = state.portrait_requests.iter().map(|(_, id)| *id).collect();
         queued_ids.sort_unstable();
@@ -1752,11 +1759,12 @@ mod tests {
             state.skill_plan_picker_search = "e".to_string();
             let mut cache = PortraitImageCache::new();
             let ctx = egui::Context::default();
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
-                egui::CentralPanel::default().show(ctx, |ui| {
+            let mut full_output = ctx.run_ui(egui::RawInput::default(), |ui| {
+                egui::CentralPanel::default().show(ui, |ui| {
                     show(ui, &mut state, &sde, &mut cache);
                 });
             });
+            full_output.textures_delta.clear();
             assert!(state.portrait_requests.is_empty());
             assert!(cache.is_empty());
         }
@@ -1783,11 +1791,12 @@ mod tests {
             }
             let mut cache = PortraitImageCache::new();
             let ctx = egui::Context::default();
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
-                egui::CentralPanel::default().show(ctx, |ui| {
+            let mut full_output = ctx.run_ui(egui::RawInput::default(), |ui| {
+                egui::CentralPanel::default().show(ui, |ui| {
                     show(ui, &mut state, &sde, &mut cache);
                 });
             });
+            full_output.textures_delta.clear();
             assert_eq!(state.portrait_requests.len(), 12);
             assert!(state
                 .portrait_requests
@@ -1805,11 +1814,12 @@ mod tests {
             assert!(cache.is_empty(), "no Ready image means no upload");
             assert!(state.skill_plan_action.is_none());
             assert!(state.skill_plan_picker_open);
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
-                egui::CentralPanel::default().show(ctx, |ui| {
+            let mut full_output = ctx.run_ui(egui::RawInput::default(), |ui| {
+                egui::CentralPanel::default().show(ui, |ui| {
                     show(ui, &mut state, &sde, &mut cache);
                 });
             });
+            full_output.textures_delta.clear();
             assert_eq!(state.portrait_requests.len(), 12);
         }
 
@@ -1826,11 +1836,12 @@ mod tests {
             }
             let mut cache = PortraitImageCache::new();
             let ctx = egui::Context::default();
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
-                egui::CentralPanel::default().show(ctx, |ui| {
+            let mut full_output = ctx.run_ui(egui::RawInput::default(), |ui| {
+                egui::CentralPanel::default().show(ui, |ui| {
                     show(ui, &mut state, &sde, &mut cache);
                 });
             });
+            full_output.textures_delta.clear();
             assert_eq!(state.portrait_requests, vec![(ImageKind::Type, 3300)]);
         }
 
@@ -1841,11 +1852,12 @@ mod tests {
             state.skill_plan_picker_search = String::new();
             let mut cache = PortraitImageCache::new();
             let ctx = egui::Context::default();
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
-                egui::CentralPanel::default().show(ctx, |ui| {
+            let mut full_output = ctx.run_ui(egui::RawInput::default(), |ui| {
+                egui::CentralPanel::default().show(ui, |ui| {
                     show(ui, &mut state, &sde, &mut cache);
                 });
             });
+            full_output.textures_delta.clear();
             assert_eq!(state.portrait_requests.len(), 100);
             let mut queued_ids: Vec<i64> =
                 state.portrait_requests.iter().map(|(_, id)| *id).collect();
@@ -1857,18 +1869,20 @@ mod tests {
             assert!(!state.portrait_requests.contains(&(ImageKind::Type, 28585)));
             assert!(!state.portrait_requests.contains(&(ImageKind::Type, 23124)));
             assert!(cache.is_empty());
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
-                egui::CentralPanel::default().show(ctx, |ui| {
+            let mut full_output = ctx.run_ui(egui::RawInput::default(), |ui| {
+                egui::CentralPanel::default().show(ui, |ui| {
                     show(ui, &mut state, &sde, &mut cache);
                 });
             });
+            full_output.textures_delta.clear();
             assert_eq!(state.portrait_requests.len(), 100);
             state.skill_plan_picker_search = "Capital Industrial Reconfiguration".to_string();
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
-                egui::CentralPanel::default().show(ctx, |ui| {
+            let mut full_output = ctx.run_ui(egui::RawInput::default(), |ui| {
+                egui::CentralPanel::default().show(ui, |ui| {
                     show(ui, &mut state, &sde, &mut cache);
                 });
             });
+            full_output.textures_delta.clear();
             assert_eq!(state.portrait_requests.len(), 101);
             assert!(state.portrait_requests.contains(&(ImageKind::Type, 28585)));
         }
@@ -1879,11 +1893,12 @@ mod tests {
             state.skill_plan_picker_search = "ro".to_string();
             let mut cache = PortraitImageCache::new();
             let ctx = egui::Context::default();
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
-                egui::CentralPanel::default().show(ctx, |ui| {
+            let mut full_output = ctx.run_ui(egui::RawInput::default(), |ui| {
+                egui::CentralPanel::default().show(ui, |ui| {
                     show(ui, &mut state, &sde, &mut cache);
                 });
             });
+            full_output.textures_delta.clear();
             assert_eq!(state.portrait_requests.len(), 100);
             assert!(state.portrait_requests.contains(&(ImageKind::Type, 55033)));
         }
@@ -1895,20 +1910,22 @@ mod tests {
             state.skill_plan_picker_search = "pe".to_string();
             let mut cache = PortraitImageCache::new();
             let ctx = egui::Context::default();
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
-                egui::CentralPanel::default().show(ctx, |ui| {
+            let mut full_output = ctx.run_ui(egui::RawInput::default(), |ui| {
+                egui::CentralPanel::default().show(ui, |ui| {
                     show(ui, &mut state, &sde, &mut cache);
                 });
             });
+            full_output.textures_delta.clear();
             assert_eq!(state.portrait_requests.len(), 100);
             assert!(state.portrait_requests.contains(&(ImageKind::Type, 41409)));
             assert!(!state.portrait_requests.contains(&(ImageKind::Type, 21668)));
             state.skill_plan_picker_search = "XL Torpedoes".to_string();
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
-                egui::CentralPanel::default().show(ctx, |ui| {
+            let mut full_output = ctx.run_ui(egui::RawInput::default(), |ui| {
+                egui::CentralPanel::default().show(ui, |ui| {
                     show(ui, &mut state, &sde, &mut cache);
                 });
             });
+            full_output.textures_delta.clear();
             assert_eq!(state.portrait_requests.len(), 101);
             assert!(state.portrait_requests.contains(&(ImageKind::Type, 21668)));
         }
@@ -1924,11 +1941,12 @@ mod tests {
             state.skill_plan_picker_search = "gunnery".to_string();
             let mut cache = PortraitImageCache::new();
             let ctx = egui::Context::default();
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
-                egui::CentralPanel::default().show(ctx, |ui| {
+            let mut full_output = ctx.run_ui(egui::RawInput::default(), |ui| {
+                egui::CentralPanel::default().show(ui, |ui| {
                     show(ui, &mut state, &sde, &mut cache);
                 });
             });
+            full_output.textures_delta.clear();
             assert_eq!(state.portrait_requests, vec![(ImageKind::Type, 3300)]);
         }
 
@@ -1938,11 +1956,12 @@ mod tests {
             state.install_skill_catalogue_type_ids(&sde);
             let mut cache = PortraitImageCache::new();
             let ctx = egui::Context::default();
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
-                egui::CentralPanel::default().show(ctx, |ui| {
+            let mut full_output = ctx.run_ui(egui::RawInput::default(), |ui| {
+                egui::CentralPanel::default().show(ui, |ui| {
                     show(ui, &mut state, &sde, &mut cache);
                 });
             });
+            full_output.textures_delta.clear();
             assert!(state.portrait_requests.is_empty());
             assert!(cache.is_empty());
         }
@@ -1975,11 +1994,12 @@ mod tests {
             state.skill_plan_picker_search = String::new();
             let mut cache = PortraitImageCache::new();
             let ctx = egui::Context::default();
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
-                egui::CentralPanel::default().show(ctx, |ui| {
+            let mut full_output = ctx.run_ui(egui::RawInput::default(), |ui| {
+                egui::CentralPanel::default().show(ui, |ui| {
                     show(ui, &mut state, &sde, &mut cache);
                 });
             });
+            full_output.textures_delta.clear();
             assert!(state.portrait_requests.is_empty());
             assert!(cache.is_empty());
         }
@@ -1993,11 +2013,12 @@ mod tests {
                 .insert((ImageKind::Type, 60381), PortraitState::Failed);
             let mut cache = PortraitImageCache::new();
             let ctx = egui::Context::default();
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
-                egui::CentralPanel::default().show(ctx, |ui| {
+            let mut full_output = ctx.run_ui(egui::RawInput::default(), |ui| {
+                egui::CentralPanel::default().show(ui, |ui| {
                     show(ui, &mut state, &sde, &mut cache);
                 });
             });
+            full_output.textures_delta.clear();
             assert_eq!(state.portrait_requests.len(), 99);
             assert!(!state.portrait_requests.contains(&(ImageKind::Type, 60381)));
             assert!(matches!(
@@ -2033,11 +2054,12 @@ mod tests {
         state.skill_plan_picker_search = String::new();
         let mut cache = PortraitImageCache::new();
         let ctx = egui::Context::default();
-        let _ = ctx.run(egui::RawInput::default(), |ctx| {
-            egui::CentralPanel::default().show(ctx, |ui| {
+        let mut full_output = ctx.run_ui(egui::RawInput::default(), |ui| {
+            egui::CentralPanel::default().show(ui, |ui| {
                 show(ui, &mut state, &sde, &mut cache);
             });
         });
+        full_output.textures_delta.clear();
         assert_eq!(state.portrait_requests.len(), 100);
         let mut queued_ids: Vec<i64> = state.portrait_requests.iter().map(|(_, id)| *id).collect();
         queued_ids.sort_unstable();

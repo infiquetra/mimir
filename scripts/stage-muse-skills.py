@@ -30,6 +30,50 @@ PLUGIN_NAME = "alidade-skills"
 EXPECTED_SKILLS = ("alidade-ui-design", "alidade-wgpu-viz", "alidade-visual-qa")
 
 
+def validate_frontmatter(rel: str, text: str, expected_name: str) -> list[str]:
+    """Validate YAML frontmatter quoting/syntax with the stdlib only.
+
+    Deliberately small: checks the `---` block exists, every
+    `key: value` line is well-formed, the name matches, and plain
+    (unquoted) scalar values carry no `: ` mapping separator or
+    leading indicator character — an unquoted colon is the failure
+    mode that silently corrupts skill frontmatter for strict YAML
+    consumers while lenient readers still accept the file.
+    """
+    errors: list[str] = []
+    if not text.startswith("---\n"):
+        return [f"{rel}: missing valid YAML frontmatter for {expected_name}"]
+    lines = text.splitlines()
+    try:
+        end = lines.index("---", 1)
+    except ValueError:
+        return [f"{rel}: unterminated YAML frontmatter for {expected_name}"]
+    seen_name = False
+    for raw in lines[1:end]:
+        if not raw.strip():
+            continue
+        key, sep, value = raw.partition(":")
+        if not sep or not key.strip():
+            errors.append(f"{rel}: malformed frontmatter line: {raw!r}")
+            continue
+        key = key.strip()
+        value = value.strip()
+        if key == "name" and value == expected_name:
+            seen_name = True
+        if value.startswith(('"', "'")):
+            quote = value[0]
+            if len(value) < 2 or not value.endswith(quote):
+                errors.append(f"{rel}: unbalanced {quote} quoting for key {key!r}")
+        elif ": " in value or value.endswith(":") or value[:1] in "[{|>*&!%@`":
+            errors.append(
+                f"{rel}: unquoted YAML value for key {key!r} contains reserved "
+                "syntax; wrap the value in double quotes"
+            )
+    if not seen_name:
+        errors.append(f"{rel}: missing valid YAML frontmatter for {expected_name}")
+    return errors
+
+
 def validate_sources() -> list[str]:
     errors: list[str] = []
     for name in EXPECTED_SKILLS:
@@ -38,8 +82,9 @@ def validate_sources() -> list[str]:
             errors.append(f"missing canonical skill: {skill_md.relative_to(ROOT)}")
             continue
         text = skill_md.read_text(encoding="utf-8")
-        if not text.startswith("---\n") or f"name: {name}" not in text:
-            errors.append(f"{skill_md.relative_to(ROOT)}: missing valid YAML frontmatter for {name}")
+        errors.extend(
+            validate_frontmatter(str(skill_md.relative_to(ROOT)), text, name)
+        )
         for link_root in (".claude/skills", ".cursor/skills"):
             link_path = ROOT / link_root / name
             if not link_path.is_symlink():

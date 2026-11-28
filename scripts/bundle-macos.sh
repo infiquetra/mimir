@@ -5,16 +5,17 @@ usage() {
     cat <<'EOF'
 Usage: scripts/bundle-macos.sh [OPTIONS]
 
-Build and package Mimir as a native macOS Mimir.app bundle.
+Build and package Alidade as a native macOS Alidade.app bundle.
 
 Options:
   --profile <release|debug>  Cargo build profile to bundle (default: release)
   --skip-build               Reuse the existing target/<profile>/mimir binary
-  --install                  Install Mimir.app into /Applications (or ~/Applications if not writable)
-  --install-dir <DIR>        Install Mimir.app into a specific directory (implies --install)
-  --open                     Launch Mimir.app after bundling/installing
-  --demo                     With --open, launch Mimir.app with --args --demo
-  --zip                      Create target/<profile>/bundle/Mimir-macos-<arch>.zip
+  --install                  Install Alidade.app into /Applications (or ~/Applications if not writable)
+  --no-install               Explicit no-op: package only, do not install (default)
+  --install-dir <DIR>        Install Alidade.app into a specific directory (implies --install)
+  --open                     Launch Alidade.app after bundling/installing
+  --demo                     With --open, launch Alidade.app with --args --demo
+  --zip                      Create target/<profile>/bundle/Alidade-macos-<arch>.zip
   --sign <identity>          Codesign identity (default: $MIMIR_CODESIGN_IDENTITY or '-')
   -h, --help                 Show this help message
 EOF
@@ -42,6 +43,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --install)
             DO_INSTALL=1
+            shift
+            ;;
+        --no-install)
+            DO_INSTALL=0
             shift
             ;;
         --install-dir)
@@ -143,7 +148,7 @@ if [[ ! -x "$BIN_PATH" ]]; then
 fi
 
 BUNDLE_ROOT="target/$PROFILE/bundle"
-APP_BUNDLE="$BUNDLE_ROOT/Mimir.app"
+APP_BUNDLE="$BUNDLE_ROOT/Alidade.app"
 rm -rf "$APP_BUNDLE"
 mkdir -p "$APP_BUNDLE/Contents/MacOS" "$APP_BUNDLE/Contents/Resources"
 
@@ -194,7 +199,7 @@ echo "==> Packaged $APP_BUNDLE (v$VERSION build $BUILD_NUMBER)"
 
 if [[ "$DO_ZIP" -eq 1 ]]; then
     ARCH="$(uname -m)"
-    ZIP_PATH="$BUNDLE_ROOT/Mimir-macos-${ARCH}.zip"
+    ZIP_PATH="$BUNDLE_ROOT/Alidade-macos-${ARCH}.zip"
     rm -f "$ZIP_PATH"
     ditto -c -k --sequesterRsrc --keepParent "$APP_BUNDLE" "$ZIP_PATH"
     echo "==> Created archive $ZIP_PATH"
@@ -210,17 +215,22 @@ if [[ "$DO_INSTALL" -eq 1 ]]; then
         fi
     fi
     mkdir -p "$INSTALL_DIR"
-    STAGED_APP="$INSTALL_DIR/.Mimir.app.new.$$"
+    STAGED_APP="$INSTALL_DIR/.Alidade.app.new.$$"
     rm -rf "$STAGED_APP"
     ditto "$APP_BUNDLE" "$STAGED_APP"
     xattr -dr com.apple.quarantine "$STAGED_APP" 2>/dev/null || true
-    DEST_APP="$INSTALL_DIR/Mimir.app"
+    DEST_APP="$INSTALL_DIR/Alidade.app"
     rm -rf "$DEST_APP"
     mv "$STAGED_APP" "$DEST_APP"
     STAGED_APP=""
     codesign --verify --deep --strict "$DEST_APP"
     OPEN_TARGET="$DEST_APP"
     echo "==> Installed $DEST_APP"
+    LEGACY_APP="$INSTALL_DIR/Mimir.app"
+    if [[ -e "$LEGACY_APP" ]]; then
+        rm -rf "$LEGACY_APP"
+        echo "==> Removed legacy $LEGACY_APP (same bundle identifier com.infiquetra.mimir) so Launch Services cannot resolve the stale bundle"
+    fi
 fi
 
 if [[ "$DO_OPEN" -eq 1 ]]; then

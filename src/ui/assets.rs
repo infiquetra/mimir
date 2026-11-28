@@ -561,11 +561,12 @@ mod tests {
             let resolver = NameResolver::new();
             let mut cache = PortraitImageCache::new();
             let ctx = egui::Context::default();
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
-                egui::CentralPanel::default().show(ctx, |ui| {
+            let mut full_output = ctx.run_ui(egui::RawInput::default(), |ui| {
+                egui::CentralPanel::default().show(ui, |ui| {
                     show(ui, &mut state, &resolver, &mut cache);
                 });
             });
+            full_output.textures_delta.clear();
             assert!(state.portrait_requests.is_empty());
             assert!(cache.is_empty());
         }
@@ -582,32 +583,35 @@ mod tests {
             let resolver = numbered_resolver(&ids, &[(60003760, "Jita Station")]);
             let mut cache = PortraitImageCache::new();
             let ctx = egui::Context::default();
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
-                egui::CentralPanel::default().show(ctx, |ui| {
+            let mut full_output = ctx.run_ui(egui::RawInput::default(), |ui| {
+                egui::CentralPanel::default().show(ui, |ui| {
                     show(ui, &mut state, &resolver, &mut cache);
                 });
             });
+            full_output.textures_delta.clear();
             assert_eq!(state.portrait_requests.len(), 100);
             assert!(cache.is_empty());
             assert!(!state.portrait_requests.contains(&(ImageKind::Type, 1125)));
             // Every queued key has left NotRequested; a second frame
             // queues nothing new.
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
-                egui::CentralPanel::default().show(ctx, |ui| {
+            let mut full_output = ctx.run_ui(egui::RawInput::default(), |ui| {
+                egui::CentralPanel::default().show(ui, |ui| {
                     show(ui, &mut state, &resolver, &mut cache);
                 });
             });
+            full_output.textures_delta.clear();
             assert_eq!(state.portrait_requests.len(), 100);
             assert!(cache.is_empty());
             // Filter before the cap: searching for the 125th row's
             // name reveals the row beyond the window and queues
             // exactly that one additional key.
             state.assets_search = "Item 1125".to_string();
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
-                egui::CentralPanel::default().show(ctx, |ui| {
+            let mut full_output = ctx.run_ui(egui::RawInput::default(), |ui| {
+                egui::CentralPanel::default().show(ui, |ui| {
                     show(ui, &mut state, &resolver, &mut cache);
                 });
             });
+            full_output.textures_delta.clear();
             assert_eq!(state.portrait_requests.len(), 101);
             assert!(state.portrait_requests.contains(&(ImageKind::Type, 1125)));
         }
@@ -633,11 +637,12 @@ mod tests {
             );
             let mut cache = PortraitImageCache::new();
             let ctx = egui::Context::default();
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
-                egui::CentralPanel::default().show(ctx, |ui| {
+            let mut full_output = ctx.run_ui(egui::RawInput::default(), |ui| {
+                egui::CentralPanel::default().show(ui, |ui| {
                     show(ui, &mut state, &resolver, &mut cache);
                 });
             });
+            full_output.textures_delta.clear();
             assert_eq!(state.portrait_requests.len(), 100);
             assert!(cache.is_empty());
         }
@@ -653,11 +658,12 @@ mod tests {
             let resolver = numbered_resolver(&[4001], &[(60003760, "Jita Station")]);
             let mut cache = PortraitImageCache::new();
             let ctx = egui::Context::default();
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
-                egui::CentralPanel::default().show(ctx, |ui| {
+            let mut full_output = ctx.run_ui(egui::RawInput::default(), |ui| {
+                egui::CentralPanel::default().show(ui, |ui| {
                     show(ui, &mut state, &resolver, &mut cache);
                 });
             });
+            full_output.textures_delta.clear();
             assert_eq!(
                 state.portrait_requests,
                 vec![(ImageKind::Type, 4001)],
@@ -676,11 +682,12 @@ mod tests {
             let resolver = NameResolver::new();
             let mut cache = PortraitImageCache::new();
             let ctx = egui::Context::default();
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
-                egui::CentralPanel::default().show(ctx, |ui| {
+            let mut full_output = ctx.run_ui(egui::RawInput::default(), |ui| {
+                egui::CentralPanel::default().show(ui, |ui| {
                     show(ui, &mut state, &resolver, &mut cache);
                 });
             });
+            full_output.textures_delta.clear();
             assert!(state.portrait_requests.is_empty());
             assert!(cache.is_empty());
             assert!(!state.portraits.contains_key(&(ImageKind::Type, 0)));
@@ -708,11 +715,12 @@ mod tests {
         let resolver = crate::demo::data::demo_resolver().expect("demo resolver loads");
         let mut cache = PortraitImageCache::new();
         let ctx = egui::Context::default();
-        let _ = ctx.run(egui::RawInput::default(), |ctx| {
-            egui::CentralPanel::default().show(ctx, |ui| {
+        let mut full_output = ctx.run_ui(egui::RawInput::default(), |ui| {
+            egui::CentralPanel::default().show(ui, |ui| {
                 show(ui, &mut state, &resolver, &mut cache);
             });
         });
+        full_output.textures_delta.clear();
         let mut queued_ids: Vec<i64> = state
             .portrait_requests
             .iter()

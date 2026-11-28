@@ -1,6 +1,6 @@
 ---
 name: alidade-wgpu-viz
-description: Architect and implement 120 fps GPU-accelerated 2D/3D visualizations in Alidade on egui 0.37 + eframe wgpu (Metal): petgraph + dagre + egui-snarl + kurbo/lyon Sankey-DAG pipelines, instanced 8,000-system 3D star maps with kiddo spatial picking, radial fitting wheels, and WGSL polar application shaders.
+description: "Architect and implement 120 fps GPU-accelerated 2D/3D visualizations in Alidade on egui 0.37 + eframe wgpu (Metal): petgraph + dagre + egui-snarl + kurbo/lyon Sankey-DAG pipelines, instanced 8,000-system 3D star maps with kiddo spatial picking, radial fitting wheels, and WGSL polar application shaders."
 ---
 
 # Alidade `wgpu` Spatial, Flow & Polar Visualizations
