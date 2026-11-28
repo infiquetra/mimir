@@ -1,0 +1,32 @@
+{
+  "90000001": {
+    "jobs": [
+      {"job_id": 710000101, "installer_id": 90000001, "facility_id": 60003760, "location_id": 60003760, "activity_id": 1, "blueprint_id": 710001001, "blueprint_type_id": 681, "output_location_id": 60003760, "runs": 3, "cost": 45000.0, "licensed_production_runs": null, "probability": null, "product_type_id": 587, "status": "active", "duration": 518400, "start_date": "2026-11-14T10:00:00Z", "end_date": "2026-11-20T10:00:00Z", "pause_date": null, "completed_date": null, "completed_character_id": null, "successful_runs": null},
+      {"job_id": 710000102, "installer_id": 90000001, "facility_id": 60003760, "location_id": 60003760, "activity_id": 4, "blueprint_id": 710001004, "blueprint_type_id": 683, "output_location_id": 60003760, "runs": 1, "cost": 12000.0, "licensed_production_runs": null, "probability": null, "product_type_id": null, "status": "paused", "duration": 172800, "start_date": "2026-11-12T09:00:00Z", "end_date": "2026-11-19T09:00:00Z", "pause_date": "2026-11-13T09:00:00Z", "completed_date": null, "completed_character_id": null, "successful_runs": null},
+      {"job_id": 710000103, "installer_id": 90000001, "facility_id": 60011866, "location_id": 60011866, "activity_id": 5, "blueprint_id": 710001001, "blueprint_type_id": 681, "output_location_id": 60011866, "runs": 2, "cost": 8000.0, "licensed_production_runs": null, "probability": null, "product_type_id": null, "status": "ready", "duration": 86400, "start_date": "2026-11-13T08:00:00Z", "end_date": "2026-11-14T08:00:00Z", "pause_date": null, "completed_date": null, "completed_character_id": null, "successful_runs": null},
+      {"job_id": 710000104, "installer_id": 90000001, "facility_id": 60003760, "location_id": 60003760, "activity_id": 1, "blueprint_id": 710001002, "blueprint_type_id": 681, "output_location_id": 60003760, "runs": 5, "cost": 30000.0, "licensed_production_runs": null, "probability": null, "product_type_id": 587, "status": "delivered", "duration": 259200, "start_date": "2026-11-09T10:00:00Z", "end_date": "2026-11-12T10:00:00Z", "pause_date": null, "completed_date": "2026-11-12T11:00:00Z", "completed_character_id": 90000001, "successful_runs": 5}
+    ],
+    "jobs_truncated": false,
+    "blueprints": [
+      {"item_id": 710001001, "type_id": 681, "location_id": 60003760, "location_flag": "Hangar", "quantity": -1, "time_efficiency": 8, "material_efficiency": 10, "runs": -1},
+      {"item_id": 710001002, "type_id": 681, "location_id": 60003760, "location_flag": "Hangar", "quantity": -2, "time_efficiency": 0, "material_efficiency": 0, "runs": 5},
+      {"item_id": 710001003, "type_id": 682, "location_id": 60011866, "location_flag": "Hangar", "quantity": 3, "time_efficiency": 0, "material_efficiency": 0, "runs": -1},
+      {"item_id": 710001004, "type_id": 683, "location_id": 60011866, "location_flag": "Hangar", "quantity": -2, "time_efficiency": 14, "material_efficiency": 9, "runs": 10}
+    ],
+    "blueprints_truncated": false
+  },
+  "90000002": {
+    "jobs": [
+      {"job_id": 710000201, "installer_id": 90000002, "facility_id": 60011866, "location_id": 60011866, "activity_id": 11, "blueprint_id": 710002003, "blueprint_type_id": 683, "output_location_id": 60011866, "runs": 1, "cost": 60000.0, "licensed_production_runs": null, "probability": null, "product_type_id": 16679, "status": "active", "duration": 345600, "start_date": "2026-11-14T12:00:00Z", "end_date": "2026-11-19T12:00:00Z", "pause_date": null, "completed_date": null, "completed_character_id": null, "successful_runs": null},
+      {"job_id": 710000202, "installer_id": 90000002, "facility_id": 60011866, "location_id": 60011866, "activity_id": 3, "blueprint_id": 710002001, "blueprint_type_id": 682, "output_location_id": 60011866, "runs": 1, "cost": 15000.0, "licensed_production_runs": null, "probability": null, "product_type_id": null, "status": "active", "duration": 432000, "start_date": "2026-11-13T12:00:00Z", "end_date": "2026-11-21T12:00:00Z", "pause_date": null, "completed_date": null, "completed_character_id": null, "successful_runs": null},
+      {"job_id": 710000203, "installer_id": 90000002, "facility_id": 60003760, "location_id": 60003760, "activity_id": 8, "blueprint_id": 710002002, "blueprint_type_id": 681, "output_location_id": 60003760, "runs": 1, "cost": 20000.0, "licensed_production_runs": 10, "probability": 0.4, "product_type_id": 682, "status": "delivered", "duration": 172800, "start_date": "2026-11-10T12:00:00Z", "end_date": "2026-11-12T12:00:00Z", "pause_date": null, "completed_date": "2026-11-12T13:00:00Z", "completed_character_id": 90000002, "successful_runs": 1}
+    ],
+    "jobs_truncated": false,
+    "blueprints": [
+      {"item_id": 710002001, "type_id": 682, "location_id": 60011866, "location_flag": "Hangar", "quantity": -1, "time_efficiency": 12, "material_efficiency": 7, "runs": -1},
+      {"item_id": 710002002, "type_id": 681, "location_id": 60011866, "location_flag": "Hangar", "quantity": -2, "time_efficiency": 0, "material_efficiency": 0, "runs": 2},
+      {"item_id": 710002003, "type_id": 683, "location_id": 60003760, "location_flag": "Hangar", "quantity": 5, "time_efficiency": 0, "material_efficiency": 0, "runs": -1}
+    ],
+    "blueprints_truncated": false
+  }
+}

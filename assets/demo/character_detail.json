@@ -1,0 +1,40 @@
+{
+  "90000001": {
+    "attributes": { "charisma": 20, "intelligence": 27, "memory": 21, "perception": 25, "willpower": 24, "bonus_remaps": 1 },
+    "implants": [22119, 22120],
+    "clones": {
+      "jump_clones": [
+        { "jump_clone_id": 91000001, "location_id": 60011866, "location_type": "station", "implants": [22119], "name": "Amarr spare" },
+        { "jump_clone_id": 91000002, "location_id": 60003760, "location_type": "station", "implants": [] }
+      ],
+      "last_clone_jump_date": "2026-10-01T00:00:00Z",
+      "home_location": { "location_id": 60003760, "location_type": "station" }
+    },
+    "standings": [
+      { "from_id": 500001, "from_type": "faction", "standing": 3.25 },
+      { "from_id": 1000125, "from_type": "npc_corp", "standing": -1.5 }
+    ],
+    "location": { "solar_system_id": 30000142, "station_id": 60003760 },
+    "ship": { "ship_item_id": 710000002, "ship_name": "Aria's Rifter", "ship_type_id": 587 },
+    "online": { "online": true, "last_login": "2026-11-15T08:00:00Z", "last_logout": "2026-11-14T22:00:00Z", "logins": 412 }
+  },
+  "90000002": {
+    "attributes": { "charisma": 22, "intelligence": 20, "memory": 24, "perception": 21, "willpower": 23, "bonus_remaps": 0, "last_remap_date": "2026-05-01T00:00:00Z" },
+    "implants": [],
+    "clones": {
+      "jump_clones": [
+        { "jump_clone_id": 91000003, "location_id": 60003760, "location_type": "station", "implants": [] }
+      ],
+      "last_station_change_date": "2026-09-15T00:00:00Z",
+      "home_location": { "location_id": 60011866, "location_type": "station" }
+    },
+    "standings": [
+      { "from_id": 1000125, "from_type": "npc_corp", "standing": 1.5 },
+      { "from_id": 99000001, "from_type": "alliance", "standing": 0.0 },
+      { "from_id": 500001, "from_type": "faction", "standing": -2.75 }
+    ],
+    "location": { "solar_system_id": 30002187, "station_id": 60011866 },
+    "ship": { "ship_item_id": 710000102, "ship_name": "Marcus's Rifter", "ship_type_id": 587 },
+    "online": { "online": false, "last_login": "2026-11-14T19:00:00Z", "last_logout": "2026-11-14T23:30:00Z", "logins": 287 }
+  }
+}

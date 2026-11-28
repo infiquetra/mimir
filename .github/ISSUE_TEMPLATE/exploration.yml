@@ -1,7 +1,7 @@
 name: Exploration
 description: Research, POC, or architectural investigation (1-3 days)
 title: "[EXPLORATION] "
-labels: ["exploration", "research", "hermes-not-actionable"]
+labels: ["exploration", "research"]
 body:
   - type: markdown
     attributes:
@@ -147,16 +147,16 @@ body:
   - type: input
     id: parent_objective
     attributes:
-      label: Parent Objective (optional)
-      description: If this exploration informs a larger Objective/Milestone
-      placeholder: "objective:mvp-launch"
+      label: Objective field option (optional)
+      description: Objective project-field value this exploration informs
+      placeholder: "MVP launch"
 
   - type: input
     id: parent_initiative
     attributes:
-      label: Parent Initiative (optional)
-      description: Strategic initiative this exploration supports
-      placeholder: "initiative:platform-launch"
+      label: Initiative field option (optional)
+      description: Initiative project-field value this exploration supports
+      placeholder: "Platform launch"
 
   - type: textarea
     id: automated_tests
@@ -193,7 +193,7 @@ body:
         - Document findings in structured format
 
         **AI Tooling Resources:**
-        - Plugins: https://github.com/infiquetra/infiquetra-claude-plugins
+        - Plugins: https://github.com/infiquetra/infiquetra-agent-plugins
 
   - type: textarea
     id: related_work

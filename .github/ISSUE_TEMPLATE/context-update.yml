@@ -1,7 +1,7 @@
 name: Context Update
 description: Blueprint repository documentation maintenance (hours to 1 day)
 title: "[CONTEXT] "
-labels: ["context-update", "documentation", "hermes-not-actionable"]
+labels: ["context-update", "documentation"]
 body:
   - type: markdown
     attributes:
@@ -161,16 +161,16 @@ body:
   - type: input
     id: parent_objective
     attributes:
-      label: Parent Objective (optional)
-      description: If this documentation supports a specific Objective/Milestone
-      placeholder: "objective:mvp-launch"
+      label: Objective field option (optional)
+      description: Objective project-field value this documentation supports
+      placeholder: "MVP launch"
 
   - type: input
     id: parent_initiative
     attributes:
-      label: Parent Initiative (optional)
-      description: Strategic initiative this documentation supports
-      placeholder: "initiative:platform-launch"
+      label: Initiative field option (optional)
+      description: Initiative project-field value this documentation supports
+      placeholder: "Platform launch"
 
   - type: textarea
     id: review_checklist
@@ -227,7 +227,7 @@ body:
         - Test code examples in actual environment before documenting
 
         **AI Tooling Resources:**
-        - Plugins: https://github.com/infiquetra/infiquetra-claude-plugins
+        - Plugins: https://github.com/infiquetra/infiquetra-agent-plugins
 
   - type: markdown
     attributes:

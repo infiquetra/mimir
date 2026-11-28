@@ -1,0 +1,7 @@
+{
+  "skills": [
+    { "skill_id": 3300, "active_skill_level": 5, "trained_skill_level": 5, "skillpoints_in_skill": 256000 }
+  ],
+  "total_sp": 1000000,
+  "unallocated_sp": 1000
+}

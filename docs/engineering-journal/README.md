@@ -1,0 +1,47 @@
+# Engineering Journal - Mimir
+
+Living documentation for the Mimir Flutter EVE companion app. This journal
+prevents repo-local knowledge loss across sessions, maintainers, and agents.
+
+The journal is the directory; the core files plus `narratives/` and `audits/`
+are its sections. Pattern adopted from the original local exemplar at
+`../home-lab/docs/engineering-journal/` and the reusable scaffold at
+`../infiquetra-sdlc/templates/engineering-journal/`.
+
+## Files In This Folder
+
+| File | What it holds | When to update |
+|------|---------------|----------------|
+| [LEARNINGS.md](LEARNINGS.md) | Empirical findings, mechanisms, fixes, and validations | When a run or implementation reveals something non-obvious |
+| [DECISIONS.md](DECISIONS.md) | Architecture and prompt-design choices with rationale and revisit conditions | When Mimir commits to a path over alternatives |
+| [QUEUED.md](QUEUED.md) | Future work by priority with "worth it when" triggers | When useful work is deferred |
+| [ARCHIVE.md](ARCHIVE.md) | Shipped, rejected, and superseded items | When queued items ship or are rejected, or old entries are invalidated |
+| [narratives/](narratives/) | Longer-form companion docs | When a topic needs standalone context |
+| [audits/](audits/) | Dated deep-dive audits or substantial review snapshots | When a larger review or test run produces reusable findings |
+
+## How To Maintain
+
+The repo-level [`AGENTS.md`](../../AGENTS.md) tells Codex to maintain this
+journal without being asked. The short version:
+
+- Significant run or implementation with a non-obvious result: update `LEARNINGS.md`.
+- Architecture, prompt, or data-contract decision: update `DECISIONS.md`.
+- Good idea deferred: update `QUEUED.md`.
+- Queued item ships or is rejected: move it to `ARCHIVE.md`.
+- Old learning or decision is invalidated: correct inline and archive the prior version.
+- Longer write-up needed: add a dated file under `narratives/` and link to it.
+
+Keep entries newest-first, concise, and evidence-backed.
+
+## Quick Navigation By Topic
+
+- Corporation roles, roster, assets, structures/fuel and wallets -> [Product specification](../specs/corporation-module.md), [queued initiative](QUEUED.md#corporation-module)
+- Exploration reference, public highways, local signatures and routing -> [Product specification](../specs/exploration-module.md), [technical design](../specs/exploration-module-design.md), [architecture decision](DECISIONS.md#exploration-uses-versioned-data-scoped-transactions-and-tuple-routing), [queued initiative](QUEUED.md#exploration-module)
+- AAR fit comparison visuals, source snapshots and BOM -> [Product specification](../specs/aar-fit-comparison-visuals.md), [technical design](../specs/aar-fit-comparison-visuals-design.md), [shipped initiative](ARCHIVE.md#shipped-2026-09-15-fit-comparison-visuals-for-aar-reports)
+- AAR fit import/capture UI tests and re-analysis retention -> [Product contract](../specs/aar-fit-import-capture-ui-tests.md), [source finding](LEARNINGS.md#fit-attachment-mocks-do-not-prove-re-analysis-retains-the-fit)
+- Per-attacker incoming profiles and defense matchups (M5, shipped) -> [Product spec](../specs/aar-per-attacker-matchup.md), [shipped initiative](ARCHIVE.md#shipped-2026-09-15-per-attacker-incoming-damage-profile-and-defense-matchup)
+- Combat analyzer AAR evidence ledger and fit evidence -> [DECISIONS](DECISIONS.md#combat-aar-v3-uses-evidence-ledger-and-fit-evidence-before-deeper-simulation)
+- Combat logs as incomplete evidence -> [LEARNINGS](LEARNINGS.md#combat-logs-are-a-primary-source-but-not-a-complete-aar-evidence-source)
+- Mimir-owned AI auth -> [DECISIONS](DECISIONS.md#ai-auth-is-mimir-owned-app-auth-not-codex-cli-mutation)
+- Combat-log classification cache -> [LEARNINGS](LEARNINGS.md#eve-gamelog-folders-are-mostly-non-combat-and-need-cached-classification)
+- Deferred AAR inference and simulation work -> [QUEUED](QUEUED.md#p1--aar-fit-simulation-and-defense-profile-derivation)

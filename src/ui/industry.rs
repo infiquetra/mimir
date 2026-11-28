@@ -1,0 +1,2358 @@
+//! Industry: the active character's industry jobs and blueprint
+//! library, read-only. The view sets request flags only
+//! (`retry_requested`, `stepup_requested`); it never fetches.
+//! Every rendered string is a resolved EVE name, a section-7 word,
+//! a fetched date, or a row count — never a raw numeric ID, and
+//! blueprint sentinel values render as words.
+
+use chrono::Utc;
+
+use super::widgets;
+use crate::app::state::{
+    AppState, BlueprintKindFilter, BlueprintsData, IndustryData, IndustryJobsData, LoadState,
+    SectionError, StepUpRequest,
+};
+use crate::config::EveConfig;
+use crate::esi::models::{CharacterBlueprint, IndustryJob};
+use crate::invention_calculator::{
+    invention_calculator_result, parse_base_probability, parse_decryptor_multiplier,
+    parse_skill_level,
+};
+use crate::names::fitting_types::FittingTypes;
+use crate::names::industry_ref::IndustryRef;
+use crate::names::resolver::NameResolver;
+use crate::production_chain::{parse_quantity, production_chain_result, ChainNode, ChainNodeKind};
+use crate::reaction_calculator::{
+    parse_facility_bonus_percent, parse_runs, reaction_calculator_result,
+};
+
+/// Invention Calculator block wording (industry calculators design
+/// section 7): heading, input labels, guidance lines, and
+/// disclosure, all verbatim. Named constants so tests assert them
+/// byte-exactly without an egui frame.
+pub const INVENTION_CALCULATOR_HEADING: &str = "Invention Calculator";
+pub const INVENTION_CALCULATOR_INPUT_LABELS: [&str; 5] = [
+    "Base Probability (0 to 1, entered by you)",
+    "Encryption Skill Level (1 to 5, entered by you)",
+    "Datacore Skill 1 Level (1 to 5, entered by you)",
+    "Datacore Skill 2 Level (1 to 5, entered by you)",
+    "Decryptor Multiplier (entered by you)",
+];
+pub const INVENTION_CALCULATOR_INPUT_GUIDANCE: &str =
+    "Enter a base probability above 0 and at most 1 (for example 0.30 for 30%), skill levels from 1 to 5, and a decryptor multiplier above 0, to see the result.";
+pub const INVENTION_CALCULATOR_NO_RESULT_GUIDANCE: &str =
+    "No result: the entered values are too large to calculate with.";
+pub const INVENTION_CALCULATOR_DISCLOSURE: &str = "Estimate using only the base probability, skill levels, and decryptor multiplier you entered. The starting values (base probability 0.30, each skill level 4, decryptor multiplier 1.0) are starting values to replace with your own: Mimir does not read the base probability from any blueprint, the skill levels from your character, or the multiplier from any decryptor you own. The decryptor choices in the retired app were None x1.0, Symmetry x1.1, Process x1.2, Parity x1.8, and Optimized x0.6; type the multiplier for the decryptor you mean. The chance is capped at 100%. Figures are rounded only for display, so these numbers can differ from EVE.";
+
+pub const REACTION_CALCULATOR_HEADING: &str = "Reaction Calculator";
+pub const REACTION_CALCULATOR_INPUT_LABELS: [&str; 3] = [
+    "Reaction (chosen by you)",
+    "Runs (entered by you)",
+    "Facility Material Bonus Percent (entered by you)",
+];
+pub const REACTION_CHOICE_RENDER_MAX: usize = 100;
+pub const REACTION_CALCULATOR_NO_INDUSTRY_DATA: &str =
+    "Reaction calculator unavailable: Mimir's bundled industry data failed to load.";
+pub const REACTION_CALCULATOR_NO_ITEM_DATA: &str =
+    "Reaction calculator unavailable: Mimir's bundled item data failed to load.";
+pub const REACTION_CALCULATOR_CHOOSE_GUIDANCE: &str =
+    "Choose a reaction above to see its materials.";
+pub const REACTION_CALCULATOR_NO_MATCH: &str = "No reactions match the search.";
+pub const REACTION_CALCULATOR_INPUT_GUIDANCE: &str = "Enter runs of at least 1 and a facility material bonus percent of at least 0 and below 100, to see the result.";
+pub const REACTION_CALCULATOR_NO_RESULT_GUIDANCE: &str =
+    "No result: the entered values are too large to calculate with.";
+pub const REACTION_CALCULATOR_DISCLOSURE: &str = "Estimate for the reaction you chose, using the per-run materials and products in Mimir's bundled industry data and only the runs and facility material bonus percent you entered. The starting values (1 run, 0.0% facility material bonus) are starting values to replace with your own: Mimir does not read the facility bonus from any structure you use, and it does not check that you own the reaction formula, have the materials, or can run the reaction. The facility choices in the retired app were No Bonus 0%, Athanor 2%, Athanor T1 Rig 2.4%, Athanor T2 Rig 2.8%, Tatara 4%, Tatara T1 Rig 4.8%, and Tatara T2 Rig 5.6%; type the percent for the facility you mean. The facility bonus applies to the total input amount for all runs, each input is rounded to a whole number with a minimum of 1, and outputs are the per-run amount times runs with no bonus. A reaction formula with no name in Mimir's bundled item data cannot be chosen. These numbers can differ from EVE.";
+
+pub const PRODUCTION_CHAIN_HEADING: &str = "Production Chain Calculator";
+pub const PRODUCTION_CHAIN_INPUT_LABELS: [&str; 2] =
+    ["Item (chosen by you)", "Quantity (entered by you)"];
+pub const PRODUCTION_CHAIN_CHOICE_RENDER_MAX: usize = 100;
+pub const PRODUCTION_CHAIN_NO_INDUSTRY_DATA: &str =
+    "Production chain calculator unavailable: Mimir's bundled industry data failed to load.";
+pub const PRODUCTION_CHAIN_NO_ITEM_DATA: &str =
+    "Production chain calculator unavailable: Mimir's bundled item data failed to load.";
+pub const PRODUCTION_CHAIN_CHOOSE_GUIDANCE: &str =
+    "Choose an item above to see its production chain.";
+pub const PRODUCTION_CHAIN_NO_MATCH: &str = "No items match the search.";
+pub const PRODUCTION_CHAIN_INPUT_GUIDANCE: &str =
+    "Enter a quantity of at least 1, to see the result.";
+pub const PRODUCTION_CHAIN_NO_RESULT_GUIDANCE: &str =
+    "No result: the entered values are too large to calculate with.";
+pub const PRODUCTION_CHAIN_DISCLOSURE: &str = "Estimate for the item and quantity you chose, using the per-run materials and products in Mimir's bundled industry data. Each item the bundled data can make is expanded into the materials for the whole runs needed to make at least the quantity shown, so a run that makes more than the chain needs can leave items over, and leftovers are not subtracted from other lines. Quantities are the bundled per-run amounts with no efficiency adjustment: Mimir does not apply blueprint material efficiency, facility bonuses, or skills, and it does not check that you own the blueprints or materials or can run the jobs. The starting quantity (1) is a starting value to replace with your own. An item with no name in Mimir's bundled item data, or made by more than one bundled blueprint, cannot be chosen, and where such an item appears inside a chain it is shown without expansion. An item that appears inside its own chain is shown once without being expanded again. These numbers can differ from EVE.";
+
+pub fn activity_label(activity_id: i64) -> &'static str {
+    match activity_id {
+        1 => "Manufacturing",
+        3 => "Time efficiency research",
+        4 => "Material efficiency research",
+        5 => "Copying",
+        8 => "Invention",
+        11 => "Reaction",
+        _ => "Unknown activity",
+    }
+}
+
+pub fn status_label(status: &str) -> &'static str {
+    match status {
+        "active" => "Active",
+        "paused" => "Paused",
+        "ready" => "Ready",
+        "delivered" => "Delivered",
+        "cancelled" => "Cancelled",
+        "reverted" => "Reverted",
+        _ => "Unknown status",
+    }
+}
+
+pub fn is_in_progress_status(status: &str) -> bool {
+    matches!(status, "active" | "paused" | "ready")
+}
+
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct IndustryJobRow {
+    pub job_id: i64,
+    pub display_type_id: i64,
+    pub type_name: String,
+    pub activity_label: &'static str,
+    pub status_label: &'static str,
+    pub in_progress: bool,
+    pub runs: i64,
+    pub successful_runs: Option<i64>,
+    pub facility_name: String,
+    pub start_date: String,
+    pub end_date: String,
+}
+
+fn job_rank(in_progress: bool) -> u8 {
+    if in_progress {
+        0
+    } else {
+        1
+    }
+}
+
+pub fn industry_job_rows(jobs: &[IndustryJob], resolver: &NameResolver) -> Vec<IndustryJobRow> {
+    let mut rows: Vec<IndustryJobRow> = jobs
+        .iter()
+        .map(|job| {
+            let display_type_id = match job.product_type_id {
+                Some(id) if id > 0 => id,
+                _ => job.blueprint_type_id,
+            };
+            IndustryJobRow {
+                job_id: job.job_id,
+                display_type_id,
+                type_name: resolver.name(display_type_id),
+                activity_label: activity_label(job.activity_id),
+                status_label: status_label(&job.status),
+                in_progress: is_in_progress_status(&job.status),
+                runs: job.runs.max(0),
+                successful_runs: job.successful_runs.map(|v| v.max(0)),
+                facility_name: resolver.location_name(job.facility_id),
+                start_date: job.start_date.clone(),
+                end_date: job.end_date.clone(),
+            }
+        })
+        .collect();
+    rows.sort_by(|a, b| {
+        job_rank(a.in_progress)
+            .cmp(&job_rank(b.in_progress))
+            .then_with(|| a.end_date.is_empty().cmp(&b.end_date.is_empty()))
+            .then_with(|| a.end_date.cmp(&b.end_date))
+            .then_with(|| a.start_date.cmp(&b.start_date))
+            .then(a.job_id.cmp(&b.job_id))
+    });
+    let counts = job_counts(&rows);
+    tracing::debug!(
+        "[INDUSTRY] job rows total={} in_progress={}",
+        counts.total,
+        counts.in_progress
+    );
+    rows
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct JobCounts {
+    pub total: usize,
+    pub in_progress: usize,
+}
+
+pub fn job_counts(rows: &[IndustryJobRow]) -> JobCounts {
+    rows.iter()
+        .fold(JobCounts::default(), |acc, row| JobCounts {
+            total: acc.total.saturating_add(1),
+            in_progress: if row.in_progress {
+                acc.in_progress.saturating_add(1)
+            } else {
+                acc.in_progress
+            },
+        })
+}
+
+pub fn blueprint_is_original(blueprint: &CharacterBlueprint) -> bool {
+    blueprint.runs == -1
+}
+
+pub fn blueprint_kind_label(blueprint: &CharacterBlueprint) -> &'static str {
+    if blueprint_is_original(blueprint) {
+        "Original (BPO)"
+    } else {
+        "Copy (BPC)"
+    }
+}
+
+pub fn blueprint_quantity_label(quantity: i64) -> String {
+    match quantity {
+        -1 => "Original".to_string(),
+        -2 => "Copy".to_string(),
+        q if q < 0 => "Unknown quantity".to_string(),
+        q => q.to_string(),
+    }
+}
+
+pub fn blueprint_runs_label(runs: i64) -> String {
+    match runs {
+        -1 => "Infinite runs (original)".to_string(),
+        r if r < 0 => "Unknown runs".to_string(),
+        r => format!("{r} runs"),
+    }
+}
+
+pub fn efficiency_label(kind: &str, value: i64) -> String {
+    format!("{} {}", kind, value.max(0))
+}
+
+pub const BLUEPRINT_RENDER_MAX: usize = 100;
+
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct BlueprintRow {
+    pub item_id: i64,
+    pub type_id: i64,
+    pub type_name: String,
+    pub kind_label: &'static str,
+    pub is_original: bool,
+    pub quantity_label: String,
+    pub runs_label: String,
+    pub material_efficiency: i64,
+    pub time_efficiency: i64,
+    pub location_name: String,
+}
+
+pub fn blueprint_rows(
+    blueprints: &[CharacterBlueprint],
+    resolver: &NameResolver,
+) -> Vec<BlueprintRow> {
+    let mut rows: Vec<BlueprintRow> = blueprints
+        .iter()
+        .map(|bp| BlueprintRow {
+            item_id: bp.item_id,
+            type_id: bp.type_id,
+            type_name: resolver.name(bp.type_id),
+            kind_label: blueprint_kind_label(bp),
+            is_original: blueprint_is_original(bp),
+            quantity_label: blueprint_quantity_label(bp.quantity),
+            runs_label: blueprint_runs_label(bp.runs),
+            material_efficiency: bp.material_efficiency,
+            time_efficiency: bp.time_efficiency,
+            location_name: resolver.location_name(bp.location_id),
+        })
+        .collect();
+    rows.sort_by(|a, b| {
+        a.type_name
+            .to_lowercase()
+            .cmp(&b.type_name.to_lowercase())
+            .then_with(|| a.type_name.cmp(&b.type_name))
+            .then_with(|| {
+                a.location_name
+                    .to_lowercase()
+                    .cmp(&b.location_name.to_lowercase())
+            })
+            .then(a.item_id.cmp(&b.item_id))
+    });
+    tracing::debug!("[INDUSTRY] blueprint rows={}", rows.len());
+    rows
+}
+
+pub fn filter_blueprint_rows<'a>(
+    rows: &'a [BlueprintRow],
+    query: &str,
+    kind: BlueprintKindFilter,
+) -> Vec<&'a BlueprintRow> {
+    let kept: Vec<&BlueprintRow> = rows
+        .iter()
+        .filter(|row| match kind {
+            BlueprintKindFilter::All => true,
+            BlueprintKindFilter::Originals => row.is_original,
+            BlueprintKindFilter::Copies => !row.is_original,
+        })
+        .filter(|row| {
+            widgets::matches_search(&row.type_name, query)
+                || widgets::matches_search(&row.location_name, query)
+        })
+        .collect();
+    tracing::debug!(
+        "[INDUSTRY] blueprint filter kept={} total={}",
+        kept.len(),
+        rows.len()
+    );
+    kept
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct BlueprintCounts {
+    pub total: usize,
+    pub originals: usize,
+    pub copies: usize,
+}
+
+pub fn blueprint_counts(rows: &[BlueprintRow]) -> BlueprintCounts {
+    rows.iter()
+        .fold(BlueprintCounts::default(), |acc, row| BlueprintCounts {
+            total: acc.total.saturating_add(1),
+            originals: if row.is_original {
+                acc.originals.saturating_add(1)
+            } else {
+                acc.originals
+            },
+            copies: if row.is_original {
+                acc.copies
+            } else {
+                acc.copies.saturating_add(1)
+            },
+        })
+}
+
+/// Uniform per-section failure line, copying the character-detail
+/// helper: a scope failure points at the step-up panel above when
+/// it is showing. The typed flag is branched on, never the message.
+fn section_error_label(ui: &mut egui::Ui, section: &str, error: &SectionError, panel_shown: bool) {
+    if error.needs_reauthorize && panel_shown {
+        ui.label("Not authorized yet. Re-authorize above to load this section.");
+    } else if error.needs_reauthorize {
+        ui.label("Not authorized yet for this character.");
+    } else {
+        ui.label(format!("Could not load {section}: {}", error.message));
+    }
+}
+
+/// One step-up panel for both sections: the button only sets the
+/// generic shell step-up request flag for the active character.
+fn industry_reauthorize_panel(ui: &mut egui::Ui, state: &mut AppState) {
+    ui.heading("Industry needs two more EVE permissions.");
+    ui.label(format!(
+        "Industry jobs and the blueprint library will not load for \
+         this character until these EVE SSO scopes are granted: {}. \
+         Other views are unaffected.",
+        EveConfig::INDUSTRY_SCOPES.join(" ")
+    ));
+    let active_id = state.active_character_id;
+    if let Some(name) = state.active_character().map(|c| c.name.clone()) {
+        ui.label(format!(
+            "Choose Re-authorize and Mimir opens EVE SSO in your browser for {name}, \
+             asking for the permissions already granted plus these. Sign in as \
+             {name}: approving as a different character is rejected and nothing \
+             is saved."
+        ));
+    }
+    let enabled = !state.demo && !state.auth.is_busy() && state.active_character_id.is_some();
+    if state.auth.is_busy() {
+        ui.spinner();
+        ui.label(state.auth.label());
+    }
+    if ui
+        .add_enabled(enabled, egui::Button::new("Re-authorize with EVE SSO"))
+        .clicked()
+    {
+        if let Some(active_id) = active_id {
+            tracing::info!(
+                "[AUTH] step-up re-authorize requested from Industry view character_id={} scopes={}",
+                active_id,
+                EveConfig::INDUSTRY_SCOPES.join(" ")
+            );
+            state.stepup_requested =
+                Some(StepUpRequest::new(active_id, EveConfig::INDUSTRY_SCOPES));
+            state.status_message =
+                "EVE SSO requested: your browser should open to login.eveonline.com.".to_string();
+        }
+    }
+}
+
+fn show_jobs_section(
+    ui: &mut egui::Ui,
+    jobs: &crate::app::state::SectionResult<IndustryJobsData>,
+    resolver: &NameResolver,
+    panel_shown: bool,
+) {
+    ui.heading("Industry jobs");
+    match jobs {
+        Err(error) => section_error_label(ui, "industry jobs", error, panel_shown),
+        Ok(data) => {
+            let rows = industry_job_rows(&data.jobs, resolver);
+            if rows.is_empty() {
+                ui.label("No industry jobs for this character.");
+                return;
+            }
+            let counts = job_counts(&rows);
+            ui.label(format!(
+                "{} jobs loaded, {} in progress.",
+                counts.total, counts.in_progress
+            ));
+            if data.truncated {
+                ui.label("Showing the first pages of jobs only; counts cover the jobs loaded.");
+            }
+            let now = Utc::now();
+            for row in &rows {
+                ui.separator();
+                ui.label(format!("{} \u{2014} {}", row.type_name, row.activity_label));
+                ui.label(format!("Status: {}", row.status_label));
+                match row.successful_runs {
+                    Some(successful) => {
+                        ui.label(format!("Runs: {} ({successful} successful)", row.runs))
+                    }
+                    None => ui.label(format!("Runs: {}", row.runs)),
+                };
+                ui.label(format!("Facility: {}", row.facility_name));
+                if row.in_progress {
+                    if !row.end_date.is_empty() {
+                        ui.label(format!(
+                            "Ends: {} ({})",
+                            widgets::format_date_short(&row.end_date),
+                            widgets::countdown_label(Some(&row.end_date), now)
+                        ));
+                        let span_known = widgets::parse_esi_date(&row.start_date).is_some()
+                            && widgets::parse_esi_date(&row.end_date).is_some();
+                        if span_known {
+                            let fraction = widgets::progress_fraction(
+                                Some(&row.start_date),
+                                Some(&row.end_date),
+                                now,
+                            );
+                            ui.add(egui::ProgressBar::new(fraction));
+                        }
+                    }
+                } else if !row.end_date.is_empty() {
+                    ui.label(format!(
+                        "Ended: {}",
+                        widgets::format_date_short(&row.end_date)
+                    ));
+                }
+            }
+        }
+    }
+}
+
+fn show_blueprints_section(
+    ui: &mut egui::Ui,
+    state: &mut AppState,
+    blueprints: &crate::app::state::SectionResult<BlueprintsData>,
+    resolver: &NameResolver,
+    panel_shown: bool,
+) {
+    ui.heading("Blueprints");
+    match blueprints {
+        Err(error) => section_error_label(ui, "blueprints", error, panel_shown),
+        Ok(data) => {
+            let rows = blueprint_rows(&data.blueprints, resolver);
+            if rows.is_empty() {
+                ui.label("No blueprints for this character.");
+                return;
+            }
+            // Controls render even when a filter matches nothing, so
+            // the user can undo it.
+            let focus = widgets::search_box(
+                ui,
+                &mut state.industry_search,
+                "Filter blueprints by item or location (press / to focus)",
+                state.focus_search,
+            );
+            state.text_input_focused |= focus;
+            if focus {
+                state.focus_search = false;
+            }
+            ui.horizontal_wrapped(|ui| {
+                for kind in BlueprintKindFilter::ALL {
+                    let selected = state.industry_blueprint_kind == kind;
+                    if ui.selectable_label(selected, kind.label()).clicked() {
+                        tracing::debug!("[INDUSTRY] blueprint kind filter chosen={}", kind.label());
+                        state.industry_blueprint_kind = kind;
+                    }
+                }
+            });
+            let counts = blueprint_counts(&rows);
+            ui.label(format!(
+                "{} blueprints loaded ({} originals, {} copies).",
+                counts.total, counts.originals, counts.copies
+            ));
+            if data.truncated {
+                ui.label(
+                    "Showing the first pages of blueprints only; counts cover the blueprints loaded.",
+                );
+            }
+            let query = state.industry_search.clone();
+            let kind = state.industry_blueprint_kind;
+            let filtered = filter_blueprint_rows(&rows, &query, kind);
+            if filtered.is_empty() {
+                ui.label("No blueprints match the search.");
+                return;
+            }
+            let shown = filtered.len().min(BLUEPRINT_RENDER_MAX);
+            ui.label(format!("Showing {shown} of {} blueprints.", filtered.len()));
+            egui::ScrollArea::vertical()
+                .id_salt("industry_blueprints_scroll")
+                .max_height(300.0)
+                .show(ui, |ui| {
+                    for row in filtered.into_iter().take(BLUEPRINT_RENDER_MAX) {
+                        ui.separator();
+                        ui.label(format!("{} \u{2014} {}", row.type_name, row.kind_label));
+                        ui.label(format!(
+                            "Quantity: {} \u{00b7} {}",
+                            row.quantity_label, row.runs_label
+                        ));
+                        ui.label(format!(
+                            "{} \u{00b7} {}",
+                            efficiency_label("ME", row.material_efficiency),
+                            efficiency_label("TE", row.time_efficiency)
+                        ));
+                        ui.label(format!("At: {}", row.location_name));
+                    }
+                });
+        }
+    }
+}
+
+/// Every line the Invention Calculator block renders after the
+/// heading and input rows: the result block plus the disclosure, or
+/// one guidance line plus the disclosure. Pure over the drafts so
+/// tests assert the rendered strings without an egui frame, like
+/// the file's other pure summaries.
+fn invention_calculator_lines(state: &AppState) -> Vec<String> {
+    let mut lines = match invention_calculator_result(
+        &state.industry_invention_base_probability,
+        &state.industry_invention_encryption_skill,
+        &state.industry_invention_datacore_skill1,
+        &state.industry_invention_datacore_skill2,
+        &state.industry_invention_decryptor_multiplier,
+    ) {
+        Some(chance) => vec![
+            format!("Invention Chance: {:.1}%", chance * 100.0),
+            "With entered skills and decryptor".to_string(),
+        ],
+        None => {
+            // Guidance selection only: no calculation is duplicated
+            // here. All five drafts parse but the calculation
+            // rejects them means the product overflowed.
+            let all_parse = parse_base_probability(&state.industry_invention_base_probability)
+                .is_some()
+                && parse_skill_level(&state.industry_invention_encryption_skill).is_some()
+                && parse_skill_level(&state.industry_invention_datacore_skill1).is_some()
+                && parse_skill_level(&state.industry_invention_datacore_skill2).is_some()
+                && parse_decryptor_multiplier(&state.industry_invention_decryptor_multiplier)
+                    .is_some();
+            if all_parse {
+                vec![INVENTION_CALCULATOR_NO_RESULT_GUIDANCE.to_string()]
+            } else {
+                vec![INVENTION_CALCULATOR_INPUT_GUIDANCE.to_string()]
+            }
+        }
+    };
+    lines.push(INVENTION_CALCULATOR_DISCLOSURE.to_string());
+    lines
+}
+
+fn show_invention_calculator(ui: &mut egui::Ui, state: &mut AppState) {
+    let mut changed = false;
+    egui::Grid::new("invention_calc_inputs")
+        .spacing([12.0, 6.0])
+        .show(ui, |ui| {
+            ui.label(INVENTION_CALCULATOR_INPUT_LABELS[0]);
+            let response = ui.text_edit_singleline(&mut state.industry_invention_base_probability);
+            state.text_input_focused |= response.has_focus();
+            changed |= response.changed();
+            ui.end_row();
+            ui.label(INVENTION_CALCULATOR_INPUT_LABELS[1]);
+            let response = ui.text_edit_singleline(&mut state.industry_invention_encryption_skill);
+            state.text_input_focused |= response.has_focus();
+            changed |= response.changed();
+            ui.end_row();
+            ui.label(INVENTION_CALCULATOR_INPUT_LABELS[2]);
+            let response = ui.text_edit_singleline(&mut state.industry_invention_datacore_skill1);
+            state.text_input_focused |= response.has_focus();
+            changed |= response.changed();
+            ui.end_row();
+            ui.label(INVENTION_CALCULATOR_INPUT_LABELS[3]);
+            let response = ui.text_edit_singleline(&mut state.industry_invention_datacore_skill2);
+            state.text_input_focused |= response.has_focus();
+            changed |= response.changed();
+            ui.end_row();
+            ui.label(INVENTION_CALCULATOR_INPUT_LABELS[4]);
+            let response =
+                ui.text_edit_singleline(&mut state.industry_invention_decryptor_multiplier);
+            state.text_input_focused |= response.has_focus();
+            changed |= response.changed();
+            ui.end_row();
+        });
+    if changed {
+        tracing::debug!("[INDUSTRY] invention calculator input changed");
+    }
+    for line in invention_calculator_lines(state) {
+        ui.label(line);
+    }
+}
+
+/// One selectable row in the reaction choice list. The type number
+/// is an internal key only, never rendered or logged.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ReactionChoiceRow {
+    pub type_id: i64,
+    pub name: String,
+}
+
+/// Build choice rows for the reaction calculator: every proven
+/// reaction blueprint (`industry_data.reaction_blueprint_type_ids`)
+/// whose bundled item row yields a chooser name, filtered by the
+/// search query and sorted by lowercased name then name then type
+/// number. Blueprints with no row, an empty name, or a purely
+/// numeric name never appear.
+fn reaction_choice_rows(
+    industry_data: &IndustryRef,
+    fitting_types: &FittingTypes,
+    query: &str,
+) -> Vec<ReactionChoiceRow> {
+    let mut rows: Vec<ReactionChoiceRow> = industry_data
+        .reaction_blueprint_type_ids()
+        .iter()
+        .filter_map(|&type_id| {
+            let row = fitting_types.lookup_by_id(type_id)?;
+            let trimmed = row.name.trim();
+            if trimmed.is_empty() || trimmed.parse::<i64>().is_ok() {
+                return None;
+            }
+            Some(ReactionChoiceRow {
+                type_id,
+                name: trimmed.to_string(),
+            })
+        })
+        .filter(|row| widgets::matches_search(&row.name, query))
+        .collect();
+    rows.sort_by(|a, b| {
+        a.name
+            .to_lowercase()
+            .cmp(&b.name.to_lowercase())
+            .then_with(|| a.name.cmp(&b.name))
+            .then_with(|| a.type_id.cmp(&b.type_id))
+    });
+    rows
+}
+
+/// Display name for a material or product row: the bundled item
+/// name when it passes the trim/empty/numeric guard, otherwise the
+/// resolver fallback (`Unknown Item`). Never renders a raw ID.
+fn reaction_item_name(
+    type_id: i64,
+    fitting_types: &FittingTypes,
+    resolver: &NameResolver,
+) -> String {
+    if let Some(row) = fitting_types.lookup_by_id(type_id) {
+        let trimmed = row.name.trim();
+        if !trimmed.is_empty() && trimmed.parse::<i64>().is_err() {
+            return trimmed.to_string();
+        }
+    }
+    resolver.name(type_id)
+}
+
+/// One selectable row in the production chain choice list. The type
+/// number is an internal key only, never rendered or logged.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ChainChoiceRow {
+    pub type_id: i64,
+    pub name: String,
+}
+
+/// Build choice rows for the production chain calculator: every
+/// buildable product made by exactly one blueprint whose bundled
+/// item row yields a chooser name, filtered by the search query and
+/// sorted by lowercased name then name then type number. Products
+/// with no blueprint, more than one blueprint, no row, an empty
+/// name, or a purely numeric name never appear.
+fn chain_choice_rows(
+    industry_data: &IndustryRef,
+    fitting_types: &FittingTypes,
+    query: &str,
+) -> Vec<ChainChoiceRow> {
+    let mut rows: Vec<ChainChoiceRow> = industry_data
+        .buildable_product_type_ids()
+        .iter()
+        .filter(|&product| industry_data.blueprints_producing(*product).len() == 1)
+        .filter_map(|&type_id| {
+            let row = fitting_types.lookup_by_id(type_id)?;
+            let trimmed = row.name.trim();
+            if trimmed.is_empty() || trimmed.parse::<i64>().is_ok() {
+                return None;
+            }
+            Some(ChainChoiceRow {
+                type_id,
+                name: trimmed.to_string(),
+            })
+        })
+        .filter(|row| widgets::matches_search(&row.name, query))
+        .collect();
+    rows.sort_by(|a, b| {
+        a.name
+            .to_lowercase()
+            .cmp(&b.name.to_lowercase())
+            .then_with(|| a.name.cmp(&b.name))
+            .then_with(|| a.type_id.cmp(&b.type_id))
+    });
+    rows
+}
+
+/// Parenthetical word for one chain node line: the producing
+/// activity for expanded nodes, or the honest leaf reason. A
+/// truncated node renders only the chain-limit word; its activity
+/// is not also rendered.
+fn production_chain_kind_word(node: &ChainNode) -> &'static str {
+    match node.kind {
+        ChainNodeKind::Produced => match node.production_activity_id {
+            Some(crate::names::industry_ref::MANUFACTURING_ACTIVITY_ID) => "Manufacturing",
+            Some(crate::names::industry_ref::REACTION_ACTIVITY_ID) => "Reaction",
+            _ => "Manufacturing",
+        },
+        ChainNodeKind::RawMaterial => "Raw Material",
+        ChainNodeKind::Cycle => "already in this chain; not expanded again",
+        ChainNodeKind::MultipleBlueprints => {
+            "more than one blueprint makes this item; not expanded"
+        }
+        ChainNodeKind::Truncated => "chain limit reached; not expanded",
+    }
+}
+
+fn production_chain_node_lines(
+    node: &ChainNode,
+    depth: usize,
+    fitting_types: &FittingTypes,
+    resolver: &NameResolver,
+    out: &mut Vec<String>,
+) {
+    let indent = "  ".repeat(depth);
+    let name = reaction_item_name(node.type_id, fitting_types, resolver);
+    out.push(format!(
+        "{indent}{name}: {} ({})",
+        node.quantity_required,
+        production_chain_kind_word(node)
+    ));
+    for child in &node.dependencies {
+        production_chain_node_lines(child, depth + 1, fitting_types, resolver, out);
+    }
+}
+
+/// Every line the Production Chain Calculator block renders after
+/// the input rows: the result block plus the disclosure, or one
+/// guidance line plus the disclosure. Pure over the drafts so tests
+/// assert the rendered strings without an egui frame. First match
+/// wins in the locked precedence; node lines are never capped.
+fn production_chain_calculator_lines(
+    state: &AppState,
+    industry_data: Option<&IndustryRef>,
+    fitting_types: Option<&FittingTypes>,
+    resolver: &NameResolver,
+) -> Vec<String> {
+    let Some(industry_data) = industry_data else {
+        return vec![PRODUCTION_CHAIN_NO_INDUSTRY_DATA.to_string()];
+    };
+    let Some(fitting_types) = fitting_types else {
+        return vec![PRODUCTION_CHAIN_NO_ITEM_DATA.to_string()];
+    };
+    let Some(selected) = state.industry_chain_selected_type_id else {
+        return vec![
+            PRODUCTION_CHAIN_CHOOSE_GUIDANCE.to_string(),
+            PRODUCTION_CHAIN_DISCLOSURE.to_string(),
+        ];
+    };
+    if industry_data.blueprints_producing(selected).len() != 1 {
+        return vec![
+            PRODUCTION_CHAIN_CHOOSE_GUIDANCE.to_string(),
+            PRODUCTION_CHAIN_DISCLOSURE.to_string(),
+        ];
+    }
+    let Some(chosen_row) = fitting_types.lookup_by_id(selected) else {
+        return vec![
+            PRODUCTION_CHAIN_CHOOSE_GUIDANCE.to_string(),
+            PRODUCTION_CHAIN_DISCLOSURE.to_string(),
+        ];
+    };
+    let chosen_trimmed = chosen_row.name.trim();
+    if chosen_trimmed.is_empty() || chosen_trimmed.parse::<i64>().is_ok() {
+        return vec![
+            PRODUCTION_CHAIN_CHOOSE_GUIDANCE.to_string(),
+            PRODUCTION_CHAIN_DISCLOSURE.to_string(),
+        ];
+    }
+    let chosen_name = chosen_trimmed.to_string();
+    if parse_quantity(&state.industry_chain_quantity).is_none() {
+        return vec![
+            PRODUCTION_CHAIN_INPUT_GUIDANCE.to_string(),
+            PRODUCTION_CHAIN_DISCLOSURE.to_string(),
+        ];
+    }
+    match production_chain_result(industry_data, selected, &state.industry_chain_quantity) {
+        Some(tree) => {
+            let mut lines = vec![format!("Production Chain: {chosen_name}")];
+            production_chain_node_lines(&tree, 0, fitting_types, resolver, &mut lines);
+            lines.push(PRODUCTION_CHAIN_DISCLOSURE.to_string());
+            lines
+        }
+        None => vec![
+            PRODUCTION_CHAIN_NO_RESULT_GUIDANCE.to_string(),
+            PRODUCTION_CHAIN_DISCLOSURE.to_string(),
+        ],
+    }
+}
+
+/// Every line the Reaction Calculator block renders after the input
+/// rows: the result block plus the disclosure, or one guidance line
+/// plus the disclosure. Pure over the drafts so tests assert the
+/// rendered strings without an egui frame. First match wins in the
+/// locked precedence.
+fn reaction_calculator_lines(
+    state: &AppState,
+    industry_data: Option<&IndustryRef>,
+    fitting_types: Option<&FittingTypes>,
+    resolver: &NameResolver,
+) -> Vec<String> {
+    let Some(industry_data) = industry_data else {
+        return vec![REACTION_CALCULATOR_NO_INDUSTRY_DATA.to_string()];
+    };
+    let Some(fitting_types) = fitting_types else {
+        return vec![REACTION_CALCULATOR_NO_ITEM_DATA.to_string()];
+    };
+    let Some(selected) = state.industry_reaction_selected_type_id else {
+        return vec![
+            REACTION_CALCULATOR_CHOOSE_GUIDANCE.to_string(),
+            REACTION_CALCULATOR_DISCLOSURE.to_string(),
+        ];
+    };
+    if !industry_data.is_reaction_blueprint(selected) {
+        return vec![
+            REACTION_CALCULATOR_CHOOSE_GUIDANCE.to_string(),
+            REACTION_CALCULATOR_DISCLOSURE.to_string(),
+        ];
+    }
+    let Some(chosen_row) = fitting_types.lookup_by_id(selected) else {
+        return vec![
+            REACTION_CALCULATOR_CHOOSE_GUIDANCE.to_string(),
+            REACTION_CALCULATOR_DISCLOSURE.to_string(),
+        ];
+    };
+    let chosen_trimmed = chosen_row.name.trim();
+    if chosen_trimmed.is_empty() || chosen_trimmed.parse::<i64>().is_ok() {
+        return vec![
+            REACTION_CALCULATOR_CHOOSE_GUIDANCE.to_string(),
+            REACTION_CALCULATOR_DISCLOSURE.to_string(),
+        ];
+    }
+    let chosen_name = chosen_trimmed.to_string();
+    if parse_runs(&state.industry_reaction_runs).is_none()
+        || parse_facility_bonus_percent(&state.industry_reaction_facility_bonus_percent).is_none()
+    {
+        return vec![
+            REACTION_CALCULATOR_INPUT_GUIDANCE.to_string(),
+            REACTION_CALCULATOR_DISCLOSURE.to_string(),
+        ];
+    }
+    let Some(material_rows) = industry_data.reaction_materials(selected) else {
+        return vec![
+            REACTION_CALCULATOR_CHOOSE_GUIDANCE.to_string(),
+            REACTION_CALCULATOR_DISCLOSURE.to_string(),
+        ];
+    };
+    let Some(product_rows) = industry_data.reaction_products(selected) else {
+        return vec![
+            REACTION_CALCULATOR_CHOOSE_GUIDANCE.to_string(),
+            REACTION_CALCULATOR_DISCLOSURE.to_string(),
+        ];
+    };
+    let base_inputs: Vec<(i64, i64)> = material_rows
+        .iter()
+        .map(|r| (r.material_type_id, r.quantity))
+        .collect();
+    let base_outputs: Vec<(i64, i64)> = product_rows
+        .iter()
+        .map(|r| (r.product_type_id, r.quantity))
+        .collect();
+    match reaction_calculator_result(
+        &base_inputs,
+        &base_outputs,
+        &state.industry_reaction_runs,
+        &state.industry_reaction_facility_bonus_percent,
+    ) {
+        Some(result) => {
+            let mut lines = Vec::new();
+            lines.push(format!("Reaction: {chosen_name}"));
+            lines.push("Input Materials".to_string());
+            for (type_id, qty) in &result.inputs {
+                let name = reaction_item_name(*type_id, fitting_types, resolver);
+                lines.push(format!("{name}: {qty}"));
+            }
+            lines.push("Output Products".to_string());
+            for (type_id, qty) in &result.outputs {
+                let name = reaction_item_name(*type_id, fitting_types, resolver);
+                lines.push(format!("{name}: {qty}"));
+            }
+            lines.push(REACTION_CALCULATOR_DISCLOSURE.to_string());
+            lines
+        }
+        None => vec![
+            REACTION_CALCULATOR_NO_RESULT_GUIDANCE.to_string(),
+            REACTION_CALCULATOR_DISCLOSURE.to_string(),
+        ],
+    }
+}
+
+fn show_reaction_calculator(
+    ui: &mut egui::Ui,
+    state: &mut AppState,
+    resolver: &NameResolver,
+    industry_data: Option<&IndustryRef>,
+    fitting_types: Option<&FittingTypes>,
+) {
+    let (industry_data, fitting_types) = match (industry_data, fitting_types) {
+        (None, _) => {
+            ui.label(REACTION_CALCULATOR_NO_INDUSTRY_DATA);
+            return;
+        }
+        (_, None) => {
+            ui.label(REACTION_CALCULATOR_NO_ITEM_DATA);
+            return;
+        }
+        (Some(a), Some(b)) => (a, b),
+    };
+    let mut changed = false;
+    ui.label(REACTION_CALCULATOR_INPUT_LABELS[0]);
+    let response = ui.text_edit_singleline(&mut state.industry_reaction_search);
+    state.text_input_focused |= response.has_focus();
+    changed |= response.changed();
+    let query = state.industry_reaction_search.clone();
+    let rows = reaction_choice_rows(industry_data, fitting_types, &query);
+    if rows.is_empty() {
+        ui.label(REACTION_CALCULATOR_NO_MATCH);
+    } else {
+        let shown = rows.len().min(REACTION_CHOICE_RENDER_MAX);
+        if rows.len() > REACTION_CHOICE_RENDER_MAX {
+            ui.label(format!("Showing {shown} of {} reactions.", rows.len()));
+        }
+        egui::ScrollArea::vertical()
+            .id_salt("industry_reaction_picker")
+            .max_height(180.0)
+            .show(ui, |ui| {
+                for row in rows.iter().take(REACTION_CHOICE_RENDER_MAX) {
+                    let selected = state.industry_reaction_selected_type_id == Some(row.type_id);
+                    if ui.selectable_label(selected, &row.name).clicked() {
+                        tracing::debug!("[INDUSTRY] reaction calculator reaction chosen");
+                        state.industry_reaction_selected_type_id = Some(row.type_id);
+                    }
+                }
+            });
+    }
+    egui::Grid::new("reaction_calc_inputs")
+        .spacing([12.0, 6.0])
+        .show(ui, |ui| {
+            ui.label(REACTION_CALCULATOR_INPUT_LABELS[1]);
+            let response = ui.text_edit_singleline(&mut state.industry_reaction_runs);
+            state.text_input_focused |= response.has_focus();
+            changed |= response.changed();
+            ui.end_row();
+            ui.label(REACTION_CALCULATOR_INPUT_LABELS[2]);
+            let response =
+                ui.text_edit_singleline(&mut state.industry_reaction_facility_bonus_percent);
+            state.text_input_focused |= response.has_focus();
+            changed |= response.changed();
+            ui.end_row();
+        });
+    if changed {
+        tracing::debug!("[INDUSTRY] reaction calculator input changed");
+    }
+    for line in reaction_calculator_lines(state, Some(industry_data), Some(fitting_types), resolver)
+    {
+        ui.label(line);
+    }
+}
+
+fn show_production_chain_calculator(
+    ui: &mut egui::Ui,
+    state: &mut AppState,
+    resolver: &NameResolver,
+    industry_data: Option<&IndustryRef>,
+    fitting_types: Option<&FittingTypes>,
+) {
+    let (industry_data, fitting_types) = match (industry_data, fitting_types) {
+        (None, _) => {
+            ui.label(PRODUCTION_CHAIN_NO_INDUSTRY_DATA);
+            return;
+        }
+        (_, None) => {
+            ui.label(PRODUCTION_CHAIN_NO_ITEM_DATA);
+            return;
+        }
+        (Some(a), Some(b)) => (a, b),
+    };
+    let mut changed = false;
+    ui.label(PRODUCTION_CHAIN_INPUT_LABELS[0]);
+    let response = ui.text_edit_singleline(&mut state.industry_chain_search);
+    state.text_input_focused |= response.has_focus();
+    changed |= response.changed();
+    let query = state.industry_chain_search.clone();
+    let rows = chain_choice_rows(industry_data, fitting_types, &query);
+    if rows.is_empty() {
+        ui.label(PRODUCTION_CHAIN_NO_MATCH);
+    } else {
+        let shown = rows.len().min(PRODUCTION_CHAIN_CHOICE_RENDER_MAX);
+        if rows.len() > PRODUCTION_CHAIN_CHOICE_RENDER_MAX {
+            ui.label(format!("Showing {shown} of {} items.", rows.len()));
+        }
+        egui::ScrollArea::vertical()
+            .id_salt("industry_chain_picker")
+            .max_height(180.0)
+            .show(ui, |ui| {
+                for row in rows.iter().take(PRODUCTION_CHAIN_CHOICE_RENDER_MAX) {
+                    let selected = state.industry_chain_selected_type_id == Some(row.type_id);
+                    if ui.selectable_label(selected, &row.name).clicked() {
+                        tracing::debug!("[INDUSTRY] production chain calculator item chosen");
+                        state.industry_chain_selected_type_id = Some(row.type_id);
+                    }
+                }
+            });
+    }
+    ui.horizontal(|ui| {
+        ui.label(PRODUCTION_CHAIN_INPUT_LABELS[1]);
+        let response = ui.text_edit_singleline(&mut state.industry_chain_quantity);
+        state.text_input_focused |= response.has_focus();
+        changed |= response.changed();
+    });
+    if changed {
+        tracing::debug!("[INDUSTRY] production chain calculator input changed");
+    }
+    for line in
+        production_chain_calculator_lines(state, Some(industry_data), Some(fitting_types), resolver)
+    {
+        ui.label(line);
+    }
+}
+
+pub fn show(
+    ui: &mut egui::Ui,
+    state: &mut AppState,
+    resolver: &NameResolver,
+    industry_data: Option<&IndustryRef>,
+    fitting_types: Option<&FittingTypes>,
+) {
+    ui.heading("Industry");
+    widgets::mode_notice(ui, state.demo, state.offline);
+
+    // --- Active character Jobs & Blueprints first (above offline calculators) ---
+    if state.active_character().is_none() {
+        widgets::card(ui, widgets::no_character_panel);
+    } else {
+        let snapshot: LoadState<IndustryData> = state.industry.clone();
+        match snapshot {
+            LoadState::Loading => widgets::card(ui, |ui| {
+                widgets::loading_panel(ui, "Loading industry data...");
+            }),
+            LoadState::Empty => widgets::card(ui, |ui| {
+                widgets::empty_panel(ui, "No industry data yet.");
+            }),
+            LoadState::Error(e) => widgets::card(ui, |ui| {
+                if widgets::error_panel_with_retry(ui, &e) {
+                    tracing::warn!("[INDUSTRY] retry requested after load error");
+                    state.retry_requested = true;
+                }
+            }),
+            LoadState::Ready(bundle) => {
+                let panel_shown = !state.demo
+                    && state.active_character_id.is_some()
+                    && bundle.needs_industry_stepup();
+                if panel_shown {
+                    widgets::card(ui, |ui| {
+                        tracing::debug!(
+                            "[INDUSTRY] showing industry re-authorize guidance (missing scopes)"
+                        );
+                        industry_reauthorize_panel(ui, state);
+                    });
+                }
+                widgets::card(ui, |ui| {
+                    show_jobs_section(ui, &bundle.jobs, resolver, panel_shown);
+                });
+                widgets::card(ui, |ui| {
+                    show_blueprints_section(ui, state, &bundle.blueprints, resolver, panel_shown);
+                });
+            }
+        }
+    }
+
+    // --- Offline Calculators below ---
+    ui.add_space(4.0);
+    widgets::section_title(ui, "Industry Calculators");
+    widgets::card(ui, |ui| {
+        egui::CollapsingHeader::new(INVENTION_CALCULATOR_HEADING)
+            .default_open(false)
+            .show(ui, |ui| {
+                show_invention_calculator(ui, state);
+            });
+    });
+    widgets::card(ui, |ui| {
+        egui::CollapsingHeader::new(REACTION_CALCULATOR_HEADING)
+            .default_open(false)
+            .show(ui, |ui| {
+                show_reaction_calculator(ui, state, resolver, industry_data, fitting_types);
+            });
+    });
+    widgets::card(ui, |ui| {
+        egui::CollapsingHeader::new(PRODUCTION_CHAIN_HEADING)
+            .default_open(false)
+            .show(ui, |ui| {
+                show_production_chain_calculator(ui, state, resolver, industry_data, fitting_types);
+            });
+    });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn resolver() -> NameResolver {
+        let mut r = NameResolver::new();
+        r.insert(681, "Bantam Blueprint".to_string());
+        r.insert(682, "Destroyer Blueprint".to_string());
+        r.insert(587, "Rifter".to_string());
+        r.insert(16679, "Ferrogel".to_string());
+        r.insert(60003760, "Jita Station".to_string());
+        r.insert(60011866, "Amarr Station".to_string());
+        r
+    }
+
+    fn job(
+        job_id: i64,
+        status: &str,
+        end: &str,
+        activity_id: i64,
+        product: Option<i64>,
+    ) -> IndustryJob {
+        IndustryJob {
+            job_id,
+            facility_id: 60003760,
+            activity_id,
+            blueprint_type_id: 681,
+            product_type_id: product,
+            runs: 1,
+            status: status.to_string(),
+            start_date: "2026-11-10T10:00:00Z".to_string(),
+            end_date: end.to_string(),
+            ..Default::default()
+        }
+    }
+
+    fn bp(item_id: i64, type_id: i64, quantity: i64, runs: i64) -> CharacterBlueprint {
+        CharacterBlueprint {
+            item_id,
+            type_id,
+            location_id: 60003760,
+            quantity,
+            runs,
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn activity_and_status_words_are_fixed_with_word_fallbacks() {
+        assert_eq!(activity_label(1), "Manufacturing");
+        assert_eq!(activity_label(3), "Time efficiency research");
+        assert_eq!(activity_label(4), "Material efficiency research");
+        assert_eq!(activity_label(5), "Copying");
+        assert_eq!(activity_label(8), "Invention");
+        assert_eq!(activity_label(11), "Reaction");
+        // Includes values never enumerated in the design map.
+        for other in [0, 2, 6, 7, 9, 10, -1, -5, 42, 99, i64::MAX] {
+            assert_eq!(activity_label(other), "Unknown activity", "{other}");
+            assert!(activity_label(other).parse::<i64>().is_err());
+        }
+        assert_eq!(status_label("active"), "Active");
+        assert_eq!(status_label("paused"), "Paused");
+        assert_eq!(status_label("ready"), "Ready");
+        assert_eq!(status_label("delivered"), "Delivered");
+        assert_eq!(status_label("cancelled"), "Cancelled");
+        assert_eq!(status_label("reverted"), "Reverted");
+        for other in ["", "Active", "ACTIVE", "weird-future-status", "123"] {
+            assert_eq!(status_label(other), "Unknown status", "{other}");
+        }
+        assert!(is_in_progress_status("active"));
+        assert!(is_in_progress_status("paused"));
+        assert!(is_in_progress_status("ready"));
+        for other in ["delivered", "cancelled", "reverted", "", "Active"] {
+            assert!(!is_in_progress_status(other), "{other}");
+        }
+    }
+
+    #[test]
+    fn sentinel_words_classification_and_efficiency() {
+        assert_eq!(blueprint_quantity_label(-1), "Original");
+        assert_eq!(blueprint_quantity_label(-2), "Copy");
+        assert_eq!(blueprint_quantity_label(-3), "Unknown quantity");
+        assert_eq!(blueprint_quantity_label(i64::MIN), "Unknown quantity");
+        assert_eq!(blueprint_quantity_label(0), "0");
+        assert_eq!(blueprint_quantity_label(7), "7");
+        assert_eq!(blueprint_runs_label(-1), "Infinite runs (original)");
+        assert_eq!(blueprint_runs_label(-2), "Unknown runs");
+        assert_eq!(blueprint_runs_label(0), "0 runs");
+        assert_eq!(blueprint_runs_label(10), "10 runs");
+        // Classification reads runs only, never quantity.
+        assert!(blueprint_is_original(&bp(1, 681, -2, -1)));
+        assert!(!blueprint_is_original(&bp(2, 681, -2, 5)));
+        assert!(!blueprint_is_original(&bp(3, 681, -1, -2)));
+        assert!(!blueprint_is_original(&bp(4, 681, -1, 0)));
+        assert_eq!(blueprint_kind_label(&bp(1, 681, 3, -1)), "Original (BPO)");
+        assert_eq!(blueprint_kind_label(&bp(2, 681, -1, 5)), "Copy (BPC)");
+        assert_eq!(efficiency_label("ME", -4), "ME 0");
+        assert_eq!(efficiency_label("TE", 14), "TE 14");
+        assert_eq!(efficiency_label("ME", 0), "ME 0");
+    }
+
+    #[test]
+    fn job_rows_display_type_ordering_clamp_and_counts() {
+        // Delivered job ends earliest but ranks last; in-progress
+        // soonest first; empty end last within its rank.
+        let mut neg = job(6, "active", "2026-11-18T10:00:00Z", 1, Some(587));
+        neg.runs = -3;
+        let jobs = vec![
+            job(1, "delivered", "2026-11-11T10:00:00Z", 1, Some(587)),
+            job(2, "active", "2026-11-20T10:00:00Z", 1, Some(587)),
+            job(3, "ready", "", 5, None),
+            job(4, "paused", "2026-11-19T10:00:00Z", 11, Some(16679)),
+            job(5, "cancelled", "2026-11-12T10:00:00Z", 1, None),
+            neg,
+            // Non-positive product falls back to the blueprint type.
+            job(7, "active", "2026-11-18T10:00:00Z", 3, Some(0)),
+            job(8, "active", "2026-11-18T10:00:00Z", 3, Some(-9)),
+        ];
+        let rows = industry_job_rows(&jobs, &resolver());
+        let ids: Vec<i64> = rows.iter().map(|r| r.job_id).collect();
+        assert_eq!(ids, vec![6, 7, 8, 4, 2, 3, 1, 5]);
+        // Reaction job (4) interleaves by the same keys, not grouped.
+        assert_eq!(rows[3].activity_label, "Reaction");
+        assert_eq!(rows[3].type_name, "Ferrogel");
+        // Product preference and fallbacks.
+        assert_eq!(rows[0].display_type_id, 587);
+        assert_eq!(rows[0].type_name, "Rifter");
+        assert_eq!(rows[0].runs, 0, "negative runs clamp to 0");
+        assert_eq!(rows[1].display_type_id, 681, "product 0 falls back");
+        assert_eq!(rows[2].display_type_id, 681, "negative product falls back");
+        let copy_job = rows.iter().find(|r| r.job_id == 3).expect("ready job");
+        assert_eq!(copy_job.display_type_id, 681, "None falls back");
+        assert_eq!(copy_job.activity_label, "Copying");
+        assert_eq!(copy_job.facility_name, "Jita Station");
+        let counts = job_counts(&rows);
+        assert_eq!(
+            counts,
+            JobCounts {
+                total: 8,
+                in_progress: 6
+            }
+        );
+        assert!(industry_job_rows(&[], &resolver()).is_empty());
+        assert_eq!(job_counts(&[]), JobCounts::default());
+    }
+
+    #[test]
+    fn job_rows_clamp_negative_successful_runs() {
+        // Successful runs decode from remote JSON unvalidated: a negative
+        // value must render as zero, never a raw negative count.
+        let mut neg = job(9, "delivered", "2026-11-11T10:00:00Z", 1, None);
+        neg.successful_runs = Some(-7);
+        let mut ok = job(10, "delivered", "2026-11-10T10:00:00Z", 1, None);
+        ok.successful_runs = Some(3);
+        let none = job(11, "active", "2026-11-12T10:00:00Z", 1, None);
+        let rows = industry_job_rows(&[neg, ok, none], &resolver());
+        let by_id = |id: i64| {
+            rows.iter()
+                .find(|r| r.job_id == id)
+                .expect("row")
+                .successful_runs
+        };
+        assert_eq!(by_id(9), Some(0));
+        assert_eq!(by_id(10), Some(3));
+        assert_eq!(by_id(11), None);
+    }
+
+    #[test]
+    fn job_rows_tie_break_start_then_job_id() {
+        let mut later = job(9, "active", "2026-11-20T10:00:00Z", 1, None);
+        later.start_date = "2026-11-12T10:00:00Z".to_string();
+        let earlier = job(10, "active", "2026-11-20T10:00:00Z", 1, None);
+        // earlier.start is 2026-11-10 from the helper.
+        let rows = industry_job_rows(&[later, earlier], &resolver());
+        assert_eq!(rows[0].job_id, 10);
+        assert_eq!(rows[1].job_id, 9);
+    }
+
+    #[test]
+    fn blueprint_rows_sort_search_kind_and_counts() {
+        // Type-ID order (681, 682) differs from name order:
+        // "Bantam Blueprint" < "Destroyer Blueprint" by name anyway,
+        // so also prove case-insensitive name sort via location tie.
+        let blueprints = vec![
+            bp(710000002, 682, -2, 5),
+            bp(710000001, 681, -1, -1),
+            bp(710000003, 681, 3, -1),
+        ];
+        let rows = blueprint_rows(&blueprints, &resolver());
+        assert_eq!(rows[0].type_name, "Bantam Blueprint");
+        assert_eq!(rows[0].item_id, 710000001);
+        assert_eq!(rows[1].item_id, 710000003);
+        assert_eq!(rows[2].type_name, "Destroyer Blueprint");
+        assert_eq!(rows[0].quantity_label, "Original");
+        assert_eq!(rows[0].runs_label, "Infinite runs (original)");
+        assert_eq!(rows[2].quantity_label, "Copy");
+        assert_eq!(rows[2].runs_label, "5 runs");
+
+        let counts = blueprint_counts(&rows);
+        assert_eq!(
+            counts,
+            BlueprintCounts {
+                total: 3,
+                originals: 2,
+                copies: 1
+            }
+        );
+        assert_eq!(counts.originals + counts.copies, counts.total);
+
+        // Search matches names and locations, case-insensitively.
+        assert_eq!(
+            filter_blueprint_rows(&rows, "bantam", BlueprintKindFilter::All).len(),
+            2
+        );
+        assert_eq!(
+            filter_blueprint_rows(&rows, "JITA", BlueprintKindFilter::All).len(),
+            3
+        );
+        assert_eq!(
+            filter_blueprint_rows(&rows, "", BlueprintKindFilter::All).len(),
+            3
+        );
+        // Anti-Flutter regression: numeric type/item IDs match nothing.
+        assert!(filter_blueprint_rows(&rows, "681", BlueprintKindFilter::All).is_empty());
+        assert!(filter_blueprint_rows(&rows, "710000001", BlueprintKindFilter::All).is_empty());
+        // Kind filter and composition with search.
+        assert_eq!(
+            filter_blueprint_rows(&rows, "", BlueprintKindFilter::Originals).len(),
+            2
+        );
+        assert_eq!(
+            filter_blueprint_rows(&rows, "", BlueprintKindFilter::Copies).len(),
+            1
+        );
+        assert_eq!(
+            filter_blueprint_rows(&rows, "bantam", BlueprintKindFilter::Copies).len(),
+            0
+        );
+        assert_eq!(
+            filter_blueprint_rows(&rows, "destroyer", BlueprintKindFilter::Copies).len(),
+            1
+        );
+    }
+
+    #[test]
+    fn blueprint_sort_is_by_name_not_type_id() {
+        // Give the larger type ID the alphabetically earlier name by
+        // reusing resolver names: insert in a fresh resolver.
+        let mut r = NameResolver::new();
+        r.insert(100, "Zulu Blueprint".to_string());
+        r.insert(200, "Alpha Blueprint".to_string());
+        r.insert(60003760, "Jita Station".to_string());
+        r.insert(60011866, "Amarr Station".to_string());
+        let mut at_amarr = bp(2, 200, -1, -1);
+        at_amarr.location_id = 60011866;
+        let at_jita = bp(1, 200, -1, -1);
+        let zulu = bp(3, 100, -2, 2);
+        let rows = blueprint_rows(&[zulu, at_jita, at_amarr], &r);
+        assert_eq!(rows[0].type_name, "Alpha Blueprint");
+        // Same name: location name (Amarr < Jita) breaks the tie.
+        assert_eq!(rows[0].location_name, "Amarr Station");
+        assert_eq!(rows[1].location_name, "Jita Station");
+        assert_eq!(rows[2].type_name, "Zulu Blueprint");
+    }
+
+    #[test]
+    fn render_cap_keeps_counts_over_full_loaded_set() {
+        let blueprints: Vec<CharacterBlueprint> = (0..(BLUEPRINT_RENDER_MAX as i64 + 25))
+            .map(|i| {
+                bp(
+                    710100000 + i,
+                    681,
+                    if i % 2 == 0 { -1 } else { -2 },
+                    if i % 2 == 0 { -1 } else { 3 },
+                )
+            })
+            .collect();
+        let rows = blueprint_rows(&blueprints, &resolver());
+        assert_eq!(rows.len(), BLUEPRINT_RENDER_MAX + 25);
+        let counts = blueprint_counts(&rows);
+        assert_eq!(counts.total, BLUEPRINT_RENDER_MAX + 25);
+        assert_eq!(counts.originals + counts.copies, counts.total);
+        let filtered = filter_blueprint_rows(&rows, "", BlueprintKindFilter::All);
+        let shown = filtered.len().min(BLUEPRINT_RENDER_MAX);
+        assert_eq!(shown, BLUEPRINT_RENDER_MAX);
+        assert_eq!(filtered.len(), BLUEPRINT_RENDER_MAX + 25);
+    }
+
+    #[test]
+    fn empty_resolver_never_renders_raw_ids_or_sentinel_digits() {
+        let jobs = vec![
+            job(710000101, "active", "2026-11-20T10:00:00Z", 99, Some(587)),
+            job(710000102, "future-status", "", 1, None),
+        ];
+        let rows = industry_job_rows(&jobs, &NameResolver::new());
+        for row in &rows {
+            assert_eq!(row.type_name, "Unknown Item");
+            assert_eq!(row.facility_name, "Unknown Location");
+            for text in [
+                row.type_name.as_str(),
+                row.facility_name.as_str(),
+                row.activity_label,
+                row.status_label,
+            ] {
+                assert!(text.parse::<i64>().is_err(), "raw id text: {text}");
+                assert_ne!(text, "710000101");
+                assert_ne!(text, "587");
+            }
+        }
+        assert_eq!(rows[0].activity_label, "Unknown activity");
+        let blueprints = vec![bp(710001001, 681, -1, -1), bp(710001002, 682, -2, 5)];
+        let brows = blueprint_rows(&blueprints, &NameResolver::new());
+        for row in &brows {
+            assert_eq!(row.type_name, "Unknown Item");
+            assert_eq!(row.location_name, "Unknown Location");
+            for text in [
+                row.type_name.as_str(),
+                row.location_name.as_str(),
+                row.kind_label,
+                row.quantity_label.as_str(),
+                row.runs_label.as_str(),
+            ] {
+                assert!(text.parse::<i64>().is_err(), "raw id text: {text}");
+                assert_ne!(text, "-1");
+                assert_ne!(text, "-2");
+                assert!(!text.contains("710001"), "instance id leaked: {text}");
+            }
+        }
+        assert_eq!(brows[0].quantity_label, "Original");
+        assert_eq!(brows[1].quantity_label, "Copy");
+    }
+
+    fn invention_state(
+        base: &str,
+        encryption: &str,
+        datacore1: &str,
+        datacore2: &str,
+        multiplier: &str,
+    ) -> AppState {
+        let mut state = AppState::new(false);
+        state.industry_invention_base_probability = base.to_string();
+        state.industry_invention_encryption_skill = encryption.to_string();
+        state.industry_invention_datacore_skill1 = datacore1.to_string();
+        state.industry_invention_datacore_skill2 = datacore2.to_string();
+        state.industry_invention_decryptor_multiplier = multiplier.to_string();
+        state
+    }
+
+    #[test]
+    fn invention_calculator_wording_is_verbatim() {
+        assert_eq!(INVENTION_CALCULATOR_HEADING, "Invention Calculator");
+        assert_eq!(
+            INVENTION_CALCULATOR_INPUT_LABELS,
+            [
+                "Base Probability (0 to 1, entered by you)",
+                "Encryption Skill Level (1 to 5, entered by you)",
+                "Datacore Skill 1 Level (1 to 5, entered by you)",
+                "Datacore Skill 2 Level (1 to 5, entered by you)",
+                "Decryptor Multiplier (entered by you)",
+            ]
+        );
+        assert_eq!(
+            INVENTION_CALCULATOR_INPUT_GUIDANCE,
+            "Enter a base probability above 0 and at most 1 (for example 0.30 for 30%), skill levels from 1 to 5, and a decryptor multiplier above 0, to see the result."
+        );
+        assert_eq!(
+            INVENTION_CALCULATOR_NO_RESULT_GUIDANCE,
+            "No result: the entered values are too large to calculate with."
+        );
+        assert_eq!(
+            INVENTION_CALCULATOR_DISCLOSURE,
+            "Estimate using only the base probability, skill levels, \
+             and decryptor multiplier you entered. \
+             The starting values (base probability 0.30, each skill level 4, \
+             decryptor multiplier 1.0) are starting values to replace with your own: \
+             Mimir does not read the base probability from any blueprint, \
+             the skill levels from your character, or the multiplier from any decryptor \
+             you own. \
+             The decryptor choices in the retired app were None x1.0, Symmetry x1.1, \
+             Process x1.2, Parity x1.8, and Optimized x0.6; \
+             type the multiplier for the decryptor you mean. \
+             The chance is capped at 100%. \
+             Figures are rounded only for display, so these numbers can differ from EVE."
+        );
+    }
+
+    #[test]
+    fn invention_calculator_full_result_block() {
+        // Starting values: 0.30 * 1.3 * 1.0 = 0.39 -> 39.0%.
+        let state = invention_state("0.30", "4", "4", "4", "1.0");
+        assert_eq!(
+            invention_calculator_lines(&state),
+            vec![
+                "Invention Chance: 39.0%",
+                "With entered skills and decryptor",
+                INVENTION_CALCULATOR_DISCLOSURE,
+            ]
+        );
+    }
+
+    #[test]
+    fn invention_calculator_oracle_3_result() {
+        // Flutter oracle 3: 0.40 * 1.3 * 0.6 = 0.312 -> 31.2%.
+        let state = invention_state("0.40", "4", "4", "4", "0.6");
+        assert_eq!(
+            invention_calculator_lines(&state),
+            vec![
+                "Invention Chance: 31.2%",
+                "With entered skills and decryptor",
+                INVENTION_CALCULATOR_DISCLOSURE,
+            ]
+        );
+    }
+
+    #[test]
+    fn invention_calculator_oracle_4_cap_result() {
+        // Flutter oracle 4: 0.90 * 1.375 * 1.8 = 2.2275, capped
+        // to 1.0 -> 100.0%. A genuinely computed boundary.
+        let state = invention_state("0.90", "5", "5", "5", "1.8");
+        assert_eq!(
+            invention_calculator_lines(&state),
+            vec![
+                "Invention Chance: 100.0%",
+                "With entered skills and decryptor",
+                INVENTION_CALCULATOR_DISCLOSURE,
+            ]
+        );
+    }
+
+    #[test]
+    fn invention_calculator_guidance_selection() {
+        // Any one draft emptied or invalid: exactly the input
+        // guidance plus disclosure, with no result line. One case
+        // per field, including base 0 and skill 0.
+        let expected = vec![
+            INVENTION_CALCULATOR_INPUT_GUIDANCE,
+            INVENTION_CALCULATOR_DISCLOSURE,
+        ];
+        assert_eq!(
+            invention_calculator_lines(&invention_state("", "4", "4", "4", "1.0")),
+            expected
+        );
+        assert_eq!(
+            invention_calculator_lines(&invention_state("0", "4", "4", "4", "1.0")),
+            expected
+        );
+        assert_eq!(
+            invention_calculator_lines(&invention_state("0.30", "", "4", "4", "1.0")),
+            expected
+        );
+        assert_eq!(
+            invention_calculator_lines(&invention_state("0.30", "0", "4", "4", "1.0")),
+            expected
+        );
+        assert_eq!(
+            invention_calculator_lines(&invention_state("0.30", "4", "", "4", "1.0")),
+            expected
+        );
+        assert_eq!(
+            invention_calculator_lines(&invention_state("0.30", "4", "4", "", "1.0")),
+            expected
+        );
+        assert_eq!(
+            invention_calculator_lines(&invention_state("0.30", "4", "4", "4", "")),
+            expected
+        );
+        // All parse but the product overflows: the no-result
+        // guidance plus disclosure.
+        assert_eq!(
+            invention_calculator_lines(&invention_state("1", "5", "5", "5", "1.5e308")),
+            vec![
+                INVENTION_CALCULATOR_NO_RESULT_GUIDANCE,
+                INVENTION_CALCULATOR_DISCLOSURE,
+            ]
+        );
+    }
+
+    #[test]
+    fn invention_calculator_demo_independence() {
+        use crate::demo::data::seed_demo_state;
+
+        let mut state = invention_state("0.40", "5", "3", "2", "0.6");
+        seed_demo_state(&mut state);
+        // Seeding installs the demo industry bundle and leaves the
+        // five drafts exactly as constructed: no prefill from the
+        // demo invention job's 0.4 probability or any demo
+        // blueprint.
+        assert!(state.industry.is_ready());
+        assert_eq!(state.industry_invention_base_probability, "0.40");
+        assert_eq!(state.industry_invention_encryption_skill, "5");
+        assert_eq!(state.industry_invention_datacore_skill1, "3");
+        assert_eq!(state.industry_invention_datacore_skill2, "2");
+        assert_eq!(state.industry_invention_decryptor_multiplier, "0.6");
+        // The seeded starting drafts render the 39.0% block in
+        // that state.
+        state.industry_invention_base_probability = "0.30".to_string();
+        state.industry_invention_encryption_skill = "4".to_string();
+        state.industry_invention_datacore_skill1 = "4".to_string();
+        state.industry_invention_datacore_skill2 = "4".to_string();
+        state.industry_invention_decryptor_multiplier = "1.0".to_string();
+        assert_eq!(
+            invention_calculator_lines(&state),
+            vec![
+                "Invention Chance: 39.0%",
+                "With entered skills and decryptor",
+                INVENTION_CALCULATOR_DISCLOSURE,
+            ]
+        );
+    }
+
+    #[test]
+    fn reaction_calculator_wording_is_verbatim() {
+        assert_eq!(REACTION_CALCULATOR_HEADING, "Reaction Calculator");
+        assert_eq!(
+            REACTION_CALCULATOR_INPUT_LABELS,
+            [
+                "Reaction (chosen by you)",
+                "Runs (entered by you)",
+                "Facility Material Bonus Percent (entered by you)",
+            ]
+        );
+        assert_eq!(REACTION_CHOICE_RENDER_MAX, 100);
+        assert_eq!(
+            REACTION_CALCULATOR_NO_INDUSTRY_DATA,
+            "Reaction calculator unavailable: Mimir's bundled industry data failed to load."
+        );
+        assert_eq!(
+            REACTION_CALCULATOR_NO_ITEM_DATA,
+            "Reaction calculator unavailable: Mimir's bundled item data failed to load."
+        );
+        assert_eq!(
+            REACTION_CALCULATOR_CHOOSE_GUIDANCE,
+            "Choose a reaction above to see its materials."
+        );
+        assert_eq!(
+            REACTION_CALCULATOR_NO_MATCH,
+            "No reactions match the search."
+        );
+        assert_eq!(
+            REACTION_CALCULATOR_INPUT_GUIDANCE,
+            "Enter runs of at least 1 and a facility material bonus percent of at least 0 and below 100, to see the result."
+        );
+        assert_eq!(
+            REACTION_CALCULATOR_NO_RESULT_GUIDANCE,
+            "No result: the entered values are too large to calculate with."
+        );
+        assert_eq!(
+            REACTION_CALCULATOR_DISCLOSURE,
+            "Estimate for the reaction you chose, using the per-run materials and products in Mimir's bundled industry data and only the runs and facility material bonus percent you entered. The starting values (1 run, 0.0% facility material bonus) are starting values to replace with your own: Mimir does not read the facility bonus from any structure you use, and it does not check that you own the reaction formula, have the materials, or can run the reaction. The facility choices in the retired app were No Bonus 0%, Athanor 2%, Athanor T1 Rig 2.4%, Athanor T2 Rig 2.8%, Tatara 4%, Tatara T1 Rig 4.8%, and Tatara T2 Rig 5.6%; type the percent for the facility you mean. The facility bonus applies to the total input amount for all runs, each input is rounded to a whole number with a minimum of 1, and outputs are the per-run amount times runs with no bonus. A reaction formula with no name in Mimir's bundled item data cannot be chosen. These numbers can differ from EVE."
+        );
+    }
+
+    #[test]
+    fn reaction_choice_rows_over_bundled_catalogues() {
+        let industry = IndustryRef::load_bundled().expect("bundled industry data loads");
+        let fitting = FittingTypes::load_bundled().expect("bundled fitting types load");
+        let rows = reaction_choice_rows(&industry, &fitting, "");
+        assert_eq!(rows.len(), 111);
+        assert_eq!(
+            rows[0].name,
+            "Axosomatic Neurolink Enhancer Reaction Formula"
+        );
+        assert_eq!(rows[1].name, "C3-FTM Acid Reaction Formula");
+        assert_eq!(rows[2].name, "Caesarium Cadmide Reaction Formula");
+        assert_eq!(rows[3].name, "Carbon Fiber Reaction Formula");
+        for row in &rows {
+            assert_ne!(row.type_id, 45732);
+            assert!(row.name.ends_with("Reaction Formula"));
+        }
+        let carbon = reaction_choice_rows(&industry, &fitting, "carbon fiber");
+        assert_eq!(
+            carbon.iter().map(|r| r.name.as_str()).collect::<Vec<_>>(),
+            vec![
+                "Carbon Fiber Reaction Formula",
+                "Reinforced Carbon Fiber Reaction Formula"
+            ]
+        );
+        let fulleride = reaction_choice_rows(&industry, &fitting, "FULLERIDE");
+        assert_eq!(
+            fulleride
+                .iter()
+                .map(|r| r.name.as_str())
+                .collect::<Vec<_>>(),
+            vec!["Fulleride Reaction Formula"]
+        );
+        let nonsense = reaction_choice_rows(&industry, &fitting, "zzz-not-a-reaction-zzz");
+        assert!(nonsense.is_empty());
+    }
+
+    #[test]
+    fn reaction_choice_rows_dual_fixture_exclusion() {
+        let industry = IndustryRef::from_json(
+            r#"{"materials":[{"typeId":50001,"activityId":11,"materialTypeId":60001,"quantity":10},{"typeId":50002,"activityId":11,"materialTypeId":60001,"quantity":10},{"typeId":50003,"activityId":11,"materialTypeId":60001,"quantity":10}],"products":[{"typeId":50001,"activityId":11,"productTypeId":70001,"quantity":5},{"typeId":50002,"activityId":11,"productTypeId":70001,"quantity":5},{"typeId":50003,"activityId":11,"productTypeId":70001,"quantity":5}]}"#,
+        )
+        .expect("dual fixture industry loads");
+        let fitting = FittingTypes::from_json(
+            r#"{"types":[{"typeId":50001,"typeName":"12345","categoryId":9},{"typeId":50003,"typeName":"Named Reaction Formula","categoryId":9},{"typeId":60001,"typeName":"Fixture Material","categoryId":9},{"typeId":70001,"typeName":"Fixture Product","categoryId":9}]}"#,
+        )
+        .expect("dual fixture fitting loads");
+        let rows = reaction_choice_rows(&industry, &fitting, "");
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].type_id, 50003);
+        assert_eq!(rows[0].name, "Named Reaction Formula");
+    }
+
+    fn reaction_state(selected: Option<i64>, runs: &str, bonus: &str) -> AppState {
+        let mut state = AppState::new(false);
+        state.industry_reaction_search = String::new();
+        state.industry_reaction_selected_type_id = selected;
+        state.industry_reaction_runs = runs.to_string();
+        state.industry_reaction_facility_bonus_percent = bonus.to_string();
+        state
+    }
+
+    #[test]
+    fn reaction_calculator_starting_text_result() {
+        let industry = IndustryRef::load_bundled().expect("bundled industry loads");
+        let fitting = FittingTypes::load_bundled().expect("bundled fitting loads");
+        let resolver = NameResolver::new();
+        let state = reaction_state(Some(57490), "1", "0.0");
+        assert_eq!(
+            reaction_calculator_lines(&state, Some(&industry), Some(&fitting), &resolver),
+            vec![
+                "Reaction: Carbon Fiber Reaction Formula",
+                "Input Materials",
+                "Hydrogen Fuel Block: 5",
+                "Hydrocarbons: 100",
+                "Evaporite Deposits: 100",
+                "Output Products",
+                "Carbon Fiber: 200",
+                REACTION_CALCULATOR_DISCLOSURE,
+            ]
+        );
+    }
+
+    #[test]
+    fn reaction_calculator_bonus_and_runs_results() {
+        let industry = IndustryRef::load_bundled().expect("bundled industry loads");
+        let fitting = FittingTypes::load_bundled().expect("bundled fitting loads");
+        let resolver = NameResolver::new();
+        let state = reaction_state(Some(57490), "10", "4.8");
+        assert_eq!(
+            reaction_calculator_lines(&state, Some(&industry), Some(&fitting), &resolver),
+            vec![
+                "Reaction: Carbon Fiber Reaction Formula",
+                "Input Materials",
+                "Hydrogen Fuel Block: 48",
+                "Hydrocarbons: 952",
+                "Evaporite Deposits: 952",
+                "Output Products",
+                "Carbon Fiber: 2000",
+                REACTION_CALCULATOR_DISCLOSURE,
+            ]
+        );
+        let state = reaction_state(Some(57490), "1", "4.8");
+        assert_eq!(
+            reaction_calculator_lines(&state, Some(&industry), Some(&fitting), &resolver),
+            vec![
+                "Reaction: Carbon Fiber Reaction Formula",
+                "Input Materials",
+                "Hydrogen Fuel Block: 5",
+                "Hydrocarbons: 95",
+                "Evaporite Deposits: 95",
+                "Output Products",
+                "Carbon Fiber: 200",
+                REACTION_CALCULATOR_DISCLOSURE,
+            ]
+        );
+    }
+
+    #[test]
+    fn reaction_calculator_second_real_data_result() {
+        let industry = IndustryRef::load_bundled().expect("bundled industry loads");
+        let fitting = FittingTypes::load_bundled().expect("bundled fitting loads");
+        let resolver = NameResolver::new();
+        let state = reaction_state(Some(46157), "5", "2.8");
+        assert_eq!(
+            reaction_calculator_lines(&state, Some(&industry), Some(&fitting), &resolver),
+            vec![
+                "Reaction: Methanofullerene Reaction Formula",
+                "Input Materials",
+                "Hydrogen Fuel Block: 24",
+                "Fullerite-C70: 486",
+                "Fullerite-C72: 486",
+                "Isogen: 1458",
+                "Output Products",
+                "Methanofullerene: 800",
+                REACTION_CALCULATOR_DISCLOSURE,
+            ]
+        );
+    }
+
+    #[test]
+    fn reaction_calculator_unknown_fallback() {
+        let industry = IndustryRef::from_json(
+            r#"{"materials":[{"typeId":50001,"activityId":11,"materialTypeId":60001,"quantity":17}],"products":[{"typeId":50001,"activityId":11,"productTypeId":70001,"quantity":23}]}"#,
+        )
+        .expect("fallback fixture industry loads");
+        let fitting = FittingTypes::from_json(
+            r#"{"types":[{"typeId":50001,"typeName":"Test Reaction Formula","categoryId":9},{"typeId":60001,"typeName":"Test Material","categoryId":9}]}"#,
+        )
+        .expect("fallback fixture fitting loads");
+        let resolver = NameResolver::new();
+        let state = reaction_state(Some(50001), "1", "0.0");
+        assert_eq!(
+            reaction_calculator_lines(&state, Some(&industry), Some(&fitting), &resolver),
+            vec![
+                "Reaction: Test Reaction Formula",
+                "Input Materials",
+                "Test Material: 17",
+                "Output Products",
+                "Unknown Item: 23",
+                REACTION_CALCULATOR_DISCLOSURE,
+            ]
+        );
+        let lines = reaction_calculator_lines(&state, Some(&industry), Some(&fitting), &resolver);
+        let joined = lines.join("\n");
+        for id in ["50001", "60001", "70001"] {
+            assert!(!joined.contains(id), "raw id {id} leaked in {joined}");
+        }
+    }
+
+    #[test]
+    fn reaction_calculator_guidance_precedence() {
+        let industry = IndustryRef::load_bundled().expect("bundled industry loads");
+        let fitting = FittingTypes::load_bundled().expect("bundled fitting loads");
+        let resolver = NameResolver::new();
+        let state = reaction_state(None, "1", "0.0");
+        // industry_data None with and without fitting types
+        assert_eq!(
+            reaction_calculator_lines(&state, None, Some(&fitting), &resolver),
+            vec![REACTION_CALCULATOR_NO_INDUSTRY_DATA]
+        );
+        assert_eq!(
+            reaction_calculator_lines(&state, None, None, &resolver),
+            vec![REACTION_CALCULATOR_NO_INDUSTRY_DATA]
+        );
+        // fitting types None alone
+        assert_eq!(
+            reaction_calculator_lines(&state, Some(&industry), None, &resolver),
+            vec![REACTION_CALCULATOR_NO_ITEM_DATA]
+        );
+        // no selection
+        assert_eq!(
+            reaction_calculator_lines(&state, Some(&industry), Some(&fitting), &resolver),
+            vec![
+                REACTION_CALCULATOR_CHOOSE_GUIDANCE,
+                REACTION_CALCULATOR_DISCLOSURE
+            ]
+        );
+        // fabricated 45732 (unnamed blueprint is never shown as chosen)
+        let state = reaction_state(Some(45732), "1", "0.0");
+        assert_eq!(
+            reaction_calculator_lines(&state, Some(&industry), Some(&fitting), &resolver),
+            vec![
+                REACTION_CALCULATOR_CHOOSE_GUIDANCE,
+                REACTION_CALCULATOR_DISCLOSURE
+            ]
+        );
+        // fabricated 681 (not a reaction blueprint)
+        let state = reaction_state(Some(681), "1", "0.0");
+        assert_eq!(
+            reaction_calculator_lines(&state, Some(&industry), Some(&fitting), &resolver),
+            vec![
+                REACTION_CALCULATOR_CHOOSE_GUIDANCE,
+                REACTION_CALCULATOR_DISCLOSURE
+            ]
+        );
+        // input guidance: one case per field
+        for (runs, bonus) in [
+            ("", "0.0"),
+            ("0", "0.0"),
+            ("1.5", "0.0"),
+            ("1", ""),
+            ("1", "100"),
+            ("1", "-1"),
+        ] {
+            let state = reaction_state(Some(57490), runs, bonus);
+            assert_eq!(
+                reaction_calculator_lines(&state, Some(&industry), Some(&fitting), &resolver),
+                vec![
+                    REACTION_CALCULATOR_INPUT_GUIDANCE,
+                    REACTION_CALCULATOR_DISCLOSURE
+                ],
+                "runs={runs} bonus={bonus}"
+            );
+        }
+        // no-result guidance: magnitude too large
+        let state = reaction_state(Some(57490), "9223372036854775807", "0.0");
+        assert_eq!(
+            reaction_calculator_lines(&state, Some(&industry), Some(&fitting), &resolver),
+            vec![
+                REACTION_CALCULATOR_NO_RESULT_GUIDANCE,
+                REACTION_CALCULATOR_DISCLOSURE
+            ]
+        );
+        // No quantity line appears in any guidance state (checked above
+        // by whole-vector equality; assert no "Reaction:" echo leaks).
+        for (runs, bonus) in [("", "0.0"), ("9223372036854775807", "0.0")] {
+            let state = reaction_state(Some(57490), runs, bonus);
+            let lines =
+                reaction_calculator_lines(&state, Some(&industry), Some(&fitting), &resolver);
+            assert!(lines.iter().all(|l| !l.starts_with("Reaction:")));
+            assert!(lines.iter().all(|l| l != "Input Materials"));
+        }
+    }
+
+    #[test]
+    fn reaction_calculator_no_raw_ids_in_success() {
+        let industry = IndustryRef::load_bundled().expect("bundled industry loads");
+        let fitting = FittingTypes::load_bundled().expect("bundled fitting loads");
+        let resolver = NameResolver::new();
+        let state = reaction_state(Some(57490), "1", "0.0");
+        let lines = reaction_calculator_lines(&state, Some(&industry), Some(&fitting), &resolver);
+        let joined = lines.join("\n");
+        for id in ["57490", "4246", "16633", "16635", "57453"] {
+            assert!(!joined.contains(id), "raw id {id} leaked in {joined}");
+        }
+    }
+
+    #[test]
+    fn reaction_calculator_demo_independence() {
+        use crate::demo::data::seed_demo_state;
+
+        let mut state = AppState::new(false);
+        state.industry_reaction_search = "carbon".to_string();
+        state.industry_reaction_selected_type_id = Some(57490);
+        state.industry_reaction_runs = "10".to_string();
+        state.industry_reaction_facility_bonus_percent = "4.8".to_string();
+        seed_demo_state(&mut state);
+        assert_eq!(state.industry_reaction_search, "carbon");
+        assert_eq!(state.industry_reaction_selected_type_id, Some(57490));
+        assert_eq!(state.industry_reaction_runs, "10");
+        assert_eq!(state.industry_reaction_facility_bonus_percent, "4.8");
+
+        let industry = IndustryRef::load_bundled().expect("bundled industry loads");
+        let fitting = FittingTypes::load_bundled().expect("bundled fitting loads");
+        let resolver = NameResolver::new();
+        // Seeded state with no selection renders the choose-guidance block.
+        let mut demo_state = AppState::new(false);
+        seed_demo_state(&mut demo_state);
+        // Reaction fields are untouched by seeding: search empty, no
+        // selection, starting drafts.
+        assert_eq!(demo_state.industry_reaction_search, "");
+        assert_eq!(demo_state.industry_reaction_selected_type_id, None);
+        assert_eq!(demo_state.industry_reaction_runs, "1");
+        assert_eq!(demo_state.industry_reaction_facility_bonus_percent, "0.0");
+        assert_eq!(
+            reaction_calculator_lines(&demo_state, Some(&industry), Some(&fitting), &resolver),
+            vec![
+                REACTION_CALCULATOR_CHOOSE_GUIDANCE,
+                REACTION_CALCULATOR_DISCLOSURE
+            ]
+        );
+        demo_state.industry_reaction_selected_type_id = Some(57490);
+        assert_eq!(
+            reaction_calculator_lines(&demo_state, Some(&industry), Some(&fitting), &resolver),
+            vec![
+                "Reaction: Carbon Fiber Reaction Formula",
+                "Input Materials",
+                "Hydrogen Fuel Block: 5",
+                "Hydrocarbons: 100",
+                "Evaporite Deposits: 100",
+                "Output Products",
+                "Carbon Fiber: 200",
+                REACTION_CALCULATOR_DISCLOSURE,
+            ]
+        );
+    }
+
+    #[test]
+    fn production_chain_calculator_wording_is_verbatim() {
+        assert_eq!(PRODUCTION_CHAIN_HEADING, "Production Chain Calculator");
+        assert_eq!(
+            PRODUCTION_CHAIN_INPUT_LABELS,
+            ["Item (chosen by you)", "Quantity (entered by you)",]
+        );
+        assert_eq!(PRODUCTION_CHAIN_CHOICE_RENDER_MAX, 100);
+        assert_eq!(
+            PRODUCTION_CHAIN_NO_INDUSTRY_DATA,
+            "Production chain calculator unavailable: Mimir's bundled industry data failed to load."
+        );
+        assert_eq!(
+            PRODUCTION_CHAIN_NO_ITEM_DATA,
+            "Production chain calculator unavailable: Mimir's bundled item data failed to load."
+        );
+        assert_eq!(
+            PRODUCTION_CHAIN_CHOOSE_GUIDANCE,
+            "Choose an item above to see its production chain."
+        );
+        assert_eq!(PRODUCTION_CHAIN_NO_MATCH, "No items match the search.");
+        assert_eq!(
+            PRODUCTION_CHAIN_INPUT_GUIDANCE,
+            "Enter a quantity of at least 1, to see the result."
+        );
+        assert_eq!(
+            PRODUCTION_CHAIN_NO_RESULT_GUIDANCE,
+            "No result: the entered values are too large to calculate with."
+        );
+        assert_eq!(
+            PRODUCTION_CHAIN_DISCLOSURE,
+            "Estimate for the item and quantity you chose, using the per-run materials and products in Mimir's bundled industry data. Each item the bundled data can make is expanded into the materials for the whole runs needed to make at least the quantity shown, so a run that makes more than the chain needs can leave items over, and leftovers are not subtracted from other lines. Quantities are the bundled per-run amounts with no efficiency adjustment: Mimir does not apply blueprint material efficiency, facility bonuses, or skills, and it does not check that you own the blueprints or materials or can run the jobs. The starting quantity (1) is a starting value to replace with your own. An item with no name in Mimir's bundled item data, or made by more than one bundled blueprint, cannot be chosen, and where such an item appears inside a chain it is shown without expansion. An item that appears inside its own chain is shown once without being expanded again. These numbers can differ from EVE."
+        );
+    }
+
+    #[test]
+    fn production_chain_choice_rows_over_bundled_catalogues() {
+        let industry = IndustryRef::load_bundled().expect("bundled industry data loads");
+        let fitting = FittingTypes::load_bundled().expect("bundled fitting types load");
+        let rows = chain_choice_rows(&industry, &fitting, "");
+        assert_eq!(rows.len(), 4299);
+        assert_eq!(
+            rows[..4]
+                .iter()
+                .map(|r| r.name.as_str())
+                .collect::<Vec<_>>(),
+            vec![
+                "'Abatis' 100mm Steel Plates",
+                "'Arquebus' Heavy Beam Laser I",
+                "'Atgeir' Explosive Disruptive Lance",
+                "'Augmented' Acolyte",
+            ]
+        );
+        for row in &rows {
+            assert_ne!(row.type_id, 21527);
+            assert_ne!(row.type_id, 22925);
+            assert_ne!(row.type_id, 23416);
+            assert_ne!(row.type_id, 37161);
+            assert_ne!(row.type_id, 16672);
+            assert_ne!(row.type_id, 165);
+        }
+        let carbon = chain_choice_rows(&industry, &fitting, "carbon fiber");
+        assert_eq!(
+            carbon.iter().map(|r| r.name.as_str()).collect::<Vec<_>>(),
+            vec!["Carbon Fiber", "Reinforced Carbon Fiber"]
+        );
+        let orca = chain_choice_rows(&industry, &fitting, "ORCA");
+        assert_eq!(
+            orca.iter().map(|r| r.name.as_str()).collect::<Vec<_>>(),
+            vec!["Orca"]
+        );
+        let nonsense = chain_choice_rows(&industry, &fitting, "zzz-not-an-item-zzz");
+        assert!(nonsense.is_empty());
+    }
+
+    #[test]
+    fn production_chain_choice_rows_dual_fixture_exclusions() {
+        let industry = IndustryRef::from_json(
+            r#"{"materials":[{"typeId":50001,"activityId":1,"materialTypeId":60001,"quantity":10},{"typeId":50002,"activityId":1,"materialTypeId":60001,"quantity":10},{"typeId":50003,"activityId":1,"materialTypeId":60001,"quantity":10},{"typeId":50004,"activityId":1,"materialTypeId":60001,"quantity":10},{"typeId":50005,"activityId":1,"materialTypeId":60001,"quantity":10}],"products":[{"typeId":50001,"activityId":1,"productTypeId":70001,"quantity":5},{"typeId":50002,"activityId":1,"productTypeId":70002,"quantity":5},{"typeId":50003,"activityId":1,"productTypeId":70002,"quantity":5},{"typeId":50004,"activityId":1,"productTypeId":70003,"quantity":5},{"typeId":50005,"activityId":1,"productTypeId":70004,"quantity":5}]}"#,
+        )
+        .expect("dual fixture industry loads");
+        let fitting = FittingTypes::from_json(
+            r#"{"types":[{"typeId":70001,"typeName":"Named Item","categoryId":9},{"typeId":70002,"typeName":"Ambiguous Item","categoryId":9},{"typeId":70004,"typeName":"12345","categoryId":9},{"typeId":60001,"typeName":"Fixture Material","categoryId":9}]}"#,
+        )
+        .expect("dual fixture fitting loads");
+        let rows = chain_choice_rows(&industry, &fitting, "");
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].type_id, 70001);
+        assert_eq!(rows[0].name, "Named Item");
+    }
+
+    fn chain_state(selected: Option<i64>, quantity: &str) -> AppState {
+        let mut state = AppState::new(false);
+        state.industry_chain_search = String::new();
+        state.industry_chain_selected_type_id = selected;
+        state.industry_chain_quantity = quantity.to_string();
+        state
+    }
+
+    #[test]
+    fn production_chain_calculator_starting_quantity_result() {
+        let industry = IndustryRef::load_bundled().expect("bundled industry loads");
+        let fitting = FittingTypes::load_bundled().expect("bundled fitting loads");
+        let resolver = NameResolver::new();
+        let state = chain_state(Some(17404), "1");
+        assert_eq!(
+            production_chain_calculator_lines(&state, Some(&industry), Some(&fitting), &resolver),
+            vec![
+                "Production Chain: Small Blaster Battery",
+                "Small Blaster Battery: 1 (Manufacturing)",
+                "  Self-Harmonizing Power Core: 1 (Raw Material)",
+                "  Light Neutron Blaster I: 1 (Manufacturing)",
+                "    Tritanium: 1596 (Raw Material)",
+                "    Pyerite: 690 (Raw Material)",
+                "    Mexallon: 144 (Raw Material)",
+                PRODUCTION_CHAIN_DISCLOSURE,
+            ]
+        );
+        let state = chain_state(Some(17404), "3");
+        assert_eq!(
+            production_chain_calculator_lines(&state, Some(&industry), Some(&fitting), &resolver),
+            vec![
+                "Production Chain: Small Blaster Battery",
+                "Small Blaster Battery: 3 (Manufacturing)",
+                "  Self-Harmonizing Power Core: 3 (Raw Material)",
+                "  Light Neutron Blaster I: 3 (Manufacturing)",
+                "    Tritanium: 4788 (Raw Material)",
+                "    Pyerite: 2070 (Raw Material)",
+                "    Mexallon: 432 (Raw Material)",
+                PRODUCTION_CHAIN_DISCLOSURE,
+            ]
+        );
+    }
+
+    #[test]
+    fn production_chain_calculator_batch_results() {
+        let industry = IndustryRef::load_bundled().expect("bundled industry loads");
+        let fitting = FittingTypes::load_bundled().expect("bundled fitting loads");
+        let resolver = NameResolver::new();
+        let state = chain_state(Some(57453), "1");
+        assert_eq!(
+            production_chain_calculator_lines(&state, Some(&industry), Some(&fitting), &resolver),
+            vec![
+                "Production Chain: Carbon Fiber",
+                "Carbon Fiber: 1 (Reaction)",
+                "  Hydrogen Fuel Block: 5 (Manufacturing)",
+                "    Robotics: 1 (Raw Material)",
+                "    Enriched Uranium: 4 (Raw Material)",
+                "    Mechanical Parts: 4 (Raw Material)",
+                "    Coolant: 9 (Raw Material)",
+                "    Strontium Clathrates: 20 (Raw Material)",
+                "    Oxygen: 22 (Raw Material)",
+                "    Heavy Water: 170 (Raw Material)",
+                "    Liquid Ozone: 350 (Raw Material)",
+                "    Hydrogen Isotopes: 450 (Raw Material)",
+                "  Hydrocarbons: 100 (Raw Material)",
+                "  Evaporite Deposits: 100 (Raw Material)",
+                PRODUCTION_CHAIN_DISCLOSURE,
+            ]
+        );
+        let state = chain_state(Some(57453), "201");
+        assert_eq!(
+            production_chain_calculator_lines(&state, Some(&industry), Some(&fitting), &resolver),
+            vec![
+                "Production Chain: Carbon Fiber",
+                "Carbon Fiber: 201 (Reaction)",
+                "  Hydrogen Fuel Block: 10 (Manufacturing)",
+                "    Robotics: 1 (Raw Material)",
+                "    Enriched Uranium: 4 (Raw Material)",
+                "    Mechanical Parts: 4 (Raw Material)",
+                "    Coolant: 9 (Raw Material)",
+                "    Strontium Clathrates: 20 (Raw Material)",
+                "    Oxygen: 22 (Raw Material)",
+                "    Heavy Water: 170 (Raw Material)",
+                "    Liquid Ozone: 350 (Raw Material)",
+                "    Hydrogen Isotopes: 450 (Raw Material)",
+                "  Hydrocarbons: 200 (Raw Material)",
+                "  Evaporite Deposits: 200 (Raw Material)",
+                PRODUCTION_CHAIN_DISCLOSURE,
+            ]
+        );
+    }
+
+    #[test]
+    fn production_chain_calculator_cycle_result() {
+        let industry = IndustryRef::load_bundled().expect("bundled industry loads");
+        let fitting = FittingTypes::load_bundled().expect("bundled fitting loads");
+        let resolver = NameResolver::new();
+        let state = chain_state(Some(12238), "1");
+        assert_eq!(
+            production_chain_calculator_lines(&state, Some(&industry), Some(&fitting), &resolver),
+            vec![
+                "Production Chain: Reprocessing Array",
+                "Reprocessing Array: 1 (Manufacturing)",
+                "  Reprocessing Array: 1 (already in this chain; not expanded again)",
+                PRODUCTION_CHAIN_DISCLOSURE,
+            ]
+        );
+    }
+
+    #[test]
+    fn production_chain_calculator_ambiguous_and_unknown_in_chain() {
+        let industry = IndustryRef::from_json(
+            r#"{"materials":[{"typeId":105,"activityId":1,"materialTypeId":34,"quantity":1},{"typeId":106,"activityId":1,"materialTypeId":34,"quantity":9},{"typeId":107,"activityId":1,"materialTypeId":600,"quantity":2},{"typeId":107,"activityId":1,"materialTypeId":999,"quantity":3}],"products":[{"typeId":105,"activityId":1,"productTypeId":600,"quantity":1},{"typeId":106,"activityId":1,"productTypeId":600,"quantity":1},{"typeId":107,"activityId":1,"productTypeId":700,"quantity":1}]}"#,
+        )
+        .expect("ambiguous fixture industry loads");
+        let fitting = FittingTypes::from_json(
+            r#"{"types":[{"typeId":700,"typeName":"Thingamajig","categoryId":9},{"typeId":600,"typeName":"Doohickey","categoryId":9}]}"#,
+        )
+        .expect("ambiguous fixture fitting loads");
+        let resolver = NameResolver::new();
+        let state = chain_state(Some(700), "1");
+        let lines =
+            production_chain_calculator_lines(&state, Some(&industry), Some(&fitting), &resolver);
+        assert_eq!(
+            lines,
+            vec![
+                "Production Chain: Thingamajig",
+                "Thingamajig: 1 (Manufacturing)",
+                "  Doohickey: 2 (more than one blueprint makes this item; not expanded)",
+                "  Unknown Item: 3 (Raw Material)",
+                PRODUCTION_CHAIN_DISCLOSURE,
+            ]
+        );
+        let joined = lines.join("\n");
+        for id in ["105", "106", "107", "600", "700", "999", "34"] {
+            assert!(!joined.contains(id), "raw id {id} leaked in {joined}");
+        }
+    }
+
+    #[test]
+    fn production_chain_calculator_uncapped_rendering() {
+        let industry = IndustryRef::load_bundled().expect("bundled industry loads");
+        let fitting = FittingTypes::load_bundled().expect("bundled fitting loads");
+        let resolver = NameResolver::new();
+        let state = chain_state(Some(28606), "1");
+        let lines =
+            production_chain_calculator_lines(&state, Some(&industry), Some(&fitting), &resolver);
+        assert_eq!(lines.len(), 512);
+        assert_eq!(lines[0], "Production Chain: Orca");
+        assert_eq!(lines[511], PRODUCTION_CHAIN_DISCLOSURE);
+    }
+
+    #[test]
+    fn production_chain_calculator_guidance_precedence() {
+        let industry = IndustryRef::load_bundled().expect("bundled industry loads");
+        let fitting = FittingTypes::load_bundled().expect("bundled fitting loads");
+        let resolver = NameResolver::new();
+        let state = chain_state(None, "1");
+        assert_eq!(
+            production_chain_calculator_lines(&state, None, Some(&fitting), &resolver),
+            vec![PRODUCTION_CHAIN_NO_INDUSTRY_DATA]
+        );
+        assert_eq!(
+            production_chain_calculator_lines(&state, None, None, &resolver),
+            vec![PRODUCTION_CHAIN_NO_INDUSTRY_DATA]
+        );
+        assert_eq!(
+            production_chain_calculator_lines(&state, Some(&industry), None, &resolver),
+            vec![PRODUCTION_CHAIN_NO_ITEM_DATA]
+        );
+        assert_eq!(
+            production_chain_calculator_lines(&state, Some(&industry), Some(&fitting), &resolver),
+            vec![
+                PRODUCTION_CHAIN_CHOOSE_GUIDANCE,
+                PRODUCTION_CHAIN_DISCLOSURE
+            ]
+        );
+        for fabricated in [21527, 34, 165] {
+            let state = chain_state(Some(fabricated), "1");
+            assert_eq!(
+                production_chain_calculator_lines(
+                    &state,
+                    Some(&industry),
+                    Some(&fitting),
+                    &resolver
+                ),
+                vec![
+                    PRODUCTION_CHAIN_CHOOSE_GUIDANCE,
+                    PRODUCTION_CHAIN_DISCLOSURE
+                ],
+                "fabricated {fabricated}"
+            );
+        }
+        for quantity in ["", "0", "1.5"] {
+            let state = chain_state(Some(17404), quantity);
+            assert_eq!(
+                production_chain_calculator_lines(
+                    &state,
+                    Some(&industry),
+                    Some(&fitting),
+                    &resolver
+                ),
+                vec![PRODUCTION_CHAIN_INPUT_GUIDANCE, PRODUCTION_CHAIN_DISCLOSURE],
+                "quantity {quantity:?}"
+            );
+        }
+        let state = chain_state(Some(17404), "9223372036854775807");
+        assert_eq!(
+            production_chain_calculator_lines(&state, Some(&industry), Some(&fitting), &resolver),
+            vec![
+                PRODUCTION_CHAIN_NO_RESULT_GUIDANCE,
+                PRODUCTION_CHAIN_DISCLOSURE
+            ]
+        );
+        for quantity in ["", "0", "1.5", "9223372036854775807"] {
+            let state = chain_state(Some(17404), quantity);
+            let lines = production_chain_calculator_lines(
+                &state,
+                Some(&industry),
+                Some(&fitting),
+                &resolver,
+            );
+            assert!(lines.iter().all(|l| !l.starts_with("Production Chain:")));
+        }
+    }
+
+    #[test]
+    fn production_chain_calculator_demo_independence() {
+        use crate::demo::data::seed_demo_state;
+
+        let mut state = AppState::new(false);
+        state.industry_chain_search = "orca".to_string();
+        state.industry_chain_selected_type_id = Some(28606);
+        state.industry_chain_quantity = "3".to_string();
+        seed_demo_state(&mut state);
+        assert_eq!(state.industry_chain_search, "orca");
+        assert_eq!(state.industry_chain_selected_type_id, Some(28606));
+        assert_eq!(state.industry_chain_quantity, "3");
+
+        let industry = IndustryRef::load_bundled().expect("bundled industry loads");
+        let fitting = FittingTypes::load_bundled().expect("bundled fitting loads");
+        let resolver = NameResolver::new();
+        let mut demo_state = AppState::new(false);
+        seed_demo_state(&mut demo_state);
+        assert_eq!(demo_state.industry_chain_search, "");
+        assert_eq!(demo_state.industry_chain_selected_type_id, None);
+        assert_eq!(demo_state.industry_chain_quantity, "1");
+        assert_eq!(
+            production_chain_calculator_lines(
+                &demo_state,
+                Some(&industry),
+                Some(&fitting),
+                &resolver
+            ),
+            vec![
+                PRODUCTION_CHAIN_CHOOSE_GUIDANCE,
+                PRODUCTION_CHAIN_DISCLOSURE
+            ]
+        );
+        demo_state.industry_chain_selected_type_id = Some(17404);
+        assert_eq!(
+            production_chain_calculator_lines(
+                &demo_state,
+                Some(&industry),
+                Some(&fitting),
+                &resolver
+            ),
+            vec![
+                "Production Chain: Small Blaster Battery",
+                "Small Blaster Battery: 1 (Manufacturing)",
+                "  Self-Harmonizing Power Core: 1 (Raw Material)",
+                "  Light Neutron Blaster I: 1 (Manufacturing)",
+                "    Tritanium: 1596 (Raw Material)",
+                "    Pyerite: 690 (Raw Material)",
+                "    Mexallon: 144 (Raw Material)",
+                PRODUCTION_CHAIN_DISCLOSURE,
+            ]
+        );
+    }
+}

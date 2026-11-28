@@ -1,0 +1,1194 @@
+//! Portrait and logo rendering for the character surfaces
+//! (Characters list and detail, Dashboard grid): upload each
+//! decoded image to an egui texture exactly once per
+//! `(ImageKind, id)`, and draw the honest placeholder for every
+//! other state (the name initial for portraits, a blank box for
+//! logos). Fetch, cache, and landing live in `crate::portraits`
+//! and `crate::app::state` / `crate::app::shell`; this module
+//! only turns ready state into widgets. The shell owns the
+//! `PortraitImageCache`: a `TextureHandle` must outlive the frame
+//! that created it, so textures can never be per-frame uploads.
+//!
+//! Logging follows the view-layer convention: the per-frame render
+//! path is log-free (one visible portrait renders once per frame,
+//! and frame-rate lines would flood the log buffer); the
+//! once-per-something events — texture upload, replacement, and
+//! prune, plus the request transition delegated to
+//! `AppState::request_portrait` — carry `[PORTRAIT]` logs.
+//! Character ids are plain integers (the `[CHAR]`/`[ESI]`
+//! convention); character names never appear in logs.
+
+use std::collections::HashMap;
+use std::sync::Arc;
+
+use crate::app::state::{AppState, PortraitState};
+use crate::portraits::{initial_for_name, ImageKind};
+
+/// Render size of a list or grid-row portrait, in points. The
+/// decoded image is 256px; views downscale it, never upscale.
+pub const LIST_PORTRAIT_PX: f32 = 32.0;
+/// Render size of the active-character detail portrait, in points.
+pub const DETAIL_PORTRAIT_PX: f32 = 96.0;
+/// Render size of a detail corporation or alliance logo, in
+/// points: left of the resolved name, matching the Flutter
+/// overview tab's icon size.
+pub const DETAIL_LOGO_PX: f32 = 20.0;
+/// Render size of an item type icon in the fittings detail,
+/// in points: left of the resolved item name, matching the
+/// detail-logo weight so icon rows across views share one
+/// visual size. Its own constant so a later row-density
+/// decision does not move logos.
+pub const TYPE_ICON_PX: f32 = 20.0;
+/// Render size of the selected item's type icon in the market
+/// detail header, in points: the Flutter detail header draws
+/// its icon at 64px, one-to-one with the 64px fetch
+/// (`TYPE_ICON_SIZE`), so the header is not a row and does
+/// not share the fittings rows' 20pt.
+pub const MARKET_TYPE_ICON_PX: f32 = 64.0;
+
+/// One uploaded image: the decoded image it was built from
+/// (identity check via `Arc::ptr_eq`) plus its live texture.
+struct CachedTexture {
+    source: Arc<image::DynamicImage>,
+    handle: egui::TextureHandle,
+}
+
+/// Per-application image textures, owned by `MimirApp` and
+/// passed into the character views. Upload happens once per
+/// `(kind, id)` image; a replaced image (remove and re-add)
+/// uploads anew and never shows the old one.
+#[derive(Default)]
+pub struct PortraitImageCache {
+    textures: HashMap<(ImageKind, i64), CachedTexture>,
+}
+
+impl PortraitImageCache {
+    /// An empty cache. Construction uploads nothing.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Drop textures for entities the state no longer knows,
+    /// freeing the GPU texture so a removed entity's image cannot
+    /// linger — and a later re-added entity re-uploads. Retention
+    /// uses the same `image_id_known` guard as fetching (rows, the
+    /// loaded character detail, or the loaded standings), so a logo
+    /// known only from standings is not dropped and re-uploaded
+    /// every frame while rows are still stale.
+    pub fn prune(&mut self, state: &AppState) {
+        let before = self.textures.len();
+        self.textures
+            .retain(|(kind, id), _| state.image_id_known(*kind, *id));
+        if self.textures.len() != before {
+            tracing::debug!(
+                "[PORTRAIT] image textures pruned remaining={}",
+                self.textures.len()
+            );
+        }
+    }
+
+    /// Number of textures currently held.
+    pub fn len(&self) -> usize {
+        self.textures.len()
+    }
+
+    /// Whether no texture is currently held.
+    pub fn is_empty(&self) -> bool {
+        self.textures.is_empty()
+    }
+
+    /// The texture for one `(kind, id)`'s `Ready` image, uploading
+    /// the decoded image exactly once. `None` for every non-Ready
+    /// state: only `Ready` under that exact key renders an image,
+    /// never a fabricated face, never another entity's. The
+    /// `to_rgba8` into `from_rgba_unmultiplied` upload carries
+    /// PNG logo alpha to the screen unchanged; the kind is part
+    /// of the texture name so two kinds never share a texture.
+    pub fn texture(
+        &mut self,
+        ctx: &egui::Context,
+        state: &AppState,
+        kind: ImageKind,
+        id: i64,
+    ) -> Option<egui::TextureHandle> {
+        let image = match state.portrait_state(kind, id) {
+            PortraitState::Ready(image) => image,
+            PortraitState::NotRequested | PortraitState::Loading | PortraitState::Failed => {
+                return None;
+            }
+        };
+        let replaced = match self.textures.get(&(kind, id)) {
+            Some(cached) if Arc::ptr_eq(&cached.source, image) => {
+                return Some(cached.handle.clone());
+            }
+            Some(_) => true,
+            None => false,
+        };
+        let rgba = image.to_rgba8();
+        let (width, height) = (rgba.width(), rgba.height());
+        let color = egui::ColorImage::from_rgba_unmultiplied(
+            [width as usize, height as usize],
+            rgba.as_raw(),
+        );
+        let texture_name = match kind {
+            ImageKind::Character => format!("portrait-{id}"),
+            ImageKind::Corporation => format!("logo-corp-{id}"),
+            ImageKind::Alliance => format!("logo-alliance-{id}"),
+            ImageKind::Faction => format!("logo-faction-{id}"),
+            ImageKind::Type => format!("type-{id}"),
+        };
+        let handle = ctx.load_texture(texture_name, color, egui::TextureOptions::default());
+        if replaced {
+            tracing::info!(
+                "[PORTRAIT] image texture replaced kind={} id={}",
+                kind.as_str(),
+                id
+            );
+        } else {
+            tracing::info!(
+                "[PORTRAIT] image texture uploaded kind={} id={} {width}x{height}",
+                kind.as_str(),
+                id
+            );
+        }
+        self.textures.insert(
+            (kind, id),
+            CachedTexture {
+                source: Arc::clone(image),
+                handle: handle.clone(),
+            },
+        );
+        Some(handle)
+    }
+}
+
+/// Queue a portrait fetch for one visible character, but only when
+/// nothing is in flight and nothing has failed yet. A `Failed`
+/// portrait is deliberately not re-requested from the render path:
+/// that would retry-loop against the image service at frame rate.
+/// A failed portrait retries through the detail view's retry
+/// button, which calls `AppState::request_portrait` directly.
+/// In demo mode the queued request is drained by the shell
+/// without spawning, so demo still makes zero network calls.
+pub fn ensure_portrait_requested(state: &mut AppState, character_id: i64) {
+    if matches!(
+        state.portrait_state(ImageKind::Character, character_id),
+        PortraitState::NotRequested
+    ) {
+        state.request_portrait(ImageKind::Character, character_id);
+    }
+}
+
+/// Queue a logo fetch for one corporation, alliance, or faction,
+/// with the same rule as `ensure_portrait_requested`: only a
+/// `NotRequested` key queues, a `Failed` logo retries through the
+/// detail view's retry button, and an unknown id queues nothing
+/// through the state guard. In demo mode the queued request is
+/// drained by the shell without spawning, so demo still makes
+/// zero network calls.
+pub fn ensure_logo_requested(state: &mut AppState, kind: ImageKind, id: i64) {
+    // Nonpositive ids can never be requested (the state layer
+    // refuses them and records nothing), so asking every frame
+    // would re-warn every frame. Never queue them.
+    if id <= 0 {
+        return;
+    }
+    if matches!(state.portrait_state(kind, id), PortraitState::NotRequested) {
+        state.request_portrait(kind, id);
+    }
+}
+
+/// Queue a type-icon fetch for one item type id, with the same
+/// rule as `ensure_logo_requested`: only a `NotRequested` key
+/// queues, a `Failed` icon never re-queues from the render path,
+/// and an unknown id queues nothing through the union guard
+/// (loaded saved fittings, the loaded assets, the selected
+/// market type, or the bundled skill catalogue's skill types).
+/// Thin delegation so calling views never spell `ImageKind` or
+/// a size.
+pub fn ensure_type_icon_requested(state: &mut AppState, type_id: i64) {
+    ensure_logo_requested(state, ImageKind::Type, type_id);
+}
+
+/// Status line for a placeholder portrait: what the user is
+/// looking at and why there is no image. `Ready` maps to `""`
+/// because an image, not a placeholder, renders.
+pub fn placeholder_status(demo: bool, portrait: &PortraitState) -> &'static str {
+    match portrait {
+        PortraitState::Ready(_) => "",
+        _ if demo => "Portraits are not fetched in demo mode.",
+        PortraitState::NotRequested | PortraitState::Loading => "Loading portrait...",
+        PortraitState::Failed => "Portrait unavailable.",
+    }
+}
+
+/// Render one character's portrait, `size_px` points square: the
+/// image when `Ready` for that exact character id, otherwise the
+/// initial placeholder — never a fabricated or stock face.
+pub fn show_portrait(
+    ui: &mut egui::Ui,
+    cache: &mut PortraitImageCache,
+    state: &AppState,
+    character_id: i64,
+    name: &str,
+    size_px: f32,
+) -> egui::Response {
+    if let Some(handle) = cache.texture(ui.ctx(), state, ImageKind::Character, character_id) {
+        let image = egui::Image::new((handle.id(), handle.size_vec2()))
+            .fit_to_exact_size(egui::Vec2::splat(size_px));
+        ui.add(image)
+    } else {
+        let initial = initial_for_name(name)
+            .map(|c| c.to_string())
+            .unwrap_or_else(|| "?".to_string());
+        let (response, painter) =
+            ui.allocate_painter(egui::Vec2::splat(size_px), egui::Sense::hover());
+        painter.text(
+            response.rect.center(),
+            egui::Align2::CENTER_CENTER,
+            initial,
+            egui::FontId::proportional(size_px * 0.5),
+            ui.visuals().text_color(),
+        );
+        response
+    }
+}
+
+/// Render one corporation, alliance, faction, or item type icon,
+/// `size_px` points square: the image when `Ready` for that exact `(kind, id)`,
+/// otherwise a blank box of the theme's faint background color —
+/// never a fabricated or stock mark. There is deliberately no
+/// `name` parameter: a logo placeholder shows no initial and no
+/// letter, so a name cannot be formatted into its slot by
+/// accident, and no raw id is formatted either. The resolved
+/// name the caller draws beside the box carries the meaning,
+/// so nothing is lost while the logo loads or after it fails.
+pub fn show_logo(
+    ui: &mut egui::Ui,
+    cache: &mut PortraitImageCache,
+    state: &AppState,
+    kind: ImageKind,
+    id: i64,
+    size_px: f32,
+) -> egui::Response {
+    if let Some(handle) = cache.texture(ui.ctx(), state, kind, id) {
+        let image = egui::Image::new((handle.id(), handle.size_vec2()))
+            .fit_to_exact_size(egui::Vec2::splat(size_px));
+        ui.add(image)
+    } else {
+        let (response, painter) =
+            ui.allocate_painter(egui::Vec2::splat(size_px), egui::Sense::hover());
+        painter.rect_filled(response.rect, 2.0, ui.visuals().faint_bg_color);
+        response
+    }
+}
+
+/// Render one item type icon, `size_px` points square: the image
+/// when `Ready` for `(Type, type_id)`, otherwise the blank box
+/// from `show_logo`. Thin delegation so the fittings view never
+/// spells `ImageKind`.
+pub fn show_type_icon(
+    ui: &mut egui::Ui,
+    cache: &mut PortraitImageCache,
+    state: &AppState,
+    type_id: i64,
+    size_px: f32,
+) -> egui::Response {
+    show_logo(ui, cache, state, ImageKind::Type, type_id, size_px)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::state::{AssetsData, CharacterDetailData, FittingsData, LoadState};
+    use crate::esi::models::{
+        AssetItem, CharacterAttributes, CharacterClones, CharacterFitting, CharacterLocation,
+        CharacterOnline, CharacterShip, FittingItem, Standing,
+    };
+    use crate::storage::repositories::CharacterRow;
+
+    fn test_row(id: i64, name: &str) -> CharacterRow {
+        CharacterRow {
+            character_id: id,
+            name: name.to_string(),
+            corporation_id: 1000166,
+            alliance_id: None,
+            is_active: false,
+        }
+    }
+
+    fn state_with_ids(ids: &[i64]) -> AppState {
+        let mut state = AppState::default();
+        for id in ids {
+            state.characters.push(test_row(*id, "Test Pilot"));
+        }
+        state
+    }
+
+    fn ready_image(width: u32, height: u32) -> Arc<image::DynamicImage> {
+        Arc::new(image::DynamicImage::new_rgb8(width, height))
+    }
+
+    fn type_fixture_item(type_id: i64) -> FittingItem {
+        FittingItem {
+            flag: "Cargo".to_string(),
+            quantity: 1,
+            type_id,
+        }
+    }
+
+    fn type_fixture_ship(ship_type_id: i64) -> CharacterFitting {
+        CharacterFitting {
+            fitting_id: ship_type_id,
+            name: "Fitting".to_string(),
+            description: None,
+            ship_type_id,
+            items: Vec::new(),
+        }
+    }
+
+    /// The design section 10 fixture: characters 1 and 2,
+    /// `fittings` Ready with fitting A (ship 587, items 2048
+    /// and 34) and fitting B (ship 597, item 178).
+    fn type_fixture_state() -> AppState {
+        let mut state = state_with_ids(&[1, 2]);
+        let mut fitting_a = type_fixture_ship(587);
+        fitting_a.items = vec![type_fixture_item(2048), type_fixture_item(34)];
+        let mut fitting_b = type_fixture_ship(597);
+        fitting_b.items = vec![type_fixture_item(178)];
+        state.fittings = LoadState::Ready(FittingsData {
+            fittings: Ok(vec![fitting_a, fitting_b]),
+        });
+        state
+    }
+
+    #[test]
+    fn placeholder_status_covers_every_state() {
+        let ready = PortraitState::Ready(ready_image(8, 8));
+        assert_eq!(placeholder_status(false, &ready), "");
+        assert_eq!(placeholder_status(true, &ready), "");
+        assert_eq!(
+            placeholder_status(false, &PortraitState::NotRequested),
+            "Loading portrait..."
+        );
+        assert_eq!(
+            placeholder_status(false, &PortraitState::Loading),
+            "Loading portrait..."
+        );
+        assert_eq!(
+            placeholder_status(false, &PortraitState::Failed),
+            "Portrait unavailable."
+        );
+        assert_eq!(
+            placeholder_status(true, &PortraitState::NotRequested),
+            "Portraits are not fetched in demo mode."
+        );
+        assert_eq!(
+            placeholder_status(true, &PortraitState::Loading),
+            "Portraits are not fetched in demo mode."
+        );
+        assert_eq!(
+            placeholder_status(true, &PortraitState::Failed),
+            "Portraits are not fetched in demo mode."
+        );
+    }
+
+    #[test]
+    fn ensure_requests_only_unrequested_portraits() {
+        let mut state = state_with_ids(&[1, 2, 3, 4]);
+        state
+            .portraits
+            .insert((ImageKind::Character, 2), PortraitState::Loading);
+        state.portraits.insert(
+            (ImageKind::Character, 3),
+            PortraitState::Ready(ready_image(8, 8)),
+        );
+        state
+            .portraits
+            .insert((ImageKind::Character, 4), PortraitState::Failed);
+
+        ensure_portrait_requested(&mut state, 1);
+        assert_eq!(state.portrait_requests, vec![(ImageKind::Character, 1)]);
+        assert!(matches!(
+            state.portrait_state(ImageKind::Character, 1),
+            PortraitState::Loading
+        ));
+
+        // Loading, Ready, and Failed are all left alone: Failed in
+        // particular never re-queues from the render path, so a
+        // failed portrait cannot retry-loop at frame rate.
+        ensure_portrait_requested(&mut state, 2);
+        ensure_portrait_requested(&mut state, 3);
+        ensure_portrait_requested(&mut state, 4);
+        assert_eq!(state.portrait_requests, vec![(ImageKind::Character, 1)]);
+        assert!(matches!(
+            state.portrait_state(ImageKind::Character, 4),
+            PortraitState::Failed
+        ));
+
+        // Unknown ids queue nothing and fabricate no entry.
+        ensure_portrait_requested(&mut state, 999);
+        assert_eq!(state.portrait_requests, vec![(ImageKind::Character, 1)]);
+    }
+
+    #[test]
+    fn prune_on_an_empty_cache_keeps_it_empty() {
+        let mut cache = PortraitImageCache::new();
+        assert!(cache.is_empty());
+        cache.prune(&state_with_ids(&[]));
+        cache.prune(&state_with_ids(&[1]));
+        assert!(cache.is_empty());
+        assert_eq!(cache.len(), 0);
+    }
+
+    #[test]
+    fn texture_is_none_until_ready() {
+        let ctx = egui::Context::default();
+        let mut state = state_with_ids(&[1, 2, 3, 4]);
+        let mut cache = PortraitImageCache::new();
+
+        assert!(cache
+            .texture(&ctx, &state, ImageKind::Character, 1)
+            .is_none());
+        state
+            .portraits
+            .insert((ImageKind::Character, 2), PortraitState::Loading);
+        assert!(cache
+            .texture(&ctx, &state, ImageKind::Character, 2)
+            .is_none());
+        state
+            .portraits
+            .insert((ImageKind::Character, 3), PortraitState::Failed);
+        assert!(cache
+            .texture(&ctx, &state, ImageKind::Character, 3)
+            .is_none());
+        state.portraits.insert(
+            (ImageKind::Character, 4),
+            PortraitState::Ready(ready_image(8, 8)),
+        );
+        assert!(cache
+            .texture(&ctx, &state, ImageKind::Character, 4)
+            .is_some());
+        assert_eq!(cache.len(), 1);
+    }
+
+    #[test]
+    fn texture_uploads_once_per_image() {
+        let ctx = egui::Context::default();
+        let mut state = state_with_ids(&[1]);
+        let mut cache = PortraitImageCache::new();
+        state.portraits.insert(
+            (ImageKind::Character, 1),
+            PortraitState::Ready(ready_image(8, 8)),
+        );
+
+        let first = cache
+            .texture(&ctx, &state, ImageKind::Character, 1)
+            .expect("ready uploads");
+        let again = cache
+            .texture(&ctx, &state, ImageKind::Character, 1)
+            .expect("ready reuses");
+        assert_eq!(first.id(), again.id(), "one upload per image");
+
+        // A replaced image object for the same character uploads
+        // anew instead of showing the old face.
+        state.portraits.insert(
+            (ImageKind::Character, 1),
+            PortraitState::Ready(ready_image(8, 8)),
+        );
+        let replaced = cache
+            .texture(&ctx, &state, ImageKind::Character, 1)
+            .expect("replaced uploads");
+        assert_ne!(first.id(), replaced.id());
+        assert_eq!(cache.len(), 1);
+    }
+
+    #[test]
+    fn prune_frees_removed_characters_and_reuploads() {
+        let ctx = egui::Context::default();
+        let mut state = state_with_ids(&[1, 2]);
+        let mut cache = PortraitImageCache::new();
+        for id in [1i64, 2] {
+            state.portraits.insert(
+                (ImageKind::Character, id),
+                PortraitState::Ready(ready_image(8, 8)),
+            );
+            let _ = cache
+                .texture(&ctx, &state, ImageKind::Character, id)
+                .expect("upload");
+        }
+        assert_eq!(cache.len(), 2);
+
+        let kept_id = cache
+            .texture(&ctx, &state, ImageKind::Character, 1)
+            .expect("reuse")
+            .id();
+        let old_id = cache
+            .texture(&ctx, &state, ImageKind::Character, 2)
+            .expect("reuse")
+            .id();
+        cache.prune(&state_with_ids(&[1]));
+        assert_eq!(cache.len(), 1);
+
+        // The still-listed character keeps its texture; the pruned
+        // one re-uploads when it returns.
+        assert_eq!(
+            cache
+                .texture(&ctx, &state, ImageKind::Character, 1)
+                .expect("kept")
+                .id(),
+            kept_id
+        );
+        assert_ne!(
+            cache
+                .texture(&ctx, &state, ImageKind::Character, 2)
+                .expect("re-upload")
+                .id(),
+            old_id
+        );
+        cache.prune(&state_with_ids(&[]));
+        assert!(cache.is_empty());
+        assert!(cache
+            .texture(&ctx, &state, ImageKind::Character, 1)
+            .is_some());
+        assert_eq!(cache.len(), 1);
+    }
+
+    #[test]
+    fn show_portrait_runs_headless() {
+        let ctx = egui::Context::default();
+        let mut state = state_with_ids(&[1, 2]);
+        let mut cache = PortraitImageCache::new();
+        state.portraits.insert(
+            (ImageKind::Character, 1),
+            PortraitState::Ready(ready_image(8, 8)),
+        );
+        let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            egui::CentralPanel::default().show(ctx, |ui| {
+                show_portrait(ui, &mut cache, &state, 1, "Test Pilot", LIST_PORTRAIT_PX);
+                show_portrait(ui, &mut cache, &state, 2, "Test Pilot", LIST_PORTRAIT_PX);
+            });
+        });
+        assert_eq!(cache.len(), 1, "only the Ready portrait uploaded");
+    }
+
+    #[test]
+    fn ensure_logo_requests_only_unrequested_known_logos() {
+        // `test_row` carries corporation 1000166, so that key is
+        // known by row; each state below isolates one status.
+        let mut unrequested = state_with_ids(&[1]);
+        ensure_logo_requested(&mut unrequested, ImageKind::Corporation, 1000166);
+        assert_eq!(
+            unrequested.portrait_requests,
+            vec![(ImageKind::Corporation, 1000166)]
+        );
+        assert!(matches!(
+            unrequested.portrait_state(ImageKind::Corporation, 1000166),
+            PortraitState::Loading
+        ));
+
+        for (label, entry) in [
+            ("loading", PortraitState::Loading),
+            ("ready", PortraitState::Ready(ready_image(8, 8))),
+            ("failed", PortraitState::Failed),
+        ] {
+            let mut state = state_with_ids(&[1]);
+            state
+                .portraits
+                .insert((ImageKind::Corporation, 1000166), entry);
+            ensure_logo_requested(&mut state, ImageKind::Corporation, 1000166);
+            assert!(
+                state.portrait_requests.is_empty(),
+                "{label} must queue nothing"
+            );
+        }
+
+        // Unknown ids queue nothing and fabricate no entry.
+        let mut unknown = state_with_ids(&[1]);
+        ensure_logo_requested(&mut unknown, ImageKind::Corporation, 9999999);
+        assert!(unknown.portrait_requests.is_empty());
+    }
+
+    #[test]
+    fn same_numeric_id_in_two_kinds_uploads_two_textures() {
+        let ctx = egui::Context::default();
+        // Row id 1000166 doubles as corporation 1000166.
+        let mut state = state_with_ids(&[1000166]);
+        let mut cache = PortraitImageCache::new();
+        state.portraits.insert(
+            (ImageKind::Character, 1000166),
+            PortraitState::Ready(ready_image(8, 8)),
+        );
+        state.portraits.insert(
+            (ImageKind::Corporation, 1000166),
+            PortraitState::Ready(ready_image(8, 8)),
+        );
+
+        let portrait = cache
+            .texture(&ctx, &state, ImageKind::Character, 1000166)
+            .expect("portrait uploads");
+        let logo = cache
+            .texture(&ctx, &state, ImageKind::Corporation, 1000166)
+            .expect("logo uploads");
+        assert_eq!(cache.len(), 2);
+        assert_ne!(portrait.id(), logo.id());
+    }
+
+    #[test]
+    fn same_numeric_id_in_corporation_and_faction_uploads_two_textures() {
+        let ctx = egui::Context::default();
+        // State entries pin each kind to its own image; the cache
+        // must upload the same number under two kinds as two
+        // textures, never one shared upload.
+        let mut state = state_with_ids(&[1]);
+        let mut cache = PortraitImageCache::new();
+        state.portraits.insert(
+            (ImageKind::Corporation, 500001),
+            PortraitState::Ready(ready_image(8, 8)),
+        );
+        state.portraits.insert(
+            (ImageKind::Faction, 500001),
+            PortraitState::Ready(ready_image(8, 8)),
+        );
+
+        let corp = cache
+            .texture(&ctx, &state, ImageKind::Corporation, 500001)
+            .expect("corp uploads");
+        let faction = cache
+            .texture(&ctx, &state, ImageKind::Faction, 500001)
+            .expect("faction uploads");
+        assert_eq!(cache.len(), 2);
+        assert_ne!(corp.id(), faction.id());
+    }
+
+    #[test]
+    fn prune_is_kind_aware_for_corporation_logos() {
+        let ctx = egui::Context::default();
+        // Two rows share corporation 1000166 (the `test_row`
+        // default); pruning to one such row keeps the logo.
+        let mut state = state_with_ids(&[1, 2]);
+        let mut cache = PortraitImageCache::new();
+        state.portraits.insert(
+            (ImageKind::Corporation, 1000166),
+            PortraitState::Ready(ready_image(8, 8)),
+        );
+        let uploaded = cache
+            .texture(&ctx, &state, ImageKind::Corporation, 1000166)
+            .expect("upload")
+            .id();
+        cache.prune(&state_with_ids(&[1]));
+        assert_eq!(cache.len(), 1);
+        assert_eq!(
+            cache
+                .texture(&ctx, &state, ImageKind::Corporation, 1000166)
+                .expect("kept")
+                .id(),
+            uploaded
+        );
+
+        // Pruning to a state whose only row carries a different
+        // corporation frees it; the next lookup re-uploads.
+        let mut other_state = state_with_ids(&[1]);
+        other_state.characters[0].corporation_id = 1000125;
+        cache.prune(&other_state);
+        assert_eq!(cache.len(), 0);
+        assert_ne!(
+            cache
+                .texture(&ctx, &state, ImageKind::Corporation, 1000166)
+                .expect("re-upload")
+                .id(),
+            uploaded
+        );
+    }
+
+    fn bundle_with_faction_standing() -> CharacterDetailData {
+        CharacterDetailData {
+            attributes: Ok(CharacterAttributes::default()),
+            implants: Ok(Vec::new()),
+            clones: Ok(CharacterClones::default()),
+            standings: Ok(vec![Standing {
+                from_id: 500001,
+                from_type: "faction".to_string(),
+                standing: 3.25,
+            }]),
+            location: Ok(CharacterLocation::default()),
+            ship: Ok(CharacterShip::default()),
+            online: Ok(CharacterOnline::default()),
+        }
+    }
+
+    #[test]
+    fn prune_is_kind_aware_for_standings_faction_logos() {
+        let ctx = egui::Context::default();
+        // The bundle's faction standing is 500001's only backing:
+        // prune retains the texture while the bundle is loaded and
+        // frees it once the bundle is gone (character switch puts
+        // `character_details` back to `Loading`).
+        let mut state = state_with_ids(&[1]);
+        state.character_details = LoadState::Ready(bundle_with_faction_standing());
+        let mut cache = PortraitImageCache::new();
+        state.portraits.insert(
+            (ImageKind::Faction, 500001),
+            PortraitState::Ready(ready_image(8, 8)),
+        );
+        let uploaded = cache
+            .texture(&ctx, &state, ImageKind::Faction, 500001)
+            .expect("upload")
+            .id();
+        cache.prune(&state);
+        assert_eq!(cache.len(), 1);
+        assert_eq!(
+            cache
+                .texture(&ctx, &state, ImageKind::Faction, 500001)
+                .expect("kept")
+                .id(),
+            uploaded
+        );
+
+        let mut loading = state_with_ids(&[1]);
+        loading.character_details = LoadState::Loading;
+        cache.prune(&loading);
+        assert_eq!(cache.len(), 0);
+        assert_ne!(
+            cache
+                .texture(&ctx, &state, ImageKind::Faction, 500001)
+                .expect("re-upload")
+                .id(),
+            uploaded
+        );
+    }
+
+    #[test]
+    fn logo_texture_is_some_only_when_ready() {
+        let ctx = egui::Context::default();
+        let mut state = state_with_ids(&[1]);
+        let mut cache = PortraitImageCache::new();
+
+        assert!(cache
+            .texture(&ctx, &state, ImageKind::Corporation, 1000166)
+            .is_none());
+        state
+            .portraits
+            .insert((ImageKind::Corporation, 1000166), PortraitState::Loading);
+        assert!(cache
+            .texture(&ctx, &state, ImageKind::Corporation, 1000166)
+            .is_none());
+        state
+            .portraits
+            .insert((ImageKind::Corporation, 1000166), PortraitState::Failed);
+        assert!(cache
+            .texture(&ctx, &state, ImageKind::Corporation, 1000166)
+            .is_none());
+        state.portraits.insert(
+            (ImageKind::Corporation, 1000166),
+            PortraitState::Ready(ready_image(8, 8)),
+        );
+        assert!(cache
+            .texture(&ctx, &state, ImageKind::Corporation, 1000166)
+            .is_some());
+        assert_eq!(cache.len(), 1);
+    }
+
+    #[test]
+    fn show_logo_runs_headless() {
+        let ctx = egui::Context::default();
+        let mut state = state_with_ids(&[1]);
+        let mut cache = PortraitImageCache::new();
+        state.portraits.insert(
+            (ImageKind::Corporation, 1000166),
+            PortraitState::Ready(ready_image(8, 8)),
+        );
+        // Corporation 1000125 has no entry: the placeholder.
+        let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            egui::CentralPanel::default().show(ctx, |ui| {
+                show_logo(
+                    ui,
+                    &mut cache,
+                    &state,
+                    ImageKind::Corporation,
+                    1000166,
+                    DETAIL_LOGO_PX,
+                );
+                show_logo(
+                    ui,
+                    &mut cache,
+                    &state,
+                    ImageKind::Corporation,
+                    1000125,
+                    DETAIL_LOGO_PX,
+                );
+            });
+        });
+        assert_eq!(cache.len(), 1, "only the Ready logo uploaded");
+    }
+
+    #[test]
+    fn ensure_type_icon_mirrors_logo_ensure_table() {
+        let mut state = type_fixture_state();
+        ensure_type_icon_requested(&mut state, 2048);
+        assert_eq!(state.portrait_requests, vec![(ImageKind::Type, 2048)]);
+        assert!(matches!(
+            state.portrait_state(ImageKind::Type, 2048),
+            PortraitState::Loading
+        ));
+
+        // Loading, Ready, and Failed entries for other known ids
+        // are left alone: Failed never re-queues.
+        let mut state = type_fixture_state();
+        state
+            .portraits
+            .insert((ImageKind::Type, 587), PortraitState::Loading);
+        state.portraits.insert(
+            (ImageKind::Type, 34),
+            PortraitState::Ready(ready_image(8, 8)),
+        );
+        state
+            .portraits
+            .insert((ImageKind::Type, 597), PortraitState::Failed);
+        ensure_type_icon_requested(&mut state, 587);
+        ensure_type_icon_requested(&mut state, 34);
+        ensure_type_icon_requested(&mut state, 597);
+        assert!(state.portrait_requests.is_empty());
+        assert!(matches!(
+            state.portrait_state(ImageKind::Type, 597),
+            PortraitState::Failed
+        ));
+
+        // Unknown ids queue nothing and fabricate no entry.
+        let mut unknown = type_fixture_state();
+        ensure_type_icon_requested(&mut unknown, 99999999);
+        assert!(unknown.portrait_requests.is_empty());
+        assert!(!unknown.portraits.contains_key(&(ImageKind::Type, 99999999)));
+    }
+
+    #[test]
+    fn same_numeric_id_in_character_and_type_uploads_two_textures() {
+        let ctx = egui::Context::default();
+        // Character 587 doubles as the fitting A ship type 587.
+        let mut state = state_with_ids(&[587]);
+        let mut fitting = type_fixture_ship(587);
+        fitting.items = vec![type_fixture_item(2048)];
+        state.fittings = LoadState::Ready(FittingsData {
+            fittings: Ok(vec![fitting]),
+        });
+        let mut cache = PortraitImageCache::new();
+        state.portraits.insert(
+            (ImageKind::Character, 587),
+            PortraitState::Ready(ready_image(8, 8)),
+        );
+        state.portraits.insert(
+            (ImageKind::Type, 587),
+            PortraitState::Ready(ready_image(8, 8)),
+        );
+
+        let portrait = cache
+            .texture(&ctx, &state, ImageKind::Character, 587)
+            .expect("portrait uploads");
+        let icon = cache
+            .texture(&ctx, &state, ImageKind::Type, 587)
+            .expect("type icon uploads");
+        assert_eq!(cache.len(), 2);
+        assert_ne!(portrait.id(), icon.id());
+    }
+
+    #[test]
+    fn prune_keeps_type_icon_across_selection_change() {
+        let ctx = egui::Context::default();
+        // Type 34 is named only by fitting A; selecting fitting B
+        // must not drop its texture (whole-bundle retention).
+        let mut state = type_fixture_state();
+        state.fittings_selected_fitting_id = Some(587);
+        let mut cache = PortraitImageCache::new();
+        state.portraits.insert(
+            (ImageKind::Type, 34),
+            PortraitState::Ready(ready_image(8, 8)),
+        );
+        let uploaded = cache
+            .texture(&ctx, &state, ImageKind::Type, 34)
+            .expect("upload")
+            .id();
+        state.fittings_selected_fitting_id = Some(597);
+        cache.prune(&state);
+        assert_eq!(cache.len(), 1);
+        assert_eq!(
+            cache
+                .texture(&ctx, &state, ImageKind::Type, 34)
+                .expect("kept")
+                .id(),
+            uploaded
+        );
+
+        // Pruning against a state with `fittings` Loading empties
+        // the cache.
+        let mut loading = type_fixture_state();
+        loading.fittings = LoadState::Loading;
+        cache.prune(&loading);
+        assert_eq!(cache.len(), 0);
+    }
+
+    #[test]
+    fn prune_keeps_selected_market_type_icon_across_switch() {
+        let ctx = egui::Context::default();
+        // Type 3300 is only the market selection, never a fitting.
+        let mut state = type_fixture_state();
+        state.set_market_selection(3300, "Type X".to_string());
+        let mut cache = PortraitImageCache::new();
+        state.portraits.insert(
+            (ImageKind::Type, 3300),
+            PortraitState::Ready(ready_image(8, 8)),
+        );
+        let uploaded = cache
+            .texture(&ctx, &state, ImageKind::Type, 3300)
+            .expect("upload")
+            .id();
+        assert_eq!(cache.len(), 1);
+
+        // A fittings selection change keeps the market texture.
+        state.fittings_selected_fitting_id = Some(597);
+        cache.prune(&state);
+        assert_eq!(cache.len(), 1);
+        assert_eq!(
+            cache
+                .texture(&ctx, &state, ImageKind::Type, 3300)
+                .expect("kept")
+                .id(),
+            uploaded,
+            "no re-upload while selected"
+        );
+
+        // A character switch resets the fittings bundle but keeps
+        // the selection, so the texture survives with no re-upload.
+        state.set_active_character(2);
+        cache.prune(&state);
+        assert_eq!(cache.len(), 1);
+        assert_eq!(
+            cache
+                .texture(&ctx, &state, ImageKind::Type, 3300)
+                .expect("kept across switch")
+                .id(),
+            uploaded
+        );
+
+        // Selecting another item drops the old texture on prune.
+        state.set_market_selection(12345, "Type Y".to_string());
+        cache.prune(&state);
+        assert_eq!(cache.len(), 0);
+    }
+
+    #[test]
+    fn prune_keeps_skill_catalogue_type_icon_across_switch() {
+        let ctx = egui::Context::default();
+        // 3300 (Gunnery) is only a bundled catalogue skill type,
+        // never a fitting, held asset, or market selection.
+        let sde = crate::names::sde::Sde::load_bundled().expect("bundled SDE loads");
+        let mut state = type_fixture_state();
+        state.install_skill_catalogue_type_ids(&sde);
+        let mut cache = PortraitImageCache::new();
+        state.portraits.insert(
+            (ImageKind::Type, 3300),
+            PortraitState::Ready(ready_image(8, 8)),
+        );
+        let uploaded = cache
+            .texture(&ctx, &state, ImageKind::Type, 3300)
+            .expect("upload")
+            .id();
+        assert_eq!(cache.len(), 1);
+
+        // A character switch keeps the catalogue texture with
+        // the same handle (no re-upload).
+        state.set_active_character(2);
+        cache.prune(&state);
+        assert_eq!(cache.len(), 1);
+        assert_eq!(
+            cache
+                .texture(&ctx, &state, ImageKind::Type, 3300)
+                .expect("kept across switch")
+                .id(),
+            uploaded
+        );
+
+        // A catalogue search change keeps it too.
+        state.skill_search = "Gunnery".to_string();
+        cache.prune(&state);
+        assert_eq!(cache.len(), 1);
+        assert_eq!(
+            cache
+                .texture(&ctx, &state, ImageKind::Type, 3300)
+                .expect("kept across search")
+                .id(),
+            uploaded
+        );
+
+        // Prune against a state with nothing installed drops
+        // the texture: guard loss is the only drop path.
+        let uninstalled = AppState::default();
+        assert!(!uninstalled.image_id_known(ImageKind::Type, 3300));
+        cache.prune(&uninstalled);
+        assert_eq!(cache.len(), 0);
+    }
+
+    fn asset_fixture_state() -> AppState {
+        let mut state = state_with_ids(&[1, 2]);
+        // Active character 1 is set by set_active_character so the
+        // switch below resets assets the same way production does.
+        state.set_active_character(1);
+        let mut fitting_a = type_fixture_ship(587);
+        fitting_a.items = vec![type_fixture_item(2048), type_fixture_item(34)];
+        let mut fitting_b = type_fixture_ship(597);
+        fitting_b.items = vec![type_fixture_item(178)];
+        state.fittings = LoadState::Ready(FittingsData {
+            fittings: Ok(vec![fitting_a, fitting_b]),
+        });
+        state.assets = LoadState::Ready(AssetsData {
+            items: vec![
+                AssetItem {
+                    item_id: 1,
+                    type_id: 3300,
+                    quantity: 1,
+                    location_id: 60003760,
+                    ..Default::default()
+                },
+                AssetItem {
+                    item_id: 2,
+                    type_id: 587,
+                    quantity: 1,
+                    location_id: 60003760,
+                    ..Default::default()
+                },
+            ],
+            custom_names: std::collections::HashMap::new(),
+        });
+        state
+    }
+
+    #[test]
+    fn prune_keeps_held_asset_type_icon_within_one_load() {
+        let ctx = egui::Context::default();
+        // 3300 is held as an asset only; 587 is held as an asset and
+        // in a saved fitting (the overlap).
+        let mut state = asset_fixture_state();
+        let mut cache = PortraitImageCache::new();
+        state.portraits.insert(
+            (ImageKind::Type, 3300),
+            PortraitState::Ready(ready_image(8, 8)),
+        );
+        state.portraits.insert(
+            (ImageKind::Type, 587),
+            PortraitState::Ready(ready_image(8, 8)),
+        );
+        let asset_only = cache
+            .texture(&ctx, &state, ImageKind::Type, 3300)
+            .expect("upload")
+            .id();
+        let overlap = cache
+            .texture(&ctx, &state, ImageKind::Type, 587)
+            .expect("upload")
+            .id();
+        assert_eq!(cache.len(), 2);
+
+        // Changing the assets search keeps both textures with the
+        // same handles (no re-upload).
+        state.assets_search = "3300".to_string();
+        cache.prune(&state);
+        assert_eq!(cache.len(), 2);
+        assert_eq!(
+            cache
+                .texture(&ctx, &state, ImageKind::Type, 3300)
+                .expect("kept")
+                .id(),
+            asset_only
+        );
+        assert_eq!(
+            cache
+                .texture(&ctx, &state, ImageKind::Type, 587)
+                .expect("kept")
+                .id(),
+            overlap
+        );
+
+        // A fittings selection change also keeps both (whole-bundle
+        // retention).
+        state.fittings_selected_fitting_id = Some(597);
+        cache.prune(&state);
+        assert_eq!(cache.len(), 2);
+        assert_eq!(
+            cache
+                .texture(&ctx, &state, ImageKind::Type, 3300)
+                .expect("kept")
+                .id(),
+            asset_only
+        );
+        assert_eq!(
+            cache
+                .texture(&ctx, &state, ImageKind::Type, 587)
+                .expect("kept")
+                .id(),
+            overlap
+        );
+
+        // The character switch resets assets (and fittings) to
+        // Loading; reloading the fittings bundle for the new active
+        // character keeps the overlapping type known while the
+        // asset-only type drops on prune. The new bundle carries
+        // the same ship 587, so the overlap survives via the
+        // fittings arm, not the assets arm.
+        state.set_active_character(2);
+        let mut fitting_a = type_fixture_ship(587);
+        fitting_a.items = vec![type_fixture_item(2048), type_fixture_item(34)];
+        let mut fitting_b = type_fixture_ship(597);
+        fitting_b.items = vec![type_fixture_item(178)];
+        state.fittings = LoadState::Ready(FittingsData {
+            fittings: Ok(vec![fitting_a, fitting_b]),
+        });
+        assert!(!state.image_id_known(ImageKind::Type, 3300));
+        assert!(state.image_id_known(ImageKind::Type, 587));
+        cache.prune(&state);
+        assert_eq!(cache.len(), 1, "asset-only texture drops on switch");
+        assert_eq!(
+            cache
+                .texture(&ctx, &state, ImageKind::Type, 587)
+                .expect("overlap kept")
+                .id(),
+            overlap,
+            "no re-upload for the overlapping type"
+        );
+        // Prune dropped only the texture, never the portrait state:
+        // the asset-only Ready image is still in state and would
+        // re-upload exactly once if its type became known again.
+        assert!(matches!(
+            state.portrait_state(ImageKind::Type, 3300),
+            PortraitState::Ready(_)
+        ));
+        assert_eq!(cache.len(), 1);
+        // A second prune keeps the dropped texture dropped while
+        // unknown (no texture call for the unknown id here, just
+        // the retained overlap).
+        assert_eq!(
+            cache
+                .texture(&ctx, &state, ImageKind::Type, 587)
+                .expect("overlap still kept")
+                .id(),
+            overlap
+        );
+        assert_eq!(cache.len(), 1);
+    }
+
+    #[test]
+    fn show_type_icon_runs_headless() {
+        let ctx = egui::Context::default();
+        let mut state = type_fixture_state();
+        let mut cache = PortraitImageCache::new();
+        state.portraits.insert(
+            (ImageKind::Type, 587),
+            PortraitState::Ready(ready_image(8, 8)),
+        );
+        // Type 2048 has no entry: the placeholder box.
+        let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            egui::CentralPanel::default().show(ctx, |ui| {
+                show_type_icon(ui, &mut cache, &state, 587, TYPE_ICON_PX);
+                show_type_icon(ui, &mut cache, &state, 2048, TYPE_ICON_PX);
+            });
+        });
+        assert_eq!(cache.len(), 1, "only the Ready type icon uploaded");
+    }
+}
