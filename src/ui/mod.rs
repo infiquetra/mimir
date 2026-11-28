@@ -6,6 +6,7 @@ pub mod exploration;
 pub mod fittings;
 pub mod industry;
 pub mod market;
+pub mod pantry;
 pub mod planets;
 pub mod portraits;
 pub mod quick_sight;

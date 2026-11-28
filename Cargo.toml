@@ -36,6 +36,7 @@ jsonwebtoken = { version = "12", default-features = false, features = ["rust_cry
 notify = "8"
 arboard = "3.7"
 egui_tiles = "0.18"
+egui_table = "0.11"
 
 [dev-dependencies]
 egui_kittest = { version = "0.37", features = ["snapshot", "wgpu"] }

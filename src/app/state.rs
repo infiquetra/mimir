@@ -45,10 +45,11 @@ pub enum View {
     Fittings,
     Settings,
     Exploration,
+    Pantry,
 }
 
 impl View {
-    pub const ALL: [View; 11] = [
+    pub const ALL: [View; 12] = [
         View::Dashboard,
         View::Characters,
         View::Skills,
@@ -60,6 +61,7 @@ impl View {
         View::Fittings,
         View::Settings,
         View::Exploration,
+        View::Pantry,
     ];
 
     pub fn label(&self) -> &'static str {
@@ -75,6 +77,7 @@ impl View {
             View::Fittings => "Fittings",
             View::Settings => "Settings",
             View::Exploration => "Exploration",
+            View::Pantry => "Pantry",
         }
     }
 
@@ -749,6 +752,17 @@ pub struct AppState {
     pub planetary: LoadState<PlanetaryData>,
     pub fittings: LoadState<FittingsData>,
     pub exploration: LoadState<ExplorationData>,
+    /// Cross-character Pantry snapshot (card #642): every linked
+    /// character's holdings, so it survives active-character
+    /// switches; `remove_character` drops the removed character's
+    /// rows so deleted holdings never bleed into the stockpile.
+    pub pantry: LoadState<crate::pantry::PantrySnapshot>,
+    /// Derived Pantry display data (rows, buckets, available
+    /// totals, filtered indices), rebuilt only when the
+    /// snapshot, name cache, or roster changes — a cache-hit
+    /// frame never rebuilds or re-sorts (card #642 repair).
+    pub pantry_cache: crate::pantry::indexer::PantryCache,
+    pub pantry_search: String,
     pub log_lines: Vec<String>,
     pub status_message: String,
 
@@ -1352,6 +1366,11 @@ impl AppState {
         tracing::info!("[CHAR] remove character_id={}", character_id);
         self.characters.retain(|c| c.character_id != character_id);
         self.summaries.remove(&character_id);
+        // Pantry is cross-character: drop exactly the removed
+        // character's holdings and step-up badge, keep the rest.
+        if let LoadState::Ready(snapshot) = &mut self.pantry {
+            snapshot.remove_character(character_id);
+        }
         // Demo plans are keyed per character (design section 7):
         // removing a character drops its demo entry too, so a
         // late landing can never resurrect plans for a gone
@@ -1640,6 +1659,9 @@ impl AppState {
         self.skills = LoadState::Empty;
         self.wallet = LoadState::Empty;
         self.assets = LoadState::Empty;
+        self.pantry = LoadState::Empty;
+        self.pantry_cache = crate::pantry::indexer::PantryCache::default();
+        self.pantry_search.clear();
         self.assets_needs_reauthorize = false;
         self.structures_needs_reauthorize = false;
         self.character_detail = LoadState::Empty;
@@ -1971,10 +1993,14 @@ mod tests {
         // every index 0-9 is unchanged, Settings.next() is now
         // Exploration and Exploration wraps back to Dashboard.
         assert_eq!(View::Settings.next(), View::Exploration);
-        assert_eq!(View::Exploration.next(), View::Dashboard);
-        assert_eq!(View::Dashboard.previous(), View::Exploration);
+        // Pantry is appended after Exploration (card #642):
+        // indices 0-10 are unchanged and Pantry wraps around.
+        assert_eq!(View::Exploration.next(), View::Pantry);
+        assert_eq!(View::Pantry.next(), View::Dashboard);
+        assert_eq!(View::Dashboard.previous(), View::Pantry);
+        assert_eq!(View::Pantry.previous(), View::Exploration);
         assert_eq!(View::Exploration.previous(), View::Settings);
-        assert_eq!(View::ALL.len(), 11);
+        assert_eq!(View::ALL.len(), 12);
         assert_eq!(View::from_index(3), Some(View::Wallet));
         assert_eq!(View::from_index(4), Some(View::Assets));
         assert_eq!(View::from_index(5), Some(View::Market));
@@ -1983,7 +2009,8 @@ mod tests {
         assert_eq!(View::from_index(8), Some(View::Fittings));
         assert_eq!(View::from_index(9), Some(View::Settings));
         assert_eq!(View::from_index(10), Some(View::Exploration));
-        assert_eq!(View::from_index(11), None);
+        assert_eq!(View::from_index(11), Some(View::Pantry));
+        assert_eq!(View::from_index(12), None);
         assert_eq!(View::Wallet.index(), 3);
         assert_eq!(View::Assets.index(), 4);
         assert_eq!(View::Market.index(), 5);
