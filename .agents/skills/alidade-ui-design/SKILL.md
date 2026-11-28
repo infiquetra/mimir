@@ -7,16 +7,16 @@ description: Design and build studio-grade native Rust desktop interfaces for Al
 
 Stock immediate-mode `egui` looks like a programmer debug inspector when built with default borders, uniform gray surfaces, and walls of `.label(...)` prose. **Alidade** commits to an unmistakable point of view: **a precision astrometric instrument for New Eden**—modeled on Rerun's `re_ui` token architecture and Google Frontend Design's typographic and anti-clutter discipline, where **spatial canvases, flow diagrams, proportion, color conviction, and tabular numerals** carry the experience rather than text walls.
 
-## 1. Mandatory HTML/Canvas Prototype Gate (Before Rust Layout Work)
+## 1. Directional Aesthetic Reference (Baseline Floor, Never a Pixel Cage)
 
-Before rewriting any major view in `src/ui/` or adding a new spatial workspace:
-1. Check `mimir-context-library/platform-specs/ui-mockups/` for the approved interactive HTML/Canvas visual prototype covering that surface.
-2. If no prototype exists or the layout changes materially, author or update the static/Canvas prototype in `mimir-context-library/platform-specs/ui-mockups/` first so proportion, hierarchy, color contrast, and visual-to-text ratio are proven before spending Rust build cycles.
-3. Match the Rust `egui` + `wgpu` implementation directly to the prototype's token values, pane ratios, and visual affordances.
+When designing or refining any view in `src/ui/` or adding a spatial workspace:
+1. Review `mimir-context-library/platform-specs/ui-mockups/index.html` to internalize the **Astrometric theme, dark obsidian/brass/cyan mood, and visual-over-prose direction**.
+2. Treat the HTML/Canvas mockups and starter hex values below as a **directional floor and creative springboard — NOT an absolute, pixel-frozen specification**.
+3. Push the native `egui 0.37` + `wgpu` execution **to the next level**: refine proportions, surface depth, shader/canvas polish, tactile hover/selection states, and spatial clarity wherever you see a stronger visual solution, while keeping colors centralized in `DesignTokens` and meeting contrast/accessibility floors.
 
-## 2. Astrometric Color & Surface Tokens (`DesignTokens`)
+## 2. Astrometric Color & Surface Tokens (`DesignTokens` — Directional Palette)
 
-Define every color in one central `DesignTokens` struct (`src/ui/theme.rs`)—never scatter inline `Color32::from_rgb(...)` literals across view files:
+Centralize all colors in one `DesignTokens` struct (`src/ui/tokens.rs` / `src/ui/theme.rs`)—never scatter inline `Color32::from_rgb(...)` literals across view files. Use the Astrometric palette below as your directional anchor (you may tune exact shades, subtle gradients, and elevation steps to elevate visual craft as long as contrast and semantic clarity hold):
 
 - **Deep Obsidian Canvas (`#090D14`)**: Root workspace background behind `egui_tiles` split panes (`1px` subtle `#1B2432` hairlines—never chunky `2px+` rounded gray `egui::Group` boxes).
 - **Recessed Instrument Slate (`#101722`)**: Primary panel surface; `#16202F` elevated interactive surface on hover/selection.
