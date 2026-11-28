@@ -223,6 +223,25 @@ pub struct DogmaCatalogue {
     per_level_skills: HashMap<i64, Vec<i64>>,
 }
 
+/// Shared bundled Dogma catalogue (#648 repair): parsed at most once
+/// per process, failure cached too, so no view re-parses per frame.
+pub fn shared_bundled_dogma() -> Option<std::sync::Arc<DogmaCatalogue>> {
+    use std::sync::OnceLock;
+    static SHARED: OnceLock<Result<std::sync::Arc<DogmaCatalogue>, String>> = OnceLock::new();
+    let result = SHARED.get_or_init(|| {
+        DogmaCatalogue::load_bundled()
+            .map(std::sync::Arc::new)
+            .map_err(|e| e.to_string())
+    });
+    match result {
+        Ok(arc) => Some(std::sync::Arc::clone(arc)),
+        Err(message) => {
+            tracing::warn!("[FITTING] shared dogma catalogue unavailable: {message}");
+            None
+        }
+    }
+}
+
 impl DogmaCatalogue {
     pub fn load_bundled() -> AppResult<Self> {
         tracing::debug!("[FITTING] loading bundled dogma catalogue");

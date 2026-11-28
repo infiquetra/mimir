@@ -10,7 +10,7 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use crate::daemon::{ClipboardKind, LogEvent};
+use crate::daemon::{ClipboardKind, LogEvent, LogEventKind};
 use crate::esi::endpoints::WriteFailureClass;
 use crate::esi::models::*;
 use crate::fitting::editor::{BrowserRow, ShipRow};
@@ -18,6 +18,7 @@ use crate::fitting::eft::{ImportSection, ImportedFitting};
 use crate::invention_calculator::{
     DEFAULT_BASE_PROBABILITY, DEFAULT_DECRYPTOR_MULTIPLIER, DEFAULT_SKILL_LEVEL,
 };
+use crate::mining::survey_scanner::SurveyParse;
 use crate::names::exploration_ref::{EffectFamily, ExplorationRef};
 use crate::names::sde::Sde;
 use crate::portraits::ImageKind;
@@ -1052,6 +1053,16 @@ pub struct AppState {
     pub mining_fetch_requested: bool,
     pub mining_generation: u64,
     pub mining_survey_text: String,
+    /// Session start stamped via `now_utc()` when the first mining
+    /// event lands (#648 repair); rate math never uses a raw clock.
+    pub mining_session_started_unix: Option<i64>,
+    /// Survey parse cache keyed by (hash, len) of the paste text.
+    pub mining_survey_cache_key: Option<(u64, usize)>,
+    pub mining_survey_cached: SurveyParse,
+    /// Cached per-unit ore hub quotes keyed by ore name. Demo seeds
+    /// these in memory only; live entries come only from a market
+    /// history whose selected type is that ore itself.
+    pub mining_ore_price_per_unit: std::collections::HashMap<String, f64>,
 
     // Request flags for the integrator to drain (set by views, never faked
     // as completed work). See the module comment.
@@ -1348,7 +1359,7 @@ impl AppState {
                 self.mining_needs_reauthorize = false;
                 self.mining_fetch_requested = false;
                 self.mining_generation = self.mining_generation.wrapping_add(1);
-                self.mining_survey_text.clear();
+                self.clear_mining_view_state();
                 // Same ownership argument: colonies are fetched
                 // tolerantly and detail is identity-stamped, so
                 // reset at the switch boundary.
@@ -1595,7 +1606,7 @@ impl AppState {
             self.mining_needs_reauthorize = false;
             self.mining_fetch_requested = false;
             self.mining_generation = self.mining_generation.wrapping_add(1);
-            self.mining_survey_text.clear();
+            self.clear_mining_view_state();
             tracing::debug!("[PI] clearing planetary of removed active character");
             self.planetary = LoadState::Loading;
             self.planetary_selected_planet_id = None;
@@ -1693,7 +1704,7 @@ impl AppState {
             self.mining_needs_reauthorize = false;
             self.mining_fetch_requested = false;
             self.mining_generation = self.mining_generation.wrapping_add(1);
-            self.mining_survey_text.clear();
+            self.clear_mining_view_state();
             self.planetary = LoadState::Empty;
             self.planetary_selected_planet_id = None;
             self.planetary_detail_fetch_requested = false;
@@ -1806,7 +1817,7 @@ impl AppState {
         self.mining_needs_reauthorize = false;
         self.mining_fetch_requested = false;
         self.mining_generation = self.mining_generation.wrapping_add(1);
-        self.mining_survey_text.clear();
+        self.clear_mining_view_state();
         self.planetary = LoadState::Empty;
         self.planetary_selected_planet_id = None;
         self.planetary_detail_fetch_requested = false;
@@ -1871,9 +1882,25 @@ impl AppState {
         self.reset_exploration_domain();
     }
 
+    /// Clear session-only mining view state (survey, cache, quotes,
+    /// session stamp). Called at every mining reset site.
+    pub fn clear_mining_view_state(&mut self) {
+        self.mining_survey_text.clear();
+        self.mining_session_started_unix = None;
+        self.mining_survey_cache_key = None;
+        self.mining_survey_cached = SurveyParse::default();
+        self.mining_ore_price_per_unit.clear();
+    }
+
     /// Record one daemon log event in the capped session-only ring.
     /// Counts and variants only are ever logged by callers.
     pub fn push_log_event(&mut self, event: LogEvent) {
+        if event.kind == LogEventKind::Mining && self.mining_session_started_unix.is_none() {
+            // Receipt stamp from the injected clock (demo anchor in
+            // demo), never a raw Utc::now in demo paths.
+            self.mining_session_started_unix = Some(self.now_utc().timestamp());
+            tracing::debug!("[MINING] mining session start stamped");
+        }
         self.daemon_event_count = self.daemon_event_count.saturating_add(1);
         self.recent_log_events.push(event);
         if self.recent_log_events.len() > RECENT_LOG_EVENTS_CAP {

@@ -22,4 +22,21 @@ mod stepup_scope_guard {
         }
         assert!(!EveConfig::first_auth_scopes_string().contains("read_character_mining"));
     }
+
+    #[test]
+    fn first_auth_scopes_exact_contents_pinned() {
+        // Byte-identical first-auth set (#648 AC): any addition,
+        // removal, or reorder fails here before it ships.
+        assert_eq!(
+            EveConfig::FIRST_AUTH_SCOPES,
+            [
+                "publicData",
+                "esi-skills.read_skills.v1",
+                "esi-skills.read_skillqueue.v1",
+                "esi-wallet.read_character_wallet.v1",
+                "esi-clones.read_implants.v1",
+            ]
+            .as_slice()
+        );
+    }
 }

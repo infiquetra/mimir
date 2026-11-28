@@ -129,6 +129,14 @@ pub struct DesignTokens {
     pub strip_dash_step_deg: f32,
     pub strip_dash_arc_deg: f32,
     pub strip_min_width: f32,
+    // Mining gauge/bar geometry (#648 repair): arc gauges and bars
+    // resolve every measurement through these fields.
+    pub gauge_size: f32,
+    pub gauge_radius: f32,
+    pub gauge_stroke: f32,
+    pub gauge_steps: usize,
+    pub bar_height: f32,
+    pub bar_min_width: f32,
 }
 
 impl DesignTokens {
@@ -188,6 +196,12 @@ impl DesignTokens {
             strip_dash_step_deg: 36.0,
             strip_dash_arc_deg: 18.0,
             strip_min_width: 320.0,
+            gauge_size: 120.0,
+            gauge_radius: 48.0,
+            gauge_stroke: 6.0,
+            gauge_steps: 48,
+            bar_height: 14.0,
+            bar_min_width: 80.0,
             typography: Typography {
                 heading: 18.0,
                 body: 13.5,

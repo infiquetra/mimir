@@ -45,5 +45,6 @@
   { "id": 3645, "name": "Water", "category": "inventory_type" },
   { "id": 9838, "name": "Superconductors", "category": "inventory_type" },
   { "id": 2480, "name": "Temperate Advanced Industry Facility", "category": "inventory_type" },
-  { "id": 2481, "name": "Temperate Basic Industry Facility", "category": "inventory_type" }
+  { "id": 2481, "name": "Temperate Basic Industry Facility", "category": "inventory_type" },
+  { "id": 17478, "name": "Retriever", "category": "inventory_type" }
 ]

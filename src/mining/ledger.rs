@@ -20,11 +20,20 @@ pub struct MiningSample {
 }
 
 /// Aggregated yield and residue for a session or fleet.
-#[derive(Debug, Clone, Copy, Default, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
+pub struct OreTotal {
+    pub ore_name: String,
+    pub yield_m3: f64,
+    pub residue_m3: f64,
+}
+
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct SessionTotals {
     pub yield_m3: f64,
     pub residue_m3: f64,
     pub samples: usize,
+    pub by_ore: Vec<OreTotal>,
+    pub skipped_unknown_ore: usize,
 }
 
 impl SessionTotals {
@@ -57,6 +66,124 @@ pub fn isk_per_hour(total_isk: f64, elapsed_secs: f64) -> f64 {
         return 0.0;
     }
     total_isk / elapsed_secs * 3600.0
+}
+
+/// Price per cubic metre for a raw ore type from its per-unit hub
+/// price and SDE volume per unit (`price_per_unit / volume`).
+pub fn price_per_m3_from_unit(price_per_unit: f64, volume_per_unit: f64) -> Option<f64> {
+    if price_per_unit > 0.0 && volume_per_unit > 0.0 {
+        Some(price_per_unit / volume_per_unit)
+    } else {
+        None
+    }
+}
+
+/// Price per cubic metre of raw-equivalent ore for a compressed type.
+/// One compressed batch represents `portion_size` raw units (SDE
+/// `portionSize`, 100 -> 1), so the denominator is
+/// `portion_size * raw_volume_per_unit`.
+pub fn compressed_price_per_m3(
+    compressed_price_per_unit: f64,
+    raw_volume_per_unit: f64,
+    portion_size: i64,
+) -> Option<f64> {
+    let portion = compressed_portion_size(portion_size) as f64;
+    if compressed_price_per_unit > 0.0 && raw_volume_per_unit > 0.0 {
+        Some(compressed_price_per_unit / (portion * raw_volume_per_unit))
+    } else {
+        None
+    }
+}
+
+/// Honest session valuation: priced and unpriced yield stay separate.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SessionValuation {
+    pub priced_isk: f64,
+    pub priced_yield_m3: f64,
+    pub unpriced_yield_m3: f64,
+}
+
+impl SessionValuation {
+    pub fn all_priced(&self) -> bool {
+        self.unpriced_yield_m3 <= 0.0 && self.priced_yield_m3 > 0.0
+    }
+    pub fn isk_per_hour(&self, elapsed_secs: f64) -> Option<f64> {
+        if elapsed_secs > 0.0 && self.priced_isk > 0.0 {
+            Some(isk_per_hour(self.priced_isk, elapsed_secs))
+        } else {
+            None
+        }
+    }
+}
+
+/// Value per-ore yield at per-m3 prices keyed by ore name. Ores without
+/// a cached quote contribute to `unpriced_yield_m3`, never to ISK.
+pub fn value_session_by_ore(
+    totals: &SessionTotals,
+    price_per_m3_by_ore: &std::collections::HashMap<String, f64>,
+) -> SessionValuation {
+    let mut out = SessionValuation {
+        priced_isk: 0.0,
+        priced_yield_m3: 0.0,
+        unpriced_yield_m3: 0.0,
+    };
+    if totals.by_ore.is_empty() {
+        out.unpriced_yield_m3 = totals.yield_m3.max(0.0);
+        return out;
+    }
+    for ore in &totals.by_ore {
+        match price_per_m3_by_ore.get(&ore.ore_name).filter(|p| **p > 0.0) {
+            Some(price) => {
+                out.priced_isk += ore.yield_m3.max(0.0) * price;
+                out.priced_yield_m3 += ore.yield_m3.max(0.0);
+            }
+            None => out.unpriced_yield_m3 += ore.yield_m3.max(0.0),
+        }
+    }
+    tracing::debug!(
+        "[MINING] session valuation priced_m3={:.1} unpriced_m3={:.1}",
+        out.priced_yield_m3,
+        out.unpriced_yield_m3
+    );
+    out
+}
+
+/// Parse an EVE gamelog timestamp (`2026.11.28 10:01:02`) to Unix secs.
+pub fn parse_log_timestamp_to_unix(ts: &str) -> Option<i64> {
+    let trimmed = ts.trim();
+    for fmt in ["%Y.%m.%d %H:%M:%S", "%Y-%m-%d %H:%M:%S"] {
+        if let Ok(dt) = chrono::NaiveDateTime::parse_from_str(trimmed, fmt) {
+            return Some(dt.and_utc().timestamp());
+        }
+    }
+    chrono::DateTime::parse_from_rfc3339(trimmed)
+        .ok()
+        .map(|dt| dt.timestamp())
+}
+
+/// Measured elapsed seconds between first and last mining events for
+/// one listener, falling back to a stamped session start -> last event.
+/// `None` when no usable interval exists (rate not observed yet).
+pub fn session_elapsed_secs(
+    events: &[LogEvent],
+    listener: Option<&str>,
+    session_started_unix: Option<i64>,
+) -> Option<f64> {
+    let mut stamps: Vec<i64> = events
+        .iter()
+        .filter(|e| e.kind == LogEventKind::Mining)
+        .filter(|e| listener.is_none() || e.listener.as_deref() == listener)
+        .filter_map(|e| e.timestamp.as_deref())
+        .filter_map(parse_log_timestamp_to_unix)
+        .collect();
+    stamps.sort_unstable();
+    let first = stamps.first().copied().or(session_started_unix);
+    let last = stamps.last().copied();
+    match (first, last) {
+        (Some(f), Some(l)) if l > f => Some((l - f) as f64),
+        (Some(f), Some(l)) if session_started_unix.is_some() && l == f => None,
+        _ => None,
+    }
 }
 
 /// Compressed batches from a raw quantity and SDE `portionSize`
@@ -206,9 +333,16 @@ pub fn merged_yield_m3(session: &SessionTotals, ledger: &[LedgerRow]) -> f64 {
     session.yield_m3.max(0.0) + ledger_m3
 }
 
+fn ascii_lower_copy(body: &str) -> String {
+    // ASCII-only lowercasing maps bytes 1:1, so offsets found in the
+    // copy are valid offsets into the original even for non-ASCII text.
+    let bytes: Vec<u8> = body.bytes().map(|b| b.to_ascii_lowercase()).collect();
+    String::from_utf8(bytes).unwrap_or_else(|_| body.to_string())
+}
+
 fn extract_m3_near(body: &str, keyword: &str) -> Option<f64> {
-    let lower = body.to_lowercase();
-    let start = lower.find(keyword)?;
+    let lower = ascii_lower_copy(body);
+    let start = lower.find(&ascii_lower_copy(keyword))?;
     let tail = &body[start + keyword.len()..];
     let mut chars = tail.chars().peekable();
     while let Some(c) = chars.peek().copied() {
@@ -228,10 +362,88 @@ fn extract_m3_near(body: &str, keyword: &str) -> Option<f64> {
     text.replace(',', "").parse::<f64>().ok()
 }
 
-/// Parse one mining log body into a sample when it carries a yield
-/// volume. Ore names come from a `:`-prefixed segment when present;
-/// otherwise the caller-facing name is `Ore`.
-pub fn parse_mining_log_body(body: &str) -> Option<MiningSample> {
+fn parse_grouped_number(text: &str) -> Option<f64> {
+    let cleaned: String = text
+        .chars()
+        .filter(|c| c.is_ascii_digit() || *c == '.' || *c == ',')
+        .collect();
+    cleaned
+        .replace(',', "")
+        .parse::<f64>()
+        .ok()
+        .filter(|v| v.is_finite())
+}
+
+fn ore_name_after_units(body: &str) -> Option<String> {
+    let lower = ascii_lower_copy(body);
+    let at = lower.find("units of")?;
+    let after = body[at + "units of".len()..].trim();
+    let name: String = after
+        .chars()
+        .take_while(|c| c.is_alphabetic() || *c == ' ')
+        .collect();
+    let name = name.split_whitespace().collect::<Vec<_>>().join(" ");
+    if name.is_empty() {
+        None
+    } else {
+        Some(name)
+    }
+}
+
+fn units_before_units_of(body: &str) -> Option<f64> {
+    let lower = ascii_lower_copy(body);
+    let at = lower.find("units of")?;
+    let before = &body[..at];
+    let token = before
+        .split(|c: char| !(c.is_ascii_digit() || c == ',' || c == '.'))
+        .rfind(|s| !s.is_empty())?;
+    parse_grouped_number(token)
+}
+
+fn fixture_ore_name(body: &str) -> String {
+    if let Some(after) = body.split(':').nth(1) {
+        let words: Vec<&str> = after
+            .split_whitespace()
+            .take_while(|w| {
+                w.chars().any(|c| c.is_alphabetic()) && !w.chars().any(|c| c.is_ascii_digit())
+            })
+            .collect();
+        let name = words.join(" ");
+        if !name.is_empty() {
+            return name;
+        }
+    }
+    "Ore".to_string()
+}
+
+/// Parse one mining log body. Real EVE format
+/// `You mined 1,071 units of Veldspar` converts units -> m3 through
+/// `volume_of` (SDE volume per unit, resolved by ore name); unknown
+/// ores return `None` and are counted as skipped by the aggregator,
+/// never counted as `m3 = units`. The legacy fixture format
+/// `Mining yield: Veldspar 120 m3 residue 30 m3` keeps working.
+pub fn parse_mining_log_body(
+    body: &str,
+    volume_of: &dyn Fn(&str) -> Option<f64>,
+) -> Option<MiningSample> {
+    let lower = ascii_lower_copy(body);
+    if lower.contains("units of") {
+        let ore_name = ore_name_after_units(body)?;
+        let units = units_before_units_of(body)?;
+        let volume = volume_of(&ore_name)?;
+        if volume <= 0.0 {
+            return None;
+        }
+        // Residue may appear as an m3 figure in the same body.
+        let residue_m3 = extract_m3_near(body, "residue")
+            .or_else(|| extract_m3_near(body, "waste"))
+            .unwrap_or(0.0);
+        return Some(MiningSample {
+            ore_name,
+            yield_m3: units * volume,
+            residue_m3,
+        });
+    }
     let yield_m3 = extract_m3_near(body, "yield")
         .or_else(|| extract_m3_near(body, "mined"))
         .or_else(|| extract_m3_near(body, "m3"))
@@ -239,32 +451,98 @@ pub fn parse_mining_log_body(body: &str) -> Option<MiningSample> {
     let residue_m3 = extract_m3_near(body, "residue")
         .or_else(|| extract_m3_near(body, "waste"))
         .unwrap_or(0.0);
-    let ore_name = body
-        .split(':')
-        .nth(1)
-        .map(|s| s.split_whitespace().take(2).collect::<Vec<_>>().join(" "))
-        .filter(|s| !s.is_empty() && s.chars().any(|c| c.is_alphabetic()))
-        .unwrap_or_else(|| "Ore".to_string());
     Some(MiningSample {
-        ore_name,
+        ore_name: fixture_ore_name(body),
         yield_m3,
         residue_m3,
     })
 }
 
+fn accumulate(totals: &mut SessionTotals, sample: MiningSample) {
+    totals.yield_m3 += sample.yield_m3.max(0.0);
+    totals.residue_m3 += sample.residue_m3.max(0.0);
+    totals.samples += 1;
+    if let Some(entry) = totals
+        .by_ore
+        .iter_mut()
+        .find(|o| o.ore_name == sample.ore_name)
+    {
+        entry.yield_m3 += sample.yield_m3.max(0.0);
+        entry.residue_m3 += sample.residue_m3.max(0.0);
+    } else {
+        totals.by_ore.push(OreTotal {
+            ore_name: sample.ore_name,
+            yield_m3: sample.yield_m3.max(0.0),
+            residue_m3: sample.residue_m3.max(0.0),
+        });
+    }
+}
+
 /// Derive session totals from the shell's recent-log-event ring.
-/// Only mining-kind events count; unparseable bodies are ignored.
-pub fn session_totals_from_log_events(events: &[LogEvent]) -> SessionTotals {
+pub fn session_totals_from_log_events(
+    events: &[LogEvent],
+    volume_of: &dyn Fn(&str) -> Option<f64>,
+) -> SessionTotals {
+    session_totals_scoped(events, None, true, volume_of)
+}
+
+/// Listener-scoped session totals for the ACTIVE character. Events
+/// whose listener differs never mix into this total.
+pub fn session_totals_for_listener(
+    events: &[LogEvent],
+    listener: Option<&str>,
+    volume_of: &dyn Fn(&str) -> Option<f64>,
+) -> SessionTotals {
+    session_totals_scoped(events, listener, false, volume_of)
+}
+
+fn session_totals_scoped(
+    events: &[LogEvent],
+    listener: Option<&str>,
+    all_listeners: bool,
+    volume_of: &dyn Fn(&str) -> Option<f64>,
+) -> SessionTotals {
     let mut totals = SessionTotals::default();
     for event in events.iter().filter(|e| e.kind == LogEventKind::Mining) {
-        if let Some(sample) = parse_mining_log_body(&event.body) {
-            totals.yield_m3 += sample.yield_m3.max(0.0);
-            totals.residue_m3 += sample.residue_m3.max(0.0);
-            totals.samples += 1;
+        if !all_listeners && event.listener.as_deref() != listener {
+            continue;
+        }
+        match parse_mining_log_body(&event.body, volume_of) {
+            Some(sample) => accumulate(&mut totals, sample),
+            None if ascii_lower_copy(&event.body).contains("units of") => {
+                totals.skipped_unknown_ore += 1
+            }
+            None => {}
         }
     }
-    tracing::debug!("[MINING] session totals samples={}", totals.samples);
+    tracing::debug!(
+        "[MINING] session totals samples={} skipped_unknown={}",
+        totals.samples,
+        totals.skipped_unknown_ore
+    );
     totals
+}
+
+/// Per-listener fleet totals for a multi-box summary line.
+pub fn fleet_totals_from_log_events(
+    events: &[LogEvent],
+    volume_of: &dyn Fn(&str) -> Option<f64>,
+) -> Vec<CharacterMiningTotals> {
+    let mut listeners: Vec<Option<String>> = Vec::new();
+    for e in events.iter().filter(|e| e.kind == LogEventKind::Mining) {
+        if !listeners.contains(&e.listener) {
+            listeners.push(e.listener.clone());
+        }
+    }
+    listeners
+        .iter()
+        .map(|listener| CharacterMiningTotals {
+            character_name: listener
+                .clone()
+                .unwrap_or_else(|| "Unknown listener".to_string()),
+            totals: session_totals_for_listener(events, listener.as_deref(), volume_of),
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -342,6 +620,7 @@ mod tests {
                     yield_m3: 100.0,
                     residue_m3: 10.0,
                     samples: 2,
+                    ..Default::default()
                 },
             },
             CharacterMiningTotals {
@@ -350,6 +629,7 @@ mod tests {
                     yield_m3: 50.0,
                     residue_m3: 5.0,
                     samples: 1,
+                    ..Default::default()
                 },
             },
         ];
@@ -384,17 +664,105 @@ mod tests {
             ev(LogEventKind::Combat, "yield 999 m3"),
             ev(LogEventKind::Mining, "no volumes here"),
         ];
-        let totals = session_totals_from_log_events(&events);
+        let totals = session_totals_from_log_events(&events, &|_| None);
         assert_eq!(totals.samples, 1);
         assert_eq!(totals.yield_m3, 120.0);
         assert_eq!(totals.residue_m3, 30.0);
         assert_eq!(totals.residue_ratio(), 0.2);
+        assert_eq!(totals.by_ore[0].ore_name, "Veldspar");
+    }
+
+    #[test]
+    fn real_format_units_convert_through_sde_volume() {
+        let vol = |name: &str| match name {
+            "Veldspar" => Some(0.1),
+            "Scordite" => Some(0.15),
+            _ => None,
+        };
+        let sample =
+            parse_mining_log_body("You mined 1,071 units of Veldspar", &vol).expect("real line");
+        assert_eq!(sample.ore_name, "Veldspar");
+        assert!(
+            (sample.yield_m3 - 107.1).abs() < 1e-9,
+            "{}",
+            sample.yield_m3
+        );
+        // Unknown ore is skipped, never m3 = units.
+        assert!(parse_mining_log_body("You mined 500 units of Unknownite", &vol).is_none());
+        let fixture = parse_mining_log_body("Mining yield: Veldspar 120 m3 residue 30 m3", &vol)
+            .expect("fixture");
+        assert_eq!(fixture.ore_name, "Veldspar");
+        assert_eq!(fixture.yield_m3, 120.0);
+    }
+
+    #[test]
+    fn two_listeners_do_not_mix() {
+        let vol = |_: &str| Some(0.1);
+        let ev = |listener: &str, body: &str| LogEvent {
+            source: LogSource::GameLog,
+            kind: LogEventKind::Mining,
+            timestamp: Some("2026.11.28 10:00:00".into()),
+            listener: Some(listener.into()),
+            channel: None,
+            speaker: None,
+            body: body.into(),
+        };
+        let events = vec![
+            ev("Aria", "You mined 100 units of Veldspar"),
+            ev("Marcus", "You mined 200 units of Veldspar"),
+        ];
+        assert_eq!(
+            session_totals_for_listener(&events, Some("Aria"), &vol).yield_m3,
+            10.0
+        );
+        assert_eq!(
+            session_totals_for_listener(&events, Some("Marcus"), &vol).yield_m3,
+            20.0
+        );
+        let fleet = fleet_totals_from_log_events(&events, &vol);
+        assert_eq!(fleet.len(), 2);
+        assert_eq!(fleet_totals(&fleet).yield_m3, 30.0);
+        assert_eq!(session_elapsed_secs(&events, Some("Aria"), None), None);
+    }
+
+    #[test]
+    fn pricing_raw_and_compressed_per_m3() {
+        assert_eq!(price_per_m3_from_unit(15.0, 0.1), Some(150.0));
+        // Compressed: 1400 ISK per batch / (100 units * 0.1 m3) = 140/m3.
+        assert_eq!(compressed_price_per_m3(1400.0, 0.1, 100), Some(140.0));
+        assert_eq!(price_per_m3_from_unit(0.0, 0.1), None);
+        let totals = SessionTotals {
+            yield_m3: 107.1,
+            samples: 1,
+            by_ore: vec![OreTotal {
+                ore_name: "Veldspar".into(),
+                yield_m3: 107.1,
+                residue_m3: 0.0,
+            }],
+            ..Default::default()
+        };
+        let v = value_session_by_ore(
+            &totals,
+            &std::collections::HashMap::from([("Veldspar".to_string(), 150.0)]),
+        );
+        assert!(v.all_priced());
+        assert!((v.priced_isk - 16065.0).abs() < 1e-6);
+        let partial = value_session_by_ore(&totals, &std::collections::HashMap::new());
+        assert_eq!(partial.unpriced_yield_m3, 107.1);
+    }
+
+    #[test]
+    fn extract_m3_near_non_ascii_does_not_panic() {
+        // İ (U+0130) lowercases to multiple bytes in Unicode; ASCII
+        // lowercasing keeps byte offsets 1:1 and must not panic.
+        let sample = parse_mining_log_body("\u{130}yield\u{e9} 5 m3", &|_| None);
+        assert!(sample.is_some());
     }
 
     #[test]
     fn dogma_hold_capacity_for_mining_ship() {
         let dogma = DogmaCatalogue::load_bundled().expect("bundled dogma");
-        // Procurer (17478) carries mining hold attribute 1556 in bundled SDE.
+        // Retriever (17478) carries mining hold attribute 1556 in bundled SDE.
         assert_eq!(hold_capacity_for_ship(&dogma, Some(17478)), Some(27500.0));
         assert_eq!(hold_capacity_for_ship(&dogma, Some(587)), None);
         assert_eq!(hold_capacity_for_ship(&dogma, None), None);

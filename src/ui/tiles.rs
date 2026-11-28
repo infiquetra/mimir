@@ -103,19 +103,32 @@ impl Workspace {
     }
 }
 
-/// Default pane tree for one workspace: a horizontal
-/// split whose first cell tabs the first two preset views
-/// (so docking/tabs are visible out of the box) and whose
-/// remaining cells stand alone. Two-view workspaces are a
-/// plain horizontal pair.
+/// Default pane tree for one workspace: a horizontal split whose
+/// first cell tabs every preset view except the last (so docking/tabs
+/// are visible out of the box) and whose last view stands alone.
+/// General rule (#648 repair): tab count = preset count - 1. For the
+/// three-view workspaces this is byte-identical to the previous
+/// first-two tabbing. Industry & Trade is the one special case: its
+/// tab tile is [Industry, Planets, Mining] and Market stands alone
+/// on the right, so Mining shares a pane instead of squeezing Market
+/// as a third column. Persisted user layouts with any arrangement of
+/// a workspace's preset views still restore unchanged
+/// (`tree_is_valid_for` allows any arrangement); no migration needed.
 pub fn default_tree(workspace: Workspace) -> Tree<View> {
     let views = workspace.preset_views();
     let mut tiles = Tiles::default();
     let panes: Vec<_> = views.iter().map(|v| tiles.insert_pane(*v)).collect();
-    let root = if panes.len() > 2 {
-        let tabs = tiles.insert_tab_tile(vec![panes[0], panes[1]]);
+    let root = if workspace == Workspace::IndustryTrade && panes.len() == 4 {
+        // Special case above: tabs [Industry, Planets, Mining],
+        // Market standalone. Preset order stays Industry, Planets,
+        // Market, Mining for coverage and navigation.
+        let tabs = tiles.insert_tab_tile(vec![panes[0], panes[1], panes[3]]);
+        tiles.insert_horizontal_tile(vec![tabs, panes[2]])
+    } else if panes.len() > 2 {
+        let (tabbed, rest) = panes.split_at(panes.len() - 1);
+        let tabs = tiles.insert_tab_tile(tabbed.to_vec());
         let mut children = vec![tabs];
-        children.extend_from_slice(&panes[2..]);
+        children.extend_from_slice(rest);
         tiles.insert_horizontal_tile(children)
     } else {
         tiles.insert_horizontal_tile(panes)

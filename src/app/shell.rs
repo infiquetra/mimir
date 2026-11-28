@@ -328,8 +328,12 @@ pub struct MimirApp {
     pub state: AppState,
     pub sde: Sde,
     pub fitting_types: Option<Arc<FittingTypes>>,
-    /// Lazily loaded Dogma catalogue for mining hold capacity (#648).
+    /// Shared Dogma catalogue, warmed in the background at startup
+    /// (#648 repair: OnceLock-cached, never parsed on the UI thread).
     pub dogma_catalogue: Option<Arc<crate::fitting::dogma_catalogue::DogmaCatalogue>>,
+    pub dogma_receiver: Option<
+        std::sync::mpsc::Receiver<Option<Arc<crate::fitting::dogma_catalogue::DogmaCatalogue>>>,
+    >,
     pub industry_data: Option<Arc<IndustryRef>>,
     pub planet_schematics: Option<Arc<PlanetSchematicsRef>>,
     pub resolver: NameResolver,
@@ -1409,6 +1413,13 @@ impl MimirApp {
             }
             crate::demo::data::seed_demo_state(&mut state);
         }
+        // Background Dogma warm-up (#648 repair): the shared
+        // OnceLock catalogue parses off-thread; Mining reads the
+        // landed handle and shows a loading label until then.
+        let (dogma_tx, dogma_receiver) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            let _ = dogma_tx.send(crate::fitting::dogma_catalogue::shared_bundled_dogma());
+        });
         let last_active_id = state.active_character_id;
         let last_active_generation = state.active_character_generation;
         let mut app = Self {
@@ -1416,6 +1427,7 @@ impl MimirApp {
             sde,
             fitting_types,
             dogma_catalogue: None,
+            dogma_receiver: Some(dogma_receiver),
             industry_data,
             planet_schematics,
             resolver,
@@ -6174,10 +6186,15 @@ impl MimirApp {
             ),
             View::Mining => {
                 if self.dogma_catalogue.is_none() {
-                    self.dogma_catalogue =
-                        crate::fitting::dogma_catalogue::DogmaCatalogue::load_bundled()
-                            .ok()
-                            .map(Arc::new);
+                    if let Some(receiver) = &self.dogma_receiver {
+                        if let Ok(landed) = receiver.try_recv() {
+                            tracing::debug!(
+                                "[MINING] shared dogma catalogue landed ready={}",
+                                landed.is_some()
+                            );
+                            self.dogma_catalogue = landed;
+                        }
+                    }
                 }
                 ui::mining::show(
                     ui,

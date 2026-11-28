@@ -1371,6 +1371,7 @@ pub fn seed_demo_state(state: &mut AppState) {
                 state.set_active_character(first_id);
                 apply_character(state, &bundle, first_id);
             }
+            seed_demo_mining(state);
             seed_demo_exploration(state);
             state.status_message = "Demo mode: sample data, no network.".to_string();
             tracing::info!(
@@ -1392,6 +1393,67 @@ pub fn seed_demo_state(state: &mut AppState) {
             state.fittings = LoadState::Error(format!("Demo data failed to load: {e}"));
         }
     }
+}
+
+/// Seed a realistic demo mining session (#648 repair): timestamped
+/// mining lines relative to the demo anchor (`state.now_utc()`),
+/// yield + residue across two ores, the active demo character in a
+/// Retriever (SDE mining hold), and cached per-ore hub quotes.
+/// In-memory only; zero network and zero live-DB writes.
+fn seed_demo_mining(state: &mut AppState) {
+    use crate::daemon::{LogEvent, LogEventKind, LogSource};
+    let Some(listener) = state.active_character().map(|c| c.name.clone()) else {
+        tracing::debug!("[DEMO] demo mining seed skipped: no active character");
+        return;
+    };
+    // Active demo hull is a mining barge so the ore-hold countdown
+    // has an SDE capacity; summaries keep their bundled ship names.
+    if let crate::app::state::LoadState::Ready(data) = &mut state.character_details {
+        if let Ok(ship) = &mut data.ship {
+            ship.ship_type_id = 17478; // Retriever
+            ship.ship_name = "Aria's Retriever".to_string();
+        }
+    }
+    let anchor = state.now_utc();
+    let fmt = |mins: i64| {
+        (anchor - chrono::Duration::minutes(mins))
+            .format("%Y.%m.%d %H:%M:%S")
+            .to_string()
+    };
+    // Fixture events go straight into the ring (not through the
+    // daemon counter): they are demo data, not observed telemetry.
+    state.mining_session_started_unix = Some(anchor.timestamp() - 55 * 60);
+    for (mins, body) in [
+        (55, "You mined 1,071 units of Veldspar"),
+        (40, "You mined 800 units of Scordite"),
+        (25, "Mining yield: Scordite 75 m3 residue 25 m3"),
+        (10, "You mined 500 units of Veldspar"),
+    ] {
+        state.recent_log_events.push(LogEvent {
+            source: LogSource::GameLog,
+            kind: LogEventKind::Mining,
+            timestamp: Some(fmt(mins)),
+            listener: Some(listener.clone()),
+            channel: None,
+            speaker: None,
+            body: body.to_string(),
+        });
+    }
+    state
+        .mining_ore_price_per_unit
+        .insert("Veldspar".to_string(), 15.0);
+    state
+        .mining_ore_price_per_unit
+        .insert("Scordite".to_string(), 22.0);
+    state
+        .mining_ore_price_per_unit
+        .insert("Compressed Veldspar".to_string(), 1450.0);
+    state
+        .mining_ore_price_per_unit
+        .insert("Compressed Scordite".to_string(), 2100.0);
+    state.mining_survey_text =
+        "Asteroid\tQuantity\tVolume\tDistance\nVeldspar\t5000\t500 m3\t5 km\nScordite\t2000\t300 m3\t7 km\n".to_string();
+    tracing::info!("[DEMO] demo mining session seeded events=4 ores=2");
 }
 
 /// Seed the demo exploration chain (#646 repair): a realistic
