@@ -8,7 +8,17 @@ impl EveConfig {
     pub const ESI_BASE_URL: &str = "https://esi.evetech.net/latest";
     pub const IMAGE_SERVER_URL: &str = "https://images.evetech.net";
     pub const DATASOURCE: &str = "tranquility";
-    pub const USER_AGENT: &str = "mimir/0.1.0 (EVE Online companion; rust)";
+    pub const USER_AGENT: &str = concat!("Alidade/", env!("CARGO_PKG_VERSION"));
+
+    /// Pinned pure OpenAPI 3.1 compatibility date (ADR-011; contract
+    /// `esi-sde-and-local-daemon-contracts.md` section 1). Bump only
+    /// deliberately, per CCP schema change.
+    pub const ESI_COMPATIBILITY_DATE: &str = "2026-11-01";
+
+    /// Value sent as `X-Compatibility-Date` on every ESI request.
+    pub fn esi_compatibility_date() -> &'static str {
+        Self::ESI_COMPATIBILITY_DATE
+    }
 
     pub const OAUTH_AUTHORIZE_URL: &str = "https://login.eveonline.com/v2/oauth/authorize";
     pub const OAUTH_TOKEN_URL: &str = "https://login.eveonline.com/v2/oauth/token";
@@ -219,6 +229,17 @@ pub fn now_unix() -> i64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn esi_compatibility_date_and_user_agent_match_contract() {
+        assert_eq!(EveConfig::esi_compatibility_date(), "2026-11-01");
+        assert_eq!(EveConfig::ESI_COMPATIBILITY_DATE, "2026-11-01");
+        assert_eq!(
+            EveConfig::USER_AGENT,
+            concat!("Alidade/", env!("CARGO_PKG_VERSION"))
+        );
+        assert!(EveConfig::USER_AGENT.starts_with("Alidade/"));
+    }
 
     #[test]
     fn first_auth_scopes_match_least_privilege_set() {

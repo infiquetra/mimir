@@ -22,6 +22,7 @@ pub mod names;
 pub mod portraits;
 pub mod production_chain;
 pub mod reaction_calculator;
+pub mod sde;
 pub mod skills;
 pub mod storage;
 pub mod trade_calculator;

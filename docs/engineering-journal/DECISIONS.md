@@ -1002,3 +1002,27 @@ the provenance model. Do not collapse back to unstructured prompt-only evidence.
 **Rejected alternatives.** Renaming `USER_AGENT` to Alidade in #651 (deferred to #654); keeping `webgpu` (no effect on native targets); relying on `persist_window` alone (egui memory would still be flushed to `app.ron` in demo).
 **Revisit when.** #654 decides the ESI identity change, or a supported Linux target without Vulkan becomes a shipped requirement (then revisit the zero-glow constraint explicitly).
 **Refs.** `src/config.rs` (`USER_AGENT`), `Cargo.toml`, `src/main.rs` (`apply_platform_chrome`, `native_options`), `src/app/shell.rs` (`show_shell` top-bar drag, `persist_egui_memory`), PR #658 review (P1-1, P2-3, P3-1, P3-3, P3-4).
+
+### SDE over HTTP swaps reference tables in one transaction and never touches user tables (2026-11-28)
+
+**Author.** Muse (card #654 backend phase)
+**Decision.** `src/sde/http_sync.rs` parses and row-count-validates all JSONL slices before opening a single `rusqlite::Transaction` that replaces only `sde_types`, `sde_solar_systems`, and `sde_stargates` and stamps `sde_meta` (`build_number`/`etag`/`synced_at`). Boot seeds a compact embedded baseline (build 0) synchronously via `ensure_embedded_baseline`; network sync is background-only and hard-skipped in demo mode via `sync_if_allowed`. The pinned compatibility date is `2026-11-01` per `platform-specs/05-technical-specifications/esi-sde-and-local-daemon-contracts.md` section 1, and the error-limit cooldown now trips at `X-Esi-Error-Limit-Remain <= 20` (was remain == 0 only).
+
+**Rejected alternatives.**
+- Bump `SCHEMA_VERSION` for the additive `sde_*` tables. `migrate()` runs the full `IF NOT EXISTS` DDL on every open, so a bump would only churn three version assertions without changing behavior.
+- Delete user-table-adjacent caches during the swap. The atomic-swap contract forbids touching `characters`, `token_meta`, `skill_plans`, or `skill_plan_entries`; the tests assert all three user row counts stay at 1 across upgrade and rollback.
+
+**Rationale.** Parse-before-transaction makes truncated or corrupt JSONL a zero-write failure, so the prior verified build keeps serving. A single transaction makes the build-number upgrade atomic across all three slices.
+
+**Revisit when.** CCP publishes the production SDE-over-HTTP base URL and exact JSONL field spellings; the parsers already accept the known spelling variants, so only the base URL wiring (post-#651 shell phase) should change.
+
+**Refs.** `src/sde/http_sync.rs`, `src/sde/mod.rs`, `src/storage/schema.sql`, `src/config.rs` (`ESI_COMPATIBILITY_DATE`), ADR-011.
+
+### SDE sync wiring is operator-configured and disabled until a base URL is set (#654 wiring, 2026-11-28)
+
+**Author.** Muse (card #654 wiring phase)
+**Decision.** Extends the SDE atomic-swap decision above. The production SDE-over-HTTP base URL is unpinned by the contract, so no URL is invented in code: `AppState::sde_base_url` starts empty, sync stays disabled (embedded baseline build 0 only) until the operator sets a base URL in Settings, and the shell spawns background sync only through the testable `should_spawn_sde_sync(demo, base_url, in_flight)` helper — demo never spawns (zero HTTP), empty URL never spawns, an in-flight sync blocks duplicates. The URL persists through the existing `app_settings` key/value store (`get_setting`/`set_setting`/`delete_setting`, key `sde_base_url`) in live mode only, mirroring `startup_view`; clearing the field deletes the saved value. Startup queues one sync via the same request-flag path as Settings "Sync now"; results land through `BackendMsg::SdeSynced` and always clear `sde_sync_in_flight`, with failures shown in `sde_status` while the baseline keeps serving.
+**Rejected alternatives.** Hardcoding a guessed CCP or mirror URL (the backend finding stands: the contract does not pin one); keeping the URL session-only (a clean free-form-string KV already exists, so persistence is honest and cheap); spawning directly from the Settings click instead of the drained request flag (breaks the shell's single drain discipline).
+**Rationale.** Operator configuration keeps the unpinned-URL disclosure truthful in the UI, and the pure decision helper makes the demo/empty/in-flight gates unit-testable without a window or network.
+**Revisit when.** CCP publishes the production SDE-over-HTTP base URL: then set it as the default (still operator-overridable) and re-check the JSONL field spellings.
+**Refs.** `src/app/shell.rs` (`should_spawn_sde_sync`, `try_spawn_sde_sync`, `persist_sde_base_url_if_changed`), `src/app/state.rs` (`sde_*` fields), `src/ui/settings.rs` (`[SDE]` in `LOG_TAGS`, Static data card), ADR-011.

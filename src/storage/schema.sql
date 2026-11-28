@@ -128,3 +128,36 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_skill_plan_entries_skill
     ON skill_plan_entries (character_id, plan_id, skill_id);
 CREATE INDEX IF NOT EXISTS idx_skill_plans_character
     ON skill_plans (character_id, updated_at DESC);
+-- SDE over HTTP reference tables (ADR-011, card #654). Additive only:
+-- sync replaces rows inside these four tables in one transaction and
+-- never deletes or drops characters, token_meta, skill_plans, or
+-- skill_plan_entries.
+CREATE TABLE IF NOT EXISTS sde_meta (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL DEFAULT ''
+);
+CREATE TABLE IF NOT EXISTS sde_types (
+    type_id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL DEFAULT '',
+    group_id INTEGER,
+    published INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS sde_solar_systems (
+    system_id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL DEFAULT '',
+    region_id INTEGER,
+    security_status REAL
+);
+CREATE TABLE IF NOT EXISTS sde_stargates (
+    stargate_id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL DEFAULT '',
+    system_id INTEGER,
+    destination_stargate_id INTEGER,
+    destination_system_id INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_sde_types_group
+    ON sde_types (group_id);
+CREATE INDEX IF NOT EXISTS idx_sde_solar_systems_region
+    ON sde_solar_systems (region_id);
+CREATE INDEX IF NOT EXISTS idx_sde_stargates_system
+    ON sde_stargates (system_id);
