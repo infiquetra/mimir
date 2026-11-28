@@ -48,6 +48,14 @@
 **Validation.** `cargo test --locked pantry` — indexer/readiness/virtualization-bench/demo-isolation suites green including the rewritten bench; full `cargo test --locked` and `ui_kittest` suites green. The same repair also persisted `location_type`/blueprint flags through SQLite (additive `ALTER TABLE` migration), moved Pantry persistence to `spawn_blocking` with a generation-stamped `PantryPersisted` landing, derived step-up badges for every character from stored `token_meta` scopes at startup and on each persist, excluded fitted/ship-bay stock from Fit-Readiness totals, resolved table locations through root places, gave every `egui_table` column a `range` floor, and virtualized the Assets view (removing the 100-row render truncation).
 **Generalizable rule.** In debug egui test binaries, meet frame budgets by moving string work to build time and rejecting rows with integer masks; never try to out-optimize per-row string scans at opt-level 0.
 **Refs.** Issue #642; `docs/engineering-journal/DECISIONS.md` (Assets truncation history).
+### Unverified scans must never become route edges; K162 mass stays Unknown until paired (#646)
+
+**Author.** builder-muse (card-646)
+**Context.** Porting the exploration router required joining probe-scanner pastes, Eve-Scout highways, and stargates in one Dijkstra graph without ever inventing traversability.
+**Evidence.** `src/exploration/notebook.rs` (`import_scan` stores `verified=0, destination_system_id=NULL`; only `confirm_connection` writes `exploration_connections`; test `unverified_signatures_never_create_edges`), `src/exploration/router.rs` (`effective_max_jump_mass_kg` returns None for unpaired K162; test `k162_unknown_never_traversable_for_mass_limited_query`).
+**Mechanism.** A scanner row naming a wormhole proves presence, not destination or mass; defaulting either fabricates shortcuts. Separating signature storage from connection confirmation makes the unsafe state unrepresentable in the edge query.
+**Generalizable rule.** Presence observations and traversal authorizations are different tables; the routing query reads only the authorization table.
+**Refs.** `docs/specs/exploration-module.md` R20/R21, issue #646.
 
 ## 2026-11-21
 
@@ -2079,3 +2087,9 @@ surface the missing evidence and give the user a way to resolve it.
 **Evidence:** PR #661 review (`/tmp/alidade-review-652.md` P2-1, P2-4, P2-5, P3-2, P3-6). The provenance popover shipped with U+24D8, which `fc-query` shows in none of egui 0.37's five bundled fonts (U+2139 exists only in NotoEmoji), so the control would render as a tofu box; it is now a text "Info" pill with a distinct AccessKit name per popover. The earlier "swept onto token sizes" wording was also inaccurate (literals equal to token values), the muted-text AA claim held only after renaming, tabular numerals were configured but unused, and the Quick-Sight benchmark used a best-case query that still flaked at 6.51 ms under parallel debug tests until search gained precomputed byte masks, a fuzzy candidate cap, and zero per-item allocation.
 **Mechanism:** Claims about rendering, contrast, and speed are only as strong as their measurement surface: font charsets, the actual call-site colors and surfaces, the fonts on rendered value labels, and worst-case (broad/no-match) query shapes under test-binary contention.
 **Generalizable rule:** For every user-visible claim, test the artifact users actually get — glyph presence in bundled fonts, contrast of the colors call sites really use on the surfaces they sit on, fonts on the rendered labels, and benchmarks across specific, broad, and no-match inputs — not just the configuration that should produce it.
+
+## 2026-11-28 — A drawn chain is a claim: only real edges may connect nodes (#646 repair)
+
+**Evidence:** PR #664 review (`/tmp/alidade-review-646.md` P1-1/P1-2/P1-3): the subway strip joined the alphabetically first system of each class C1-C6 with solid connectors although no connection existed between them, every node was built with `eol: false`, and `confirm_connection` turned Data Site and Combat Anomaly signatures into permanent two-way route edges (scratch probes returned 2 edges for each, surviving rescans and a one-year-later query).
+**Mechanism:** A connector line asserts traversability, so its data source must be the same eligibility pipeline the router consumes: confirmed notebook edges (wormhole-only, inside the confirming transaction, future expiry, verification younger than 24h) plus fresh public snapshot edges. Rendering state (EOL dash, mass ring) must derive from the entering edge's `expires_at - state.now_utc()` and effective mass at paint time, never from node-construction constants.
+**Generalizable rule:** Any visual link between entities must be backed by the exact edge set the underlying solver would traverse, with per-edge status computed at render time from the injected clock; a decorative chain is a fabricated route.

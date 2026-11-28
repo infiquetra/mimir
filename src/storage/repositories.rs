@@ -252,6 +252,8 @@ pub fn delete_character(conn: &rusqlite::Connection, character_id: i64) -> AppRe
         "wallet_transactions",
         "loyalty_points",
         "token_meta",
+        "exploration_signatures",
+        "exploration_connections",
     ] {
         tx.execute(
             &format!("DELETE FROM {table} WHERE character_id = ?1"),

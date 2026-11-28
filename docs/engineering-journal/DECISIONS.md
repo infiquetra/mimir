@@ -34,6 +34,14 @@
 **Rationale.** A single harness with fixed timestep (`1/60`), `RendererOptions::PREDICTABLE` (`msaa_samples = 1`), and demo-seeded `MimirApp::new(true, ..., None, None)` gives deterministic, disk-free, network-free frames that downstream cards reuse without renegotiating determinism.
 **Revisit when.** egui_kittest renames the `mac` config table, or a downstream card needs per-OS goldens beyond Linux.
 **Refs.** `tests/ui_kittest/`, `kittest.toml`, `scripts/qa/utm-smoke.sh`, `.github/workflows/ci.yml`, ADR-013.
+### Tuple-cost Dijkstra with mode-specific security mappings (#646)
+
+**Author.** builder-muse (card-646)
+**Decision.** One Dijkstra engine in `src/exploration/router.rs` over petgraph with lexicographic `RouteCost (security_penalty, jump_count, wormhole_uncertainty, path_system_ids)`; Shortest zeroes security, Safest charges lowsec 10 / wormhole 12 / null 20, LessSecure inverts highsec to 20. Full path ids are the deterministic tiebreak.
+**Rejected alternatives.** Scalar weighted-sum cost (loses lexicographic guarantees); BFS (cannot honor security-first or sequence tiebreaks, spec 4.6).
+**Rationale.** Lexicographic tuples make mode semantics exact and testable; storing the path in the cost makes equal-cost relaxation deterministic regardless of insertion order.
+**Revisit when.** Route preferences gain user-tunable avoid flags (spec R23) — then eligibility filtering, not new cost terms, should carry them.
+**Refs.** `src/exploration/router.rs`, `docs/specs/exploration-module-design.md` section 4.6, issue #646.
 
 ## 2026-11-27
 
@@ -1073,3 +1081,10 @@ the provenance model. Do not collapse back to unstructured prompt-only evidence.
 **Revisit when.** Wave 3A canvases land in `src/ui/canvases/` (stub created here): canvas shaders/painter code must take token colors as uniforms/arguments, never literals, and the guard test should be extended to WGSL sources when the first shader ships.
 
 **Refs.** `src/ui/{tokens,tiles,quick_sight,canvases/mod}.rs`; `src/app/shell.rs` (ViewBehavior, activate_view); [LEARNINGS 2026-11-28 guard-test entry](LEARNINGS.md).
+
+### Real-edge subway chain and R10 ring semantics (#646 repair, 2026-11-28)
+
+**Decision.** The Wormhole Subway strip derives its ordered chain only from real edges: the active character's confirmed notebook connections plus fresh Eve-Scout snapshot edges, ordered by an endpoint walk in `ordered_chain`. No static reference assignment ever becomes a node or connector; empty input renders "No confirmed connections" with no connectors. Each node carries two independent R10 rings: an inner mass ring (green Known limit, amber Unknown for an unpaired K162, muted "Mass not reported" for public rows) and an outer dashed warning ring only when the entering connection has `0 < expires_at - now < 4h`; connectors are dashed on that same per-connection EOL test. All display and TTL math uses `state.now_utc()` so demo goldens anchor deterministically. Router weights keep the brief's lexicographic tuple and deviate from spec R24's entry-count model (documented in the #646 tuple-cost entry above); Pochven (class 25) now takes the high-risk Safest penalty 20 at/above nullsec, and `Route` carries additive per-step `RouteVia` detail without breaking `system_ids`. Eve-Scout live HTTP fetch is deliberately not added in this repair: parser plus snapshot plumbing only, so scan and route episodes stay strictly local.
+**Rejected alternatives.** Relabelling the old alphabetical chain as a legend (still implies connectivity); fetching Eve-Scout live in this repair (adds network to a strictly local scan episode); scalar route costs (loses the deterministic lexicographic tiebreak).
+**Revisit when.** A future card wires the Eve-Scout HTTP fetch with the R11 single-flight/cooldown policy, or R23 avoid-flags land and eligibility filtering absorbs the security weights.
+**Refs.** `src/ui/exploration.rs` (`ordered_chain`, `show_subway_strip`, `show_domain_panels`), `src/exploration/{notebook,evescout,router}.rs`, `src/app/{state,shell}.rs` (`reset_exploration_domain`, `drain_exploration_requests`), issue #646, PR #664.

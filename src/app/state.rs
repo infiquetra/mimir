@@ -308,6 +308,29 @@ pub enum SkillPlanEditor {
     Edit { character_id: i64, plan_id: i64 },
 }
 
+/// One explicit Confirm connection request from the
+/// exploration view (#646 repair). Drained by the shell on the
+/// blocking pool; ids are state only, never rendered.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ExplorationConfirmRequest {
+    pub signature_id: String,
+    pub from_system_id: i64,
+    pub to_system_id: i64,
+    pub wormhole_code: String,
+    pub max_jump_mass_kg: Option<i64>,
+    pub expires_at: Option<i64>,
+}
+
+/// One route-finder request (#646 repair). Drained by the
+/// shell; the router runs off the UI thread in live mode.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ExplorationRouteRequest {
+    pub origin_id: i64,
+    pub destination_id: i64,
+    pub mode: crate::exploration::router::RouteMode,
+    pub ship: Option<crate::exploration::router::ShipClass>,
+}
+
 /// Wallet period filter shared by the wallet view and the dashboard.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum WalletPeriod {
@@ -976,6 +999,35 @@ pub struct AppState {
     pub exploration_selected_system_id: Option<i64>,
     pub exploration_selected_family: Option<EffectFamily>,
     pub exploration_selected_strength: u8,
+    // Exploration domain state (#646 repair): real chain edges
+    // (confirmed notebook connections for the active character
+    // plus Eve-Scout snapshot edges), the latest snapshot, and
+    // view drafts. Reset on character switch/removal and mode
+    // switches via `reset_exploration_domain`.
+    pub exploration_chain_edges: Vec<crate::exploration::router::RouterEdge>,
+    pub exploration_snapshot: Option<crate::exploration::evescout::EveScoutSnapshot>,
+    pub exploration_signatures: Vec<crate::exploration::notebook::TrackedSignature>,
+    pub exploration_signatures_system_id: Option<i64>,
+    pub exploration_paste: String,
+    pub exploration_status: Option<String>,
+    pub exploration_confirm_dest_name: String,
+    pub exploration_confirm_code: String,
+    pub exploration_confirm_mass: String,
+    pub exploration_confirm_expiry_hours: String,
+    pub exploration_selected_signature: Option<String>,
+    pub exploration_route_origin: String,
+    pub exploration_route_destination: String,
+    pub exploration_route_mode: crate::exploration::router::RouteMode,
+    pub exploration_route_ship: Option<crate::exploration::router::ShipClass>,
+    pub exploration_route_result: Option<crate::exploration::router::Route>,
+    pub exploration_route_message: Option<String>,
+    pub exploration_origin_confirmed: bool,
+    pub exploration_origin_system_id: Option<i64>,
+    pub exploration_pending_import: Option<(i64, Vec<crate::exploration::notebook::ParsedScanRow>)>,
+    pub exploration_confirm_request: Option<ExplorationConfirmRequest>,
+    pub exploration_route_request: Option<ExplorationRouteRequest>,
+    pub exploration_loaded_for: Option<i64>,
+    pub exploration_load_requested: bool,
 
     // Request flags for the integrator to drain (set by views, never faked
     // as completed work). See the module comment.
@@ -1335,6 +1387,7 @@ impl AppState {
                 self.skill_plan_action = None;
                 self.skill_plan_picker_open = false;
                 self.skill_plan_picker_search.clear();
+                self.reset_exploration_domain();
             }
         }
         self.selected_queue_row = 0;
@@ -1552,6 +1605,7 @@ impl AppState {
             self.skill_plan_action = None;
             self.skill_plan_picker_open = false;
             self.skill_plan_picker_search.clear();
+            self.reset_exploration_domain();
             self.assets_needs_reauthorize = false;
             self.structures_needs_reauthorize = false;
             if let Some(first) = self.characters.first().map(|c| c.character_id) {
@@ -1637,6 +1691,37 @@ impl AppState {
             self.skill_plan_picker_search.clear();
             self.dashboard = LoadState::Empty;
         }
+    }
+
+    /// Clear every exploration domain field (#646 repair):
+    /// chain edges, snapshot, signatures, drafts, requests and
+    /// route results never bleed across characters or modes.
+    pub fn reset_exploration_domain(&mut self) {
+        tracing::debug!("[EXPLORE] reset exploration domain state");
+        self.exploration_chain_edges.clear();
+        self.exploration_snapshot = None;
+        self.exploration_signatures.clear();
+        self.exploration_signatures_system_id = None;
+        self.exploration_paste.clear();
+        self.exploration_status = None;
+        self.exploration_confirm_dest_name.clear();
+        self.exploration_confirm_code.clear();
+        self.exploration_confirm_mass.clear();
+        self.exploration_confirm_expiry_hours.clear();
+        self.exploration_selected_signature = None;
+        self.exploration_route_origin.clear();
+        self.exploration_route_destination.clear();
+        self.exploration_route_mode = crate::exploration::router::RouteMode::Shortest;
+        self.exploration_route_ship = None;
+        self.exploration_route_result = None;
+        self.exploration_route_message = None;
+        self.exploration_origin_confirmed = false;
+        self.exploration_origin_system_id = None;
+        self.exploration_pending_import = None;
+        self.exploration_confirm_request = None;
+        self.exploration_route_request = None;
+        self.exploration_loaded_for = None;
+        self.exploration_load_requested = false;
     }
 
     /// Reset all mode-scoped characters, per-character caches, in-flight guards,
@@ -1733,6 +1818,7 @@ impl AppState {
         self.recent_log_events.clear();
         self.daemon_event_count = 0;
         self.focus_search = false;
+        self.reset_exploration_domain();
     }
 
     /// Record one daemon log event in the capped session-only ring.

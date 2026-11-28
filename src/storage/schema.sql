@@ -183,3 +183,31 @@ CREATE INDEX IF NOT EXISTS idx_character_assets_character
     ON character_assets (character_id);
 CREATE INDEX IF NOT EXISTS idx_character_assets_type
     ON character_assets (type_id);
+
+-- Exploration notebook (#646): character-scoped private scans.
+-- Signatures never imply edges; only exploration_connections
+-- rows (explicit Confirm) are traversable. Public/reference
+-- data is not stored here.
+CREATE TABLE IF NOT EXISTS exploration_signatures (
+    character_id INTEGER NOT NULL,
+    system_id INTEGER NOT NULL,
+    signature_id TEXT NOT NULL,
+    signature_type TEXT NOT NULL DEFAULT 'Unknown',
+    name TEXT,
+    destination_system_id INTEGER,
+    verified INTEGER NOT NULL DEFAULT 0,
+    observed_at INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (character_id, system_id, signature_id)
+);
+CREATE TABLE IF NOT EXISTS exploration_connections (
+    character_id INTEGER NOT NULL,
+    from_system_id INTEGER NOT NULL,
+    to_system_id INTEGER NOT NULL,
+    wormhole_code TEXT NOT NULL DEFAULT '',
+    max_jump_mass_kg INTEGER,
+    expires_at INTEGER,
+    verified_at INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (character_id, from_system_id, to_system_id, wormhole_code)
+);
+CREATE INDEX IF NOT EXISTS idx_exploration_signatures_character
+    ON exploration_signatures (character_id, system_id);
