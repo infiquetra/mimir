@@ -4343,8 +4343,10 @@ fn queue_has_unfinished_skill(
     })
 }
 
-impl eframe::App for MimirApp {
-    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+impl MimirApp {
+    /// Whole-shell frame body; extracted so headless tests can drive it
+    /// without constructing an `eframe::Frame` (its fields are crate-private).
+    fn show_shell(&mut self, ui: &mut egui::Ui) {
         let ctx = ui.ctx().clone();
         self.tx.attach_ctx_if_unset(&ctx);
         self.drain_requests();
@@ -4372,6 +4374,26 @@ impl eframe::App for MimirApp {
             .inner_margin(egui::Margin::symmetric(14, 8));
 
         egui::Panel::top("top_bar").frame(bar_frame).show(ui, |ui| {
+            // Drag/maximize on the empty top-bar area (macOS hides the
+            // native titlebar); widgets drawn afterwards keep their clicks.
+            let drag_response = ui.interact(
+                ui.available_rect_before_wrap(),
+                ui.scope_id().with("top_bar_window_drag"),
+                egui::Sense::click_and_drag(),
+            );
+            if drag_response.drag_started() {
+                tracing::debug!("[UI] top bar drag started; requesting window drag");
+                ui.ctx().send_viewport_cmd(egui::ViewportCommand::StartDrag);
+            }
+            if drag_response.double_clicked() {
+                let maximized = ui.ctx().input(|i| i.viewport().maximized).unwrap_or(false);
+                tracing::debug!(
+                    "[UI] top bar double-click toggling maximized={}",
+                    !maximized
+                );
+                ui.ctx()
+                    .send_viewport_cmd(egui::ViewportCommand::Maximized(!maximized));
+            }
             ui.horizontal(|ui| {
                 ui.add_space(ui::theme::traffic_light_inset());
                 ui.label(
@@ -4605,6 +4627,16 @@ impl eframe::App for MimirApp {
         if self.has_pending_work() {
             ctx.request_repaint();
         }
+    }
+}
+
+impl eframe::App for MimirApp {
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        self.show_shell(ui);
+    }
+
+    fn persist_egui_memory(&self) -> bool {
+        !self.state.demo
     }
 }
 
@@ -6755,6 +6787,118 @@ mod tests {
         assert_eq!(
             app.state.portrait_requests,
             vec![(ImageKind::Faction, 500001)]
+        );
+    }
+
+    fn shell_test_input(events: Vec<egui::Event>) -> egui::RawInput {
+        egui::RawInput {
+            screen_rect: Some(egui::Rect::from_min_size(
+                egui::Pos2::ZERO,
+                egui::vec2(1280.0, 800.0),
+            )),
+            events,
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn full_shell_smoke_renders_every_view_without_panic() {
+        assert_eq!(View::ALL.len(), 11);
+        let mut app = MimirApp::new(true, Arc::new(Mutex::new(Vec::new())), None, None);
+        let ctx = egui::Context::default();
+        for view in View::ALL {
+            app.state.switch_view(view);
+            let mut output = ctx.run_ui(shell_test_input(Vec::new()), |ui| {
+                app.show_shell(ui);
+            });
+            output.textures_delta.clear();
+            assert!(
+                !output.shapes.is_empty(),
+                "view {} produced no shapes",
+                view.label()
+            );
+            assert!(
+                output.viewport_output.contains_key(&egui::ViewportId::ROOT),
+                "view {} produced no root viewport output",
+                view.label()
+            );
+        }
+    }
+
+    #[test]
+    fn top_bar_refresh_button_still_clickable_over_drag_area() {
+        let mut app = MimirApp::new(true, Arc::new(Mutex::new(Vec::new())), None, None);
+        let ctx = egui::Context::default();
+        let mut warmup = ctx.run_ui(shell_test_input(Vec::new()), |ui| {
+            app.show_shell(ui);
+        });
+        warmup.textures_delta.clear();
+        assert!(!app.state.refresh_requested);
+        let button_pos = egui::pos2(1210.0, 16.0);
+        for pressed in [true, false] {
+            let mut output = ctx.run_ui(
+                shell_test_input(vec![egui::Event::PointerButton {
+                    pos: button_pos,
+                    button: egui::PointerButton::Primary,
+                    pressed,
+                    modifiers: egui::Modifiers::default(),
+                }]),
+                |ui| {
+                    app.show_shell(ui);
+                },
+            );
+            output.textures_delta.clear();
+        }
+        assert!(
+            app.state.refresh_requested,
+            "Refresh button click must survive the top-bar drag area"
+        );
+    }
+
+    #[test]
+    fn top_bar_drag_emits_start_drag_viewport_command() {
+        let mut app = MimirApp::new(true, Arc::new(Mutex::new(Vec::new())), None, None);
+        let ctx = egui::Context::default();
+        // Warm-up frame establishes the top-bar layout and widget ids.
+        let mut warmup = ctx.run_ui(shell_test_input(Vec::new()), |ui| {
+            app.show_shell(ui);
+        });
+        warmup.textures_delta.clear();
+
+        let press_pos = egui::pos2(640.0, 16.0);
+        let mut press = ctx.run_ui(
+            shell_test_input(vec![egui::Event::PointerButton {
+                pos: press_pos,
+                button: egui::PointerButton::Primary,
+                pressed: true,
+                modifiers: egui::Modifiers::default(),
+            }]),
+            |ui| {
+                app.show_shell(ui);
+            },
+        );
+        press.textures_delta.clear();
+
+        let mut saw_start_drag = false;
+        for moved in [egui::pos2(660.0, 16.0), egui::pos2(700.0, 16.0)] {
+            let mut output = ctx.run_ui(
+                shell_test_input(vec![egui::Event::PointerMoved(moved)]),
+                |ui| {
+                    app.show_shell(ui);
+                },
+            );
+            output.textures_delta.clear();
+            if output.viewport_output.values().any(|viewport| {
+                viewport
+                    .commands
+                    .contains(&egui::ViewportCommand::StartDrag)
+            }) {
+                saw_start_drag = true;
+            }
+        }
+        assert!(
+            saw_start_drag,
+            "press+move over the empty top bar must emit ViewportCommand::StartDrag"
         );
     }
 }

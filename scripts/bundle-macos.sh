@@ -226,6 +226,11 @@ if [[ "$DO_INSTALL" -eq 1 ]]; then
     codesign --verify --deep --strict "$DEST_APP"
     OPEN_TARGET="$DEST_APP"
     echo "==> Installed $DEST_APP"
+    LEGACY_APP="$INSTALL_DIR/Mimir.app"
+    if [[ -e "$LEGACY_APP" ]]; then
+        rm -rf "$LEGACY_APP"
+        echo "==> Removed legacy $LEGACY_APP (same bundle identifier com.infiquetra.mimir) so Launch Services cannot resolve the stale bundle"
+    fi
 fi
 
 if [[ "$DO_OPEN" -eq 1 ]]; then

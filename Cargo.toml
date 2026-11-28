@@ -12,7 +12,7 @@ edition = "2021"
 eframe = { version = "0.37", default-features = false, features = ["wgpu_no_default_features", "accesskit", "clipboard", "default_fonts", "links", "persistence", "system_fonts", "wayland", "x11"] }
 egui = "0.37"
 egui_extras = { version = "0.37", features = ["image"] }
-wgpu = { version = "30", default-features = false, features = ["std", "parking_lot", "dx12", "metal", "vulkan", "wgsl", "webgpu"] }
+wgpu = { version = "30", default-features = false, features = ["std", "parking_lot", "dx12", "metal", "vulkan", "wgsl"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time", "net"] }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 serde = { version = "1", features = ["derive"] }
